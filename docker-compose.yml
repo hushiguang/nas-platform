@@ -231,20 +231,3 @@ services:
       test: ["CMD-SHELL", "pg_isready -U nas -d nas_platform"]
       interval: 10s
       retries: 5
-
-  # ---------------------------------------------------------------- 外网访问（可选）
-  # 取消注释并在 .env 填 TS_AUTHKEY。注意：不要把 321x 端口映射到公网
-  # tailscale:
-  #   image: tailscale/tailscale:latest
-  #   restart: unless-stopped
-  #   environment:
-  #     - TS_AUTHKEY=${TS_AUTHKEY}
-  #     - TS_STATE_DIR=/var/lib/tailscale
-  #   volumes:
-  #     - tsstate:/var/lib/tailscale
-  #   cap_add: [NET_ADMIN, SYS_MODULE]
-
-# 说明：数据库已改用宿主机 bind mount（见 postgres 的 PG_DATA_DIR），不再用命名卷。
-# 若启用 Tailscale，取消下面注释。
-# volumes:
-#   tsstate:
