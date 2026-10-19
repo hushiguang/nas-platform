@@ -42,6 +42,10 @@ command -v openssl >/dev/null 2>&1 || die "未找到 openssl，请先安装 open
 echo "docker / compose / git / openssl 均就绪。"
 
 gitc=()
+# GIT_PROXY 也可以写进仓库根的 .env（若已有）；否则用环境变量传入
+if [ -z "${GIT_PROXY:-}" ] && [ -f "$INSTALL_DIR/.env" ]; then
+  GIT_PROXY="$(grep -E '^GIT_PROXY=' "$INSTALL_DIR/.env" | tail -1 | cut -d= -f2- || true)"
+fi
 if [ -n "$GIT_PROXY" ]; then
   gitc=(-c "http.proxy=$GIT_PROXY" -c "https.proxy=$GIT_PROXY")
   echo "已启用 git 代理：$GIT_PROXY"

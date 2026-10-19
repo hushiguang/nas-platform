@@ -4,9 +4,10 @@
 // update 分支只改 role/status —— 所以「改了 .env 的 ADMIN_PASSWORD 再跑 seed」
 // 对已存在的账号是不生效的，密码必须用这个脚本显式改。
 //
-// 用法（在仓库根目录，或 migrator 容器里）：
-//   npm run db:set-password -w @nas/db -- <用户名> <新密码>
-//   docker compose run --rm migrator npx tsx ../../scripts/set-password.ts admin '新密码'
+// 用法（在仓库根目录执行）：
+//   npm run set-password -w @nas/db -- <用户名> <新密码>
+// NAS 上（migrator 容器的工作目录就是仓库根 /app，不用加 ../../）：
+//   docker compose run --rm migrator npm run set-password -w @nas/db -- Leo '新密码'
 //
 // 参数里的密码不要带前后空格；含 $ # 空格 时务必用单引号包住。
 import bcrypt from "bcryptjs";

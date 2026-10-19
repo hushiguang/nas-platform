@@ -20,6 +20,10 @@ command -v git >/dev/null || die "未找到 git"
 [ -f .env ] || die "缺少 .env，首次部署请先跑 scripts/setup-fnos.sh"
 
 gitc=()
+# GIT_PROXY 可以直接写进 .env，配一次就不用每次带环境变量
+if [ -z "${GIT_PROXY:-}" ] && [ -f .env ]; then
+  GIT_PROXY="$(grep -E '^GIT_PROXY=' .env | tail -1 | cut -d= -f2- || true)"
+fi
 [ -n "${GIT_PROXY:-}" ] && gitc=(-c "http.proxy=$GIT_PROXY" -c "https.proxy=$GIT_PROXY")
 
 log "拉取最新代码"
