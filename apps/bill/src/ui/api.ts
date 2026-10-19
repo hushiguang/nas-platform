@@ -1,5 +1,5 @@
 /**
- * 请求层 —— 从 cash-platform 原样搬来，只改了两处收口：
+ * 请求层 —— 从 cash-platform 原样搬来，只改了三处收口：
  *
  *   1. 去掉 Capacitor Preferences。门户统一登录，身份靠 Auth.js 的会话 cookie，
  *      不再有 Bearer token 要同步。getToken / setToken 保留是为了 App 端
@@ -8,6 +8,8 @@
  *      因为 Auth.js 占了 `/api/auth/[...nextauth]`（catch-all），旧接口挂
  *      `/api/*` 会被吞掉，所以整层挪到 `/legacy` 前缀下。所有请求都经过这个函数，
  *      App.jsx 因此一个字都不用改。
+ *   3. 「服务器地址」设置框下线后不再有可配置的 base，getApiBase() 直接返回
+ *      当前站点地址。
  */
 
 const TOKEN_KEY = 'qingji.token';
@@ -32,21 +34,24 @@ export function setToken(token?: string | null): void {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+/**
+ * 后端地址。
+ *
+ * 原来的「服务器地址」设置框已下线，接口固定走账单自己的站点（/legacy 同源），
+ * 所以这里不再有可配置的 base：直接用当前页面地址兜底，
+ * 用户清掉 localStorage 也照样能跑。
+ */
 export function getApiBase(): string {
-  return (localStorage.getItem(API_BASE_KEY) || '').trim();
-}
-
-export function setApiBase(url: string): void {
-  const value = url.trim().replace(/\/+$/, '');
-  if (value) localStorage.setItem(API_BASE_KEY, value);
-  else localStorage.removeItem(API_BASE_KEY);
+  const stored = (localStorage.getItem(API_BASE_KEY) || '').trim();
+  if (stored) return stored.replace(/\/+$/, '');
+  return typeof window === 'undefined' ? '' : window.location.origin;
 }
 
 /**
  * 把 /api/xxx 拼成实际请求地址。
  *
- * 同源（门户里打开）→ /legacy/api/xxx，靠 cookie 带上登录态；
- * App 直连（设置页填了服务器地址）→ https://host/legacy/api/xxx，靠 Bearer。
+ * 地址固定为账单自己的站点（getApiBase 默认就是当前 origin），
+ * 所以 /api/* 改写到 /legacy/api/* 后直接同源发出，靠 cookie 带登录态。
  */
 export function apiUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path;
@@ -120,7 +125,7 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
     });
   } catch (err) {
     // 最常见的就是 App 里后端地址没配/不可达，给一句人话
-    throw new ApiError(getApiBase() ? '连不上服务器，检查设置里的地址' : '网络请求失败', 0, err);
+    throw new ApiError('网络请求失败', 0, err);
   }
 
   // 会话过期：Auth.js 的登录页路径与旧前端不同，这里统一按 401 处理

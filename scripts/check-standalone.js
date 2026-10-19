@@ -1,10 +1,15 @@
 // 构建期自检：确认 Next standalone 产物里运行时真正依赖的模块都在。
 //
-// 为什么需要它：Next 15.5.27 的文件追踪会漏拷个别 next 自带模块，
-// 漏掉的文件在构建阶段毫无异样，容器一启动才炸，日志还只是一长串
-// requireStack。实测漏过两个：
-//   next/dist/compiled/is-docker             （server/cache-dir.js 依赖）
-//   next/dist/lib/metadata/get-metadata-route（server/lib/router-utils/filesystem.js 依赖）
+// 为什么需要它：Next 15.5.27 的文件追踪会漏拷个别模块，漏掉的文件在
+// 构建阶段毫无异样，容器一启动才炸，日志还只是一长串 requireStack。
+// 实测漏过两类：
+//   next 自带模块：
+//     next/dist/compiled/is-docker             （server/cache-dir.js 依赖）
+//     next/dist/lib/metadata/get-metadata-route（server/lib/router-utils/filesystem.js 依赖）
+//   第三方包：
+//     generator-function（exports 的 module-sync 条件指向 require.mjs，
+//       追踪只认 import/default，只拷了 index.mjs，运行时按 module-sync
+//       去找就 MODULE_NOT_FOUND）
 //
 // Docker 仓库的 Dockerfile.app 在补齐 lib/shared 之后调用本脚本做存在性校验，
 // 缺失就让构建直接失败，把问题挡在 build 阶段。
@@ -12,6 +17,7 @@
 // 用法（WORKDIR 为仓库根）：APP=bill node scripts/check-standalone.js
 
 const path = require("path");
+const fs = require("fs");
 
 const app = process.env.APP;
 if (!app) {
@@ -19,7 +25,8 @@ if (!app) {
   process.exit(1);
 }
 
-const base = path.resolve("apps", app, ".next/standalone/node_modules/next/dist");
+const standaloneRoot = path.resolve("apps", app, ".next/standalone");
+const base = path.join(standaloneRoot, "node_modules/next/dist");
 
 // 这些模块由 next 内部文件以静态 require 引用，缺任何一个容器都起不来
 const MUST_EXIST = [
@@ -31,6 +38,11 @@ const MUST_EXIST = [
   "server/lib/start-server",
 ];
 
+// 非 next 的模块，同属文件追踪漏拷：
+// generator-function 的 exports 里 module-sync 指向 require.mjs，
+// 追踪只认 import/default，运行时按 module-sync 去找就 MODULE_NOT_FOUND。
+const MUST_EXIST_PKGS = ["generator-function"];
+
 const missing = MUST_EXIST.filter((m) => {
   try {
     require.resolve(path.join(base, m));
@@ -40,9 +52,24 @@ const missing = MUST_EXIST.filter((m) => {
   }
 });
 
-if (missing.length) {
-  console.error(`standalone 产物缺失 next 模块（APP=${app}）：${missing.join(", ")}`);
-  console.error(`产物目录：${base}`);
+const missingPkgs = MUST_EXIST_PKGS.filter((name) => {
+  try {
+    require.resolve(path.join(standaloneRoot, "node_modules", name));
+    return false;
+  } catch {
+    return true;
+  }
+});
+
+if (missing.length || missingPkgs.length) {
+  if (missing.length) {
+    console.error(`standalone 产物缺失 next 模块（APP=${app}）：${missing.join(", ")}`);
+    console.error(`产物目录：${base}`);
+  }
+  if (missingPkgs.length) {
+    console.error(`standalone 产物缺失 node_modules 包（APP=${app}）：${missingPkgs.join(", ")}`);
+    console.error(`产物目录：${path.join(standaloneRoot, "node_modules")}`);
+  }
   process.exit(1);
 }
 
@@ -50,7 +77,6 @@ if (missing.length) {
 // 同类断链。这里只告警、不让构建失败 —— Next 产物里存在良性的悬空引用
 // （如 route-modules/pages/builtin/_error.js → pages/_error，由
 // load-default-error-components.js 容错加载），硬失败会误伤每一次构建。
-const fs = require("fs");
 
 function walk(dir, out = [], depth = 0) {
   if (depth > 8) return out;

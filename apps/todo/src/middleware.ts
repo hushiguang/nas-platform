@@ -8,5 +8,7 @@ import { createAuthMiddleware } from "@nas/auth/edge";
 export default createAuthMiddleware();
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // api/media 必须排除：图片代理要返回图片字节，未登录时被中间件拦成 307
+  // 跳登录页，前端拿到的是一段 HTML，表现为「图片全裂」。其余六个应用都有这一项。
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/media).*)"],
 };

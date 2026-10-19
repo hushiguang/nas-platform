@@ -26,7 +26,14 @@ function env(name: string): string {
  * 填 .nas.local → 所有子域共享。**前面那个点不能省**，否则只对当前子域有效。
  */
 export function cookieDomain(): string | undefined {
-  return env("AUTH_COOKIE_DOMAIN") || undefined;
+  const raw = env("AUTH_COOKIE_DOMAIN");
+  // 浏览器会直接拒收不含点（或只有一点）的 Domain cookie，且拒收得毫无提示 ——
+  // 表现是 cookie 存不下、登录一律 MissingCSRF，但服务端日志看不出原因。
+  // 这种值基本只来自 NAS_ROOT_DOMAIN 漏配（compose 的默认值退化成 "."）。
+  // 降级为 undefined（仅同 host 共享）至少让本应用还能登录，
+  // 代价只是跨子域 SSO 失效，可用性远好于全线登不上。
+  if (!raw || !raw.includes(".")) return undefined;
+  return raw.startsWith(".") ? raw : `.${raw}`;
 }
 
 /** 只有走 https 时才置 true。内网 http 访问若置 true，浏览器根本不回传 cookie */

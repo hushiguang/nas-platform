@@ -1,7 +1,7 @@
 import { Children, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, apiUrl, getApiBase, setApiBase, getToken, setToken, subscribeBusy, track } from './api';
+import { api, apiUrl, getApiBase, getToken, setToken, subscribeBusy, track } from './api';
 import { consumePayDraft, isNative, lastPayNotice, openPayAccessibilitySettings, openPayApp, openPayNotifySettings, openPayPopupSettings } from './platform';
 
 const TYPES = [
@@ -877,61 +877,20 @@ function UserPage({ user, onLogout, portalHome }) {
   );
 }
 
-/**
- * 服务器地址：网页访问留空走同源；手机 App 是本地包，必须指向 NAS / 服务器才能请求。
- * 放在登录页是因为没配地址就连不上，登录后也能从侧栏「退出」旁边再改。
- */
-function ServerSetup() {
-  const [open, setOpen] = useState(() => isNative || Boolean(getApiBase()));
-  const [url, setUrl] = useState(() => getApiBase());
-  const [hint, setHint] = useState('');
-  if (!open) {
-    return (
-      <button className="link-btn" type="button" onClick={() => setOpen(true)}>服务器地址</button>
-    );
-  }
-  return (
-    <div className="server-setup">
-      <label>
-        服务器地址
-        <input
-          value={url}
-          onChange={(event) => { setUrl(event.target.value); setHint(''); }}
-          placeholder="http://example.com:8080"
-          inputMode="url"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-      </label>
-      <div className="server-setup-actions">
-        <button className="secondary" type="button" onClick={() => { setApiBase(url); setHint('已保存，重新登录生效'); }}>
-          保存
-        </button>
-        <button className="link-btn" type="button" onClick={() => setOpen(false)}>收起</button>
-      </div>
-      {hint && <p className="muted">{hint}</p>}
-      <p className="muted">手机 App 填 NAS / 服务器的地址（含端口）；网页访问留空。</p>
-    </div>
-  );
-}
-
 function AuthScreen({ onLogin }) {
-  const [mode, setMode] = useState('login');
-  const [config, setConfig] = useState({ allowRegister: true, hasUsers: true });
-  const [form, setForm] = useState({ username: '', password: '', displayName: '' });
+  // 注册入口已下线：账号统一由门户发放（管理后台建用户），这里只留登录。
+  const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    api('/api/auth/config').then(setConfig).catch(() => {});
-  }, []);
   async function submit(event) {
     event.preventDefault();
     setError('');
     setBusy(true);
     try {
-      const path = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
-      const data = await api(path, { method: 'POST', body: form });
+      const data = await api('/api/auth/login', {
+        method: 'POST',
+        body: { username: form.username, password: form.password },
+      });
       setToken(data.token);
       onLogin(data.user);
     } catch (err) {
@@ -945,20 +904,11 @@ function AuthScreen({ onLogin }) {
       <div className="auth-theme"><ThemeSwitch /></div>
       <form className="card auth-card stack" onSubmit={submit}>
         <h1>轻账单</h1>
-        <p className="muted">{mode === 'register' ? '创建账号后会带上常用账户和分类。' : '登录后记账、导入账单、查看日历。'}</p>
+        <p className="muted">登录后记账、导入账单、查看日历。</p>
         {error && <div className="error">{error}</div>}
         <label>用户名<input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></label>
-        {mode === 'register' && (
-          <label>显示名<input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></label>
-        )}
         <label>密码<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></label>
-        <button className="primary" type="submit" disabled={busy}>{busy ? (mode === 'register' ? '注册中…' : '登录中…') : (mode === 'register' ? '注册' : '登录')}</button>
-        {config.allowRegister && (
-          <button className="secondary" type="button" disabled={busy} onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
-            {mode === 'login' ? '没有账号，去注册' : '已有账号，去登录'}
-          </button>
-        )}
-        <ServerSetup />
+        <button className="primary" type="submit" disabled={busy}>{busy ? '登录中…' : '登录'}</button>
       </form>
     </div>
   );

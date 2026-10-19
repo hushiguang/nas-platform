@@ -64,6 +64,17 @@ RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
       mkdir -p "$SND/compiled/is-docker"; \
       cp -r node_modules/next/dist/compiled/is-docker/. "$SND/compiled/is-docker/"; \
     fi \
+# generator-function 走的是同一类缺陷，但根因不同：它的 package.json exports
+# 声明了三个条件 —— module-sync 指向 require.mjs、import 指向 index.mjs、
+# default 指向 index.js。Next 的文件追踪只认 import / default，于是只拷了
+# index.mjs；运行时 Node 命中 module-sync 去找 require.mjs，文件不存在，
+# 容器起来就报 Cannot find module '.../generator-function/require.mjs'。
+# 整包拷过去最省事（几百 KB），也免得只补一个文件、下次升级又换条件名。
+ && if [ -d node_modules/generator-function ]; then \
+      mkdir -p "apps/${APP}/.next/standalone/node_modules/generator-function"; \
+      cp -r node_modules/generator-function/. \
+        "apps/${APP}/.next/standalone/node_modules/generator-function/"; \
+    fi \
  && APP="$APP" node scripts/check-standalone.js
 
 # ---------------------------------------------------------------- 运行层
