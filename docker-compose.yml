@@ -53,6 +53,7 @@ x-app-env: &app-env
 services:
   # ---------------------------------------------------------------- 门户
   portal:
+    container_name: nas-platform-portal
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -73,6 +74,7 @@ services:
   # 既是底座（各平台的待办都收口到 todo 表），也是独立站点：
   # 个人清单、家庭共享清单、图片、统一提醒。
   todo:
+    container_name: nas-platform-todo
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -91,6 +93,7 @@ services:
 
   # ---------------------------------------------------------------- 账单
   bill:
+    container_name: nas-platform-bill
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -110,6 +113,7 @@ services:
 
   # ---------------------------------------------------------------- 纪念日
   anniversary:
+    container_name: nas-platform-anniversary
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -125,6 +129,7 @@ services:
 
   # ---------------------------------------------------------------- 工作
   work:
+    container_name: nas-platform-work
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -140,6 +145,7 @@ services:
 
   # ---------------------------------------------------------------- 孕期
   pregnancy:
+    container_name: nas-platform-pregnancy
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -155,6 +161,7 @@ services:
 
   # ---------------------------------------------------------------- 旅行
   travel:
+    container_name: nas-platform-travel
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -174,6 +181,7 @@ services:
 
   # ---------------------------------------------------------------- 定时任务
   worker:
+    container_name: nas-platform-worker
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
@@ -199,6 +207,7 @@ services:
   # ---------------------------------------------------------------- 一次性的迁移与种子
   # 幂等，每次 up 都会跑一遍；跑完即退出，各应用等它成功才开始
   migrator:
+    container_name: nas-platform-migrator
     build:
       context: .
       dockerfile: docker/Dockerfile.app
@@ -216,6 +225,7 @@ services:
 
   # ---------------------------------------------------------------- 数据库
   postgres:
+    container_name: nas-platform-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
