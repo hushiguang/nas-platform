@@ -32,6 +32,17 @@ const ALLOWED_HOSTS = new Set(
   [imageHostConfig.url, ...imageHostConfig.allowHosts].map(hostOf).filter(Boolean),
 );
 
+/**
+ * 白名单为空时给出可读的原因，而不是让 isAllowedImageUrl 对所有地址一律 false。
+ * 空集最常见的成因是 IMAGE_HOST_URL 漏配（compose 默认空串），但从返回值上
+ * 和「URL 确实不在白名单里」完全看不出区别，排查只能靠猜。
+ */
+export function allowHostsDiagnostic(): string {
+  if (ALLOWED_HOSTS.size) return `白名单：${[...ALLOWED_HOSTS].join(", ")}`;
+  return "回源白名单为空：IMAGE_HOST_URL 与 IMAGE_HOST_ALLOW_HOSTS 都没配，" +
+    "所有 /api/media/image 请求都会被拒（表现为图片全裂，但日志只有一句「这个地址不允许」）";
+}
+
 /** 图床是否已配置。没配就整块上传关闭，接口返回 501 */
 export const imageHostConfigured = Boolean(imageHostConfig.token && imageHostConfig.url);
 
@@ -133,17 +144,31 @@ export async function uploadImage(input: ImageUploadInput): Promise<ImageUploadR
   };
 }
 
-/** 回源地址白名单校验 */
-export function isAllowedImageUrl(value: unknown): boolean {
+/**
+ * 回源地址白名单校验。
+ *
+ * 第二个返回值是拒绝原因，只在拒绝时有值 —— 空集（配置漏了）和
+ * 「这个主机确实不在名单里」在布尔返回值上完全看不出区别，而这两者的
+ * 排查方向完全相反，所以把原因一并带出去。
+ */
+export function isAllowedImageUrl(value: unknown): [boolean, string | null] {
+  let parsed: URL;
   try {
-    const parsed = new URL(String(value));
-    return (
-      (parsed.protocol === "https:" || parsed.protocol === "http:") &&
-      ALLOWED_HOSTS.has(parsed.hostname.toLowerCase())
-    );
+    parsed = new URL(String(value));
   } catch {
-    return false;
+    return [false, "地址格式不合法"];
   }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return [false, `只允许 http/https，收到 ${parsed.protocol}`];
+  }
+  if (!ALLOWED_HOSTS.size) {
+    return [false, allowHostsDiagnostic()];
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (!ALLOWED_HOSTS.has(host)) {
+    return [false, `${host} 不在回源白名单（${[...ALLOWED_HOSTS].join(", ")}）`];
+  }
+  return [true, null];
 }
 
 /** 代理取图：绕开自签证书，浏览器就能直接显示了 */

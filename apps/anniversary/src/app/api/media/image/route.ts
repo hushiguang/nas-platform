@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url).searchParams.get("u") || "";
   if (!url) return NextResponse.json({ message: "缺少地址" }, { status: 400 });
-  if (!isAllowedImageUrl(url)) return NextResponse.json({ message: "这个地址不允许" }, { status: 400 });
+  const [allowed, reason] = isAllowedImageUrl(url);
+  if (!allowed) return NextResponse.json({ message: reason ?? "这个地址不允许" }, { status: 400 });
 
   try {
     const image = await fetchImage(url);

@@ -244,7 +244,8 @@ function parseBackground(raw: string): string | null {
     if (!gradientById(id)) throw new AnniversaryError("没有这张背景");
     return `gradient:${id}`;
   }
-  if (!isAllowedImageUrl(raw)) throw new AnniversaryError("这张图片不在图床上");
+  const [allowed, reason] = isAllowedImageUrl(raw);
+  if (!allowed) throw new AnniversaryError(reason ?? "这张图片不在图床上");
   return raw;
 }
 

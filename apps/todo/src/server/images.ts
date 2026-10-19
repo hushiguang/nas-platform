@@ -118,7 +118,8 @@ export async function readImage(u: string): Promise<{ body: Uint8Array; contentT
     }
   }
 
-  if (!isAllowedImageUrl(address)) throw new MediaError("这个地址不允许", 400);
+  const [allowed, reason] = isAllowedImageUrl(address);
+  if (!allowed) throw new MediaError(reason ?? "这个地址不允许", 400);
   return fetchImage(address);
 }
 

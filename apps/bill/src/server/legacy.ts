@@ -769,7 +769,8 @@ route("POST", "upload/image", async ({ req, files }) => {
 route("GET", "image", async ({ query }) => {
   const url = String(query.u || "");
   if (!url) throw new BillError("缺少地址");
-  if (!isAllowedImageUrl(url)) throw new BillError("这个地址不允许");
+  const [allowed, reason] = isAllowedImageUrl(url);
+  if (!allowed) throw new BillError(reason ?? "这个地址不允许");
   const { body, contentType } = await fetchImage(url);
   return new Response(new Uint8Array(body), {
     headers: {
