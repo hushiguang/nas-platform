@@ -79,6 +79,23 @@ else
 
   read -rp "  对外端口（经反代对外，如 :1443；走 80/443 直接回车）: " NAS_PUBLIC_PORT
 
+  # 协议决定两件事：自动拼接的各应用地址前缀，以及会话 cookie 是否带 Secure。
+  # 反代（如 Lucky）挂了证书走 https 时选 https；直接 IP:端口 访问选 http。
+  # 选 http 却实际走 https，cookie 不带 Secure 尚可工作（浏览器照样发送），
+  # 但自动拼出来的 http:// 地址会让应用间跳转降级到明文，务必按实际填。
+  read -rp "  对外协议（https 走反代证书 / http 直连）[http]: " NAS_PUBLIC_PROTO
+  NAS_PUBLIC_PROTO="${NAS_PUBLIC_PROTO:-http}"
+  case "$NAS_PUBLIC_PROTO" in
+    http|https) ;;
+    *) die "协议只能是 http 或 https，收到：$NAS_PUBLIC_PROTO" ;;
+  esac
+
+  if [ "$NAS_PUBLIC_PROTO" = "https" ]; then
+    AUTH_COOKIE_SECURE=true
+  else
+    AUTH_COOKIE_SECURE=false
+  fi
+
   read -rp "  管理员用户名 [admin]: " ADMIN_USERNAME
   ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
 
@@ -112,7 +129,7 @@ DATABASE_URL=postgresql://nas:${PG_PASSWORD}@localhost:5433/nas_platform
 PG_PASSWORD=${PG_PASSWORD}
 
 NAS_ROOT_DOMAIN=${NAS_ROOT_DOMAIN}
-NAS_PUBLIC_PROTO=http
+NAS_PUBLIC_PROTO=${NAS_PUBLIC_PROTO}
 NAS_PUBLIC_PORT=${NAS_PUBLIC_PORT}
 
 PORTAL_SUBDOMAIN=
@@ -125,8 +142,11 @@ TRAVEL_SUBDOMAIN=
 
 AUTH_SECRET=${AUTH_SECRET}
 AUTH_TRUST_HOST=true
-AUTH_COOKIE_DOMAIN=
-AUTH_COOKIE_SECURE=false
+# 不写 AUTH_COOKIE_DOMAIN —— compose 的 ${VAR-.默认} 只在「未设置」时才
+# 回退成 .<root>。一旦写上（哪怕写成空值），会被当作「已设置为空」原样保留，
+# cookie 就不带 Domain，跨子域 SSO 直接失效（门户登录后每个应用都跳登录页）。
+# 自动推导即可，别加这一行。
+AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE}
 
 PORTAL_URL=
 TODO_BASE_URL=

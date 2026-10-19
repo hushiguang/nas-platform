@@ -64,17 +64,21 @@ RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
       mkdir -p "$SND/compiled/is-docker"; \
       cp -r node_modules/next/dist/compiled/is-docker/. "$SND/compiled/is-docker/"; \
     fi \
-# generator-function 走的是同一类缺陷，但根因不同：它的 package.json exports
-# 声明了三个条件 —— module-sync 指向 require.mjs、import 指向 index.mjs、
-# default 指向 index.js。Next 的文件追踪只认 import / default，于是只拷了
-# index.mjs；运行时 Node 命中 module-sync 去找 require.mjs，文件不存在，
-# 容器起来就报 Cannot find module '.../generator-function/require.mjs'。
-# 整包拷过去最省事（几百 KB），也免得只补一个文件、下次升级又换条件名。
- && if [ -d node_modules/generator-function ]; then \
-      mkdir -p "apps/${APP}/.next/standalone/node_modules/generator-function"; \
-      cp -r node_modules/generator-function/. \
-        "apps/${APP}/.next/standalone/node_modules/generator-function/"; \
-    fi \
+# 同属文件追踪漏拷的还有一类第三方包：ljharb 的包族（generator-function、
+# async-function …）在 package.json 里把 exports 声明成三个条件 ——
+# module-sync 指向 require.mjs、import 指向 index.mjs、default 指向 index.js。
+# Next 的文件追踪只认 import / default，于是只拷了 index.mjs；运行时 Node
+# 命中 module-sync 去找 require.mjs，文件不存在，容器起来就报
+# Cannot find module '.../generator-function/require.mjs'。
+# 实测同一个缺陷先在 generator-function 上暴露，修完之后又轮到 async-function
+# ——说明下次升级还会再冒出一个新包名。写死包名必然漏，所以这里动态扫：
+# 把 node_modules 里凡是 exports 含 module-sync 条件的包整棵拷进产物。
+# 这些包都很小（几 KB），代价可以忽略，换来的是不用再追着包名打补丁。
+ && for pkg in $(node -e 'const fs=require("fs"),p=require("path");for(const d of fs.readdirSync("node_modules")){if(d.startsWith("."))continue;const ns=d.startsWith("@")?fs.readdirSync("node_modules/"+d).map(x=>d+"/"+x):[d];for(const n of ns){const f=p.join("node_modules",n,"package.json");if(!fs.existsSync(f))continue;let j;try{j=JSON.parse(fs.readFileSync(f,"utf8"))}catch{continue}if(JSON.stringify(j.exports||{}).includes("module-sync"))console.log(n)}}'); do \
+      dest="apps/${APP}/.next/standalone/node_modules/$pkg"; \
+      mkdir -p "$dest"; \
+      cp -r "node_modules/$pkg/." "$dest/"; \
+    done \
  && APP="$APP" node scripts/check-standalone.js
 
 # ---------------------------------------------------------------- 运行层

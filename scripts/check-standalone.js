@@ -7,9 +7,9 @@
 //     next/dist/compiled/is-docker             （server/cache-dir.js 依赖）
 //     next/dist/lib/metadata/get-metadata-route（server/lib/router-utils/filesystem.js 依赖）
 //   第三方包：
-//     generator-function（exports 的 module-sync 条件指向 require.mjs，
-//       追踪只认 import/default，只拷了 index.mjs，运行时按 module-sync
-//       去找就 MODULE_NOT_FOUND）
+//     ljharb 包族 generator-function / async-function（exports 的
+//       module-sync 条件指向 require.mjs，追踪只认 import/default，
+//       只拷了 index.mjs，运行时按 module-sync 去找就 MODULE_NOT_FOUND）
 //
 // Docker 仓库的 Dockerfile.app 在补齐 lib/shared 之后调用本脚本做存在性校验，
 // 缺失就让构建直接失败，把问题挡在 build 阶段。
@@ -39,9 +39,42 @@ const MUST_EXIST = [
 ];
 
 // 非 next 的模块，同属文件追踪漏拷：
-// generator-function 的 exports 里 module-sync 指向 require.mjs，
-// 追踪只认 import/default，运行时按 module-sync 去找就 MODULE_NOT_FOUND。
-const MUST_EXIST_PKGS = ["generator-function"];
+// ljharb 包族（generator-function / async-function）的 exports 里
+// module-sync 条件指向 require.mjs，追踪只认 import/default，
+// 只拷了 index.mjs，运行时按 module-sync 去找就 MODULE_NOT_FOUND。
+// 写死包名必然漏（补完 generator-function 后又轮到 async-function），
+// 所以这里同样动态扫源 node_modules：凡是 exports 含 module-sync 的包，
+// 产物里必须存在且 require.mjs 可解析。
+function moduleSyncPackages() {
+  const nm = "node_modules";
+  const out = [];
+  let entries;
+  try {
+    entries = fs.readdirSync(nm, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    if (!e.isDirectory() || e.name.startsWith(".")) continue;
+    const names = e.name.startsWith("@")
+      ? fs
+          .readdirSync(path.join(nm, e.name), { withFileTypes: true })
+          .filter((s) => s.isDirectory())
+          .map((s) => `${e.name}/${s.name}`)
+      : [e.name];
+    for (const name of names) {
+      const pj = path.join(nm, name, "package.json");
+      if (!fs.existsSync(pj)) continue;
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pj, "utf8"));
+        if (JSON.stringify(pkg.exports ?? {}).includes("module-sync")) out.push(name);
+      } catch {
+        /* 解析不了的 manifest 不参与判断 */
+      }
+    }
+  }
+  return out;
+}
 
 const missing = MUST_EXIST.filter((m) => {
   try {
@@ -52,9 +85,10 @@ const missing = MUST_EXIST.filter((m) => {
   }
 });
 
-const missingPkgs = MUST_EXIST_PKGS.filter((name) => {
+const missingPkgs = moduleSyncPackages().filter((name) => {
+  const dest = path.join(standaloneRoot, "node_modules", name);
   try {
-    require.resolve(path.join(standaloneRoot, "node_modules", name));
+    require.resolve(path.join(dest, "require.mjs"));
     return false;
   } catch {
     return true;
@@ -67,7 +101,7 @@ if (missing.length || missingPkgs.length) {
     console.error(`产物目录：${base}`);
   }
   if (missingPkgs.length) {
-    console.error(`standalone 产物缺失 node_modules 包（APP=${app}）：${missingPkgs.join(", ")}`);
+    console.error(`standalone 产物缺失 module-sync 包（APP=${app}）：${missingPkgs.join(", ")}`);
     console.error(`产物目录：${path.join(standaloneRoot, "node_modules")}`);
   }
   process.exit(1);

@@ -22,11 +22,13 @@ x-app-env: &app-env
   DATABASE_URL: postgresql://nas:${PG_PASSWORD}@postgres:5432/nas_platform
   AUTH_SECRET: ${AUTH_SECRET}
   AUTH_TRUST_HOST: "true"
-  # cookie 作用域默认由根域推导成 .<root> —— 门户登录一次，账单站直接认
-  # 用 ${VAR-默认} 而不是 ${VAR:-默认}：前者只在「未设置」时套用默认值，
-  # 后者会把「显式留空」也吃掉。而显式留空是有意义的场景 ——
-  # 直连 IP:3210 访问时必须留空，浏览器不接受 IP 主机上的 Domain cookie，
-  # 硬套 .<root> 会导致 cookie 存不下、登录报 MissingCSRF。
+  # cookie 作用域默认由根域推导成 .<root> —— 门户登录一次，各子域应用都认。
+  # 用 ${VAR-默认} 而不是 ${VAR:-默认}：只有「未设置」才套用默认值，
+  # 「显式留空」会被原样保留。子域方案下 AUTH_COOKIE_DOMAIN 这一行应当整行删掉，
+  # 一旦写成 AUTH_COOKIE_DOMAIN= 就会退化成同 host 共享，
+  # 表现为门户登录后每个应用都跳回登录页 —— 只差一个等号，很难自查。
+  # 只有直连 IP:3210 才需要显式留空（浏览器不接受 IP 主机上的 Domain cookie），
+  # 但那种访问方式没有子域，本来就不涉及跨子域 SSO。
   AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN-.${NAS_ROOT_DOMAIN}}
   AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
   # 各应用地址默认按 NAS_ROOT_DOMAIN 拼出来，手工填了就以手工的为准。
