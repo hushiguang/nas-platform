@@ -16,6 +16,7 @@
     "migrate:bills": "tsx --env-file=../../.env scripts/migrate-bills.ts",
     "verify:all": "tsx --env-file=../../.env scripts/verify-bills.ts",
     "repair:dates": "tsx --env-file=../../.env scripts/repair-dates.ts",
+    "set-password": "tsx --env-file-if-exists=../../.env scripts/set-password.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

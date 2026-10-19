@@ -31,6 +31,12 @@ async function main() {
   if (!password) {
     throw new Error("未设置 ADMIN_PASSWORD，拒绝用默认密码创建管理员。请在 .env 里配置后再运行 seed。");
   }
+  // 先看账号在不在，才能说清这次到底是「建了」还是「只更新了角色」。
+  // update 分支故意不动 passwordHash —— 免得每次部署把你界面上改过的密码冲掉；
+  // 但这意味着「改了 .env 的 ADMIN_PASSWORD 再跑 seed」对已存在的账号是不生效的。
+  // 不提示的话很容易白折腾：密码明明改过，却怎么也登不进去。
+  const existed = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+
   const admin = await prisma.user.upsert({
     where: { username },
     update: { role: "ADMIN", status: "ACTIVE" },
@@ -41,7 +47,13 @@ async function main() {
       role: "ADMIN",
     },
   });
-  console.log(`管理员就绪：${admin.username}（密码取自 ADMIN_PASSWORD，请尽快修改）`);
+
+  if (existed) {
+    console.log(`管理员 ${admin.username} 已存在，本次只更新了角色/状态，未改动密码。`);
+    console.log(`如需重置密码：npm run set-password -w @nas/db -- ${username} '新密码'`);
+  } else {
+    console.log(`管理员已创建：${admin.username}（密码取自 ADMIN_PASSWORD，请尽快修改）`);
+  }
 
   // 所有启用中的用户都要有应用授权，否则门户首页是空的。
   // 从旧库迁过来的账户当年没有这套授权表，这里补齐。
