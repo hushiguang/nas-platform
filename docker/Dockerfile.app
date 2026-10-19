@@ -54,7 +54,8 @@ RUN case "${APP}" in \
 # 实测 filesystem.js 的 18 个相对依赖里只有 get-metadata-route 没被追踪到，
 # 属于 Next 的单点缺陷。lib + shared 合计才 4MB，整棵补齐最省事，
 # 也免得以后每冒出一个漏拷的模块就改一次 Dockerfile。
-# 补完在构建期做存在性自检：这类问题必须在这里暴露，而不是等容器启动崩溃。
+# 补完调用 scripts/check-standalone.js 做自检：这类问题必须在这里暴露，
+# 而不是等容器启动崩。检查逻辑放在文件里是因为 Dockerfile 无法写多行 node -e。
 RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
  && mkdir -p "$SND/lib" "$SND/shared" "$SND/compiled" \
  && cp -r node_modules/next/dist/lib/. "$SND/lib/" \
@@ -63,20 +64,7 @@ RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
       mkdir -p "$SND/compiled/is-docker"; \
       cp -r node_modules/next/dist/compiled/is-docker/. "$SND/compiled/is-docker/"; \
     fi \
- && APP="$APP" node -e '
-      const path = require("path");
-      const base = path.resolve("apps", process.env.APP, ".next/standalone/node_modules/next/dist");
-      const must = ["compiled/is-docker", "lib/metadata/get-metadata-route",
-                    "server/lib/router-utils/filesystem", "server/cache-dir"];
-      const missing = must.filter((m) => {
-        try { require.resolve(path.join(base, m)); return false; } catch { return true; }
-      });
-      if (missing.length) {
-        console.error("standalone 产物缺失 next 模块：" + missing.join(", "));
-        process.exit(1);
-      }
-      console.log("standalone 产物自检通过（next 运行时依赖齐全）");
-    '
+ && APP="$APP" node scripts/check-standalone.js
 
 # ---------------------------------------------------------------- 运行层
 FROM base AS runner
