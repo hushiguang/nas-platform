@@ -1,0 +1,714 @@
+/* 待办应用专有样式。通用外壳、卡片、表单控件、待办行的备注与缩略图都在
+   @nas/ui/globals.css，这里只补它没有的部分：弹窗、勾选框、缩略图删除按钮、
+   分组标题。颜色一律用主题变量，跟随明暗切换。 */
+
+/* ---------------------------------------------------------------- 弹窗 */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(20, 14, 30, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px 16px;
+  overflow-y: auto;
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  flex: none;
+  align-self: flex-start;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.modal .card-head {
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 弹窗内小标题与下一行控件拉开距离 */
+.modal .form-label {
+  margin-bottom: 6px;
+}
+
+.modal .field {
+  display: grid;
+  gap: 8px;
+}
+
+.modal .form-row {
+  margin-top: 2px;
+}
+
+/* 触发按钮的包裹层：不参与布局，只用来挂点击 */
+.todo-trigger {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- 勾选框 */
+.todo-check {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.todo-box {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--field-line);
+  background: var(--chip);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.todo-box:hover {
+  border-color: var(--mint);
+}
+
+.todo-box.on {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+/* 完成的行整体淡化，标题划线 */
+.todo-row.done .todo-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+/* 备注(.todo-note) 与图片缩略图(.todo-thumbs / .todo-thumb) 的样式在
+   @nas/ui/globals.css —— 门户的「待办管理」也会渲染同样的待办行，
+   两边必须长得一样。这里只留待办应用独有的缩略图删除按钮。 */
+
+.todo-thumb-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 14, 30, 0.6);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- 分组 */
+.todo-group {
+  margin-bottom: 18px;
+}
+
+.todo-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 8px 2px;
+}
+
+/* 小号按钮（globals 里只有默认尺寸） */
+.btn.sm,
+.ghost.sm {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+
+/* 统计卡片的警示态 */
+.stat.warn b {
+  color: var(--coral);
+}
+
+/* ---------------------------------------------------------------- 主页：单列 + 分类横栏 */
+.todo-home {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding-bottom: 110px;
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.todo-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.todo-cats.is-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-cat {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  white-space: nowrap;
+}
+
+.todo-cat:hover {
+  color: var(--text);
+}
+
+.todo-cat.active {
+  color: var(--text);
+  background: var(--soft);
+  border-color: var(--line);
+  font-weight: 650;
+}
+
+.todo-count {
+  min-width: 20px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--muted);
+}
+
+.todo-manage {
+  flex: none;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.todo-manage:hover {
+  color: var(--text);
+}
+
+.todo-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.todo-list-head b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.todo-search {
+  margin-bottom: 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 6px 6px 12px;
+}
+
+.todo-search .input {
+  border: none;
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------- 紧凑行：一行标题 + 一行小字 */
+.todo-list {
+  gap: 8px;
+}
+
+.todo-row.is-compact {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.todo-row.is-compact .todo-dot {
+  margin-top: 6px;
+  width: 7px;
+  height: 7px;
+}
+
+.todo-row.is-compact .todo-box {
+  width: 22px;
+  height: 22px;
+}
+
+.todo-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.todo-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.todo-line .todo-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.todo-due {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.todo-due.is-overdue {
+  background: var(--wash-coral);
+  color: var(--coral);
+  font-weight: 700;
+}
+
+.todo-due.is-none {
+  opacity: 0.7;
+}
+
+/* 行内操作：ghost 小胶囊（与门户 btn ghost sm 同款） */
+.todo-ops {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-ops form {
+  margin: 0;
+  display: inline-flex;
+}
+
+.todo-op {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.todo-op:hover,
+a.todo-op:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.todo-op.is-danger {
+  color: var(--danger, #ff4d6a);
+  border-color: rgba(255, 77, 106, 0.4);
+}
+
+.todo-op.is-danger:hover {
+  background: rgba(255, 77, 106, 0.12);
+  color: var(--danger, #ff4d6a);
+}
+
+.todo-row .todo-meta {
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.todo-flag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--coral);
+}
+
+/* 备注：收起时只在 meta 里露一行预览，展开才显示全文，不再遮挡 */
+.todo-row .todo-note.is-full {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--soft);
+  line-height: 1.65;
+  font-size: 13px;
+}
+
+/* 底部快速添加：固定悬浮在视口底部，宽度跟内容列（max-width: 880px）对齐。
+ * 外壳左侧有 248px 侧栏，主区左右 padding 共 52px，
+ * 所以内容宽 = min(880px, 100vw - 248px - 52px)，居中要向右偏 half(248px)=124px。 */
+.quick-add {
+  position: fixed;
+  left: calc(50% + 124px);
+  transform: translateX(-50%);
+  bottom: 18px;
+  width: min(880px, calc(100vw - 248px - 52px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 18px;
+  z-index: 40;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.quick-add-input {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 14px;
+}
+
+.quick-add-input:focus {
+  outline: none;
+}
+
+.quick-add-hint {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.quick-add .btn {
+  border-radius: 12px;
+  padding: 9px 20px;
+}
+
+/* 外壳侧栏在 900px 收起：悬浮条回到视口居中，宽度跟移动端内容列对齐
+ *（主区左右 padding 共 28px） */
+@media (max-width: 900px) {
+  .quick-add {
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: calc(100vw - 28px);
+  }
+  .quick-add-hint {
+    display: none;
+  }
+  .todo-ops .todo-snooze {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- 搜索：瘦条 */
+.todo-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 3px 3px 3px 10px;
+}
+
+.todo-search .input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.todo-search .input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------- 清单页 */
+.list-create {
+  padding: 12px 14px;
+}
+
+.list-create-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.list-create-row input[name="icon"] {
+  flex: none;
+  width: 58px;
+  text-align: center;
+}
+
+.list-create-row input[name="name"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-create-row select[name="kind"] {
+  flex: none;
+  width: 112px;
+}
+
+.list-hint {
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.list-card {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.list-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.list-card-head b {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-sub {
+  font-size: 12px;
+  margin-top: -6px;
+}
+
+.list-edit-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.list-edit-row input[name="icon"] {
+  flex: none;
+  width: 52px;
+  text-align: center;
+}
+
+.list-edit-row input[name="name"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-edit-row select {
+  flex: none;
+  width: 104px;
+}
+
+.input.sm {
+  padding: 6px 9px;
+  font-size: 12.5px;
+  border-radius: 9px;
+}
+
+.list-members-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.list-member-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.list-member-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 8px;
+}
+
+.list-member-list li:hover {
+  background: var(--soft);
+}
+
+.list-member-list form {
+  margin: 0;
+}
+
+.list-add-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.list-add-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-del-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+/* 清单列表页：表格卡片 + 行内名称链接 */
+.list-table-card {
+  padding: 6px 8px 10px;
+}
+
+.list-table-card .list-hint {
+  margin: 8px 6px 2px;
+  font-size: 12px;
+}
+
+.list-name {
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.list-name:hover {
+  text-decoration: underline;
+}
+
+table.data .todo-ops {
+  justify-content: flex-end;
+}
+
+/* 弹窗表单：强制纵向堆叠，不依赖全局 .field 的 display。
+ * （label 默认 inline，直接用全局类会在一行横排挤成条） */
+.modal .form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal .form-stack > label.field,
+.modal .form-stack > .field {
+  display: block;
+}
+
+.modal .form-stack > .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal .form-stack .input {
+  width: 100%;
+}
+
+.modal .form-stack textarea.input {
+  resize: vertical;
+  min-height: 56px;
+}
+
+.modal .dlg-row-uneven {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 12px;
+}
+
+/* 缩略图点击区 + 灯箱大图 */
+.todo-thumb-open {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 6, 12, 0.88);
+  cursor: zoom-out;
+  animation: lightbox-in 0.12s ease-out;
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

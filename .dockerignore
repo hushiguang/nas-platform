@@ -2,5 +2,16 @@ node_modules
 .next
 .git
 .env
+.env.*
+!.env.example
 *.log
-README.md
+*.md
+# 构建缓存与运行时数据，没必要进构建上下文
+.npmcache
+.turbo
+data
+backups
+pgdata
+.idea
+.vscode
+.DS_Store

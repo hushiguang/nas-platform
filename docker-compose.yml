@@ -1,0 +1,250 @@
+# 家庭 NAS 一体化平台 · 门户 + 多应用
+#
+# 七个应用各自独立容器、独立端口，共享同一个 PostgreSQL 与同一份 AUTH_SECRET。
+# 登录态靠 cookie 作用域共享：把 AUTH_COOKIE_DOMAIN 设成 .nas.local，
+# 在门户登录一次，其余应用都认 —— 不需要任何中心化的鉴权服务。
+#
+#   docker compose up -d --build              全部起起来
+#   docker compose up -d --build bill         只重建账单
+#   docker compose logs -f portal             看门户日志
+#
+# 首次启动会自动跑迁移与种子（migrator 服务，幂等）。
+#
+# 对外反代：各应用各自监听独立端口（3210-3216），由外部反代（如 Lucky）按
+# 子域名分发，本文件不再内置 nginx 网关。SSO 仍靠 AUTH_COOKIE_DOMAIN=.<root>。
+# 详细部署步骤与域名解析见 docs/部署说明.md
+
+# 各应用共用的环境变量。新增变量记得同时补到 .env.example
+x-app-env: &app-env
+  DATABASE_URL: postgresql://nas:${PG_PASSWORD}@postgres:5432/nas_platform
+  AUTH_SECRET: ${AUTH_SECRET}
+  AUTH_TRUST_HOST: "true"
+  # cookie 作用域默认由根域推导成 .<root> —— 门户登录一次，账单站直接认
+  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-.${NAS_ROOT_DOMAIN}}
+  AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+  # 各应用地址默认按 NAS_ROOT_DOMAIN 拼出来，手工填了就以手工的为准。
+  # 子域前缀可用 <APP>_SUBDOMAIN 覆盖（例如 ANNIVERSARY_SUBDOMAIN=birthday）。
+  PORTAL_URL: ${PORTAL_URL:-${NAS_PUBLIC_PROTO:-http}://${PORTAL_SUBDOMAIN:-nav}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  TODO_BASE_URL: ${TODO_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${TODO_SUBDOMAIN:-todo}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  BILL_BASE_URL: ${BILL_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${BILL_SUBDOMAIN:-cash}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  ANNIVERSARY_BASE_URL: ${ANNIVERSARY_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${ANNIVERSARY_SUBDOMAIN:-anniversary}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  WORK_BASE_URL: ${WORK_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${WORK_SUBDOMAIN:-work}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  PREGNANCY_BASE_URL: ${PREGNANCY_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${PREGNANCY_SUBDOMAIN:-pregnancy}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  TRAVEL_BASE_URL: ${TRAVEL_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${TRAVEL_SUBDOMAIN:-travel}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  SERVICE_TOKEN: ${SERVICE_TOKEN}
+  CRON_SECRET: ${CRON_SECRET}
+  # 图床。账单上传和纪念日背景共用，不配则只能用内置图库
+  IMAGE_HOST_URL: ${IMAGE_HOST_URL:-}
+  IMAGE_HOST_TOKEN: ${IMAGE_HOST_TOKEN:-}
+  IMAGE_HOST_ALLOW_HOSTS: ${IMAGE_HOST_ALLOW_HOSTS:-}
+  IMAGE_PROXY_CACHE_TTL: ${IMAGE_PROXY_CACHE_TTL:-86400}
+  IMAGE_MAX_BYTES: ${IMAGE_MAX_BYTES:-12582912}
+  # 高德地图（旅行足迹）：Web端(JS API) Key / 安全密钥 / 可选的 Web服务 Key
+  AMAP_KEY: ${AMAP_KEY:-}
+  AMAP_JSCODE: ${AMAP_JSCODE:-}
+  AMAP_WEB_KEY: ${AMAP_WEB_KEY:-}
+  # 待办图片的本地兜底目录（没用图床时才走这里）
+  TODO_UPLOAD_DIR: /data/uploads/todo
+  TZ: Asia/Shanghai
+
+services:
+  # ---------------------------------------------------------------- 门户
+  portal:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: portal }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    ports:
+      - "3210:3000"
+    volumes:
+      # 只读挂载 Docker 套接字，门户的日志页才能看到各容器输出
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 待办
+  # 既是底座（各平台的待办都收口到 todo 表），也是独立站点：
+  # 个人清单、家庭共享清单、图片、统一提醒。
+  todo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: todo }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    volumes:
+      # 没配图床时待办图片落这里（配了图床就不会用到）。独立子目录，别和账单票据混
+      - /vol1/1000/photos/todo:/data/uploads/todo
+    ports:
+      - "3216:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 账单
+  bill:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: bill }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      NAS_PHOTO_ROOT: /data/photos
+    volumes:
+      # 票据照片。账单上传的图存这里，容器重建不丢
+      - /vol1/1000/photos:/data/photos
+    ports:
+      - "3211:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 纪念日
+  anniversary:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: anniversary }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    ports:
+      - "3212:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 工作
+  work:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: work }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    ports:
+      - "3213:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 孕期
+  pregnancy:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: pregnancy }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    ports:
+      - "3214:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 旅行
+  travel:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: travel }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      NAS_PHOTO_ROOT: /data/photos
+    volumes:
+      # 相册目录只读挂载：旅行应用只读照片，不往里写
+      - /vol1/1000/photos:/data/photos:ro
+    ports:
+      - "3215:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 定时任务
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      # 通知渠道：定时任务要发提醒，配置与各应用保持一致
+      WECOM_CORP_ID: ${WECOM_CORP_ID:-}
+      WECOM_CORP_SECRET: ${WECOM_CORP_SECRET:-}
+      WECOM_AGENT_ID: ${WECOM_AGENT_ID:-}
+      # 群机器人 webhook：配了就用它发，不需要应用三件套，也不受可信 IP / 可信域名限制
+      WECOM_WEBHOOK: ${WECOM_WEBHOOK:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
+
+  # ---------------------------------------------------------------- 一次性的迁移与种子
+  # 幂等，每次 up 都会跑一遍；跑完即退出，各应用等它成功才开始
+  migrator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args: { APP: portal }
+      target: builder
+    environment:
+      DATABASE_URL: postgresql://nas:${PG_PASSWORD}@postgres:5432/nas_platform
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      TZ: Asia/Shanghai
+    command: sh -c "npx prisma migrate deploy --schema packages/db/prisma/schema.prisma && npm run seed -w @nas/db"
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  # ---------------------------------------------------------------- 数据库
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nas_platform
+      POSTGRES_USER: nas
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      # 数据落在宿主机目录，方便直接在 NAS 上查看/备份/迁移。
+      # 飞牛上把它指到存储卷，例如 /vol1/1000/nas-platform/pgdata（见 .env 的 PG_DATA_DIR）。
+      # ⚠ 目录属主必须是镜像里的 postgres 用户（postgres:16-alpine 是 uid 70），
+      #   否则容器启动会因权限被拒。首次部署前执行：
+      #     mkdir -p <PG_DATA_DIR> && chown -R 70:70 <PG_DATA_DIR>
+      - ${PG_DATA_DIR:-./pgdata}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nas -d nas_platform"]
+      interval: 10s
+      retries: 5
+
+  # ---------------------------------------------------------------- 外网访问（可选）
+  # 取消注释并在 .env 填 TS_AUTHKEY。注意：不要把 321x 端口映射到公网
+  # tailscale:
+  #   image: tailscale/tailscale:latest
+  #   restart: unless-stopped
+  #   environment:
+  #     - TS_AUTHKEY=${TS_AUTHKEY}
+  #     - TS_STATE_DIR=/var/lib/tailscale
+  #   volumes:
+  #     - tsstate:/var/lib/tailscale
+  #   cap_add: [NET_ADMIN, SYS_MODULE]
+
+# 说明：数据库已改用宿主机 bind mount（见 postgres 的 PG_DATA_DIR），不再用命名卷。
+# 若启用 Tailscale，取消下面注释。
+# volumes:
+#   tsstate:

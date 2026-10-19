@@ -1,0 +1,41 @@
+{
+  "name": "nas-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "家庭 NAS 一体化平台 —— 门户 + 多应用",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "db:generate": "npm run generate -w @nas/db",
+    "db:migrate": "npm run migrate -w @nas/db",
+    "db:seed": "npm run seed -w @nas/db",
+    "worker": "npm run dev -w @nas/worker",
+    "dev:portal": "sh -c 'set -a; . ./.env; set +a; exec npm run dev -w @nas/portal'",
+    "dev:bill": "sh -c 'set -a; . ./.env; set +a; exec npm run dev -w @nas/bill'",
+    "dev:todo": "sh -c 'set -a; . ./.env; set +a; exec npm run dev -w @nas/todo-app'",
+    "dev:anniversary": "sh -c 'set -a; . ./.env; set +a; exec npm run dev -w @nas/anniversary'",
+    "dev:work": "sh -c 'set -a; . ./.env; set +a; exec npm run dev -w @nas/work'",
+    "start:portal": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/portal'",
+    "start:bill": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/bill'",
+    "start:todo": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/todo-app'",
+    "start:anniversary": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/anniversary'",
+    "start:work": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/work'",
+    "start:pregnancy": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/pregnancy'",
+    "start:travel": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/travel'",
+    "build:all": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.8",
+    "@types/react": "^19.1.15",
+    "@types/react-dom": "^19.1.9",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

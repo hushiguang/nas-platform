@@ -1,0 +1,403 @@
+/* 旅行足迹平台专属样式。骨架与主题变量来自 @nas/ui/globals.css */
+
+/* ---------- 统计卡 ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+
+.stat-card b {
+  display: block;
+  font-size: 26px;
+  color: var(--ink);
+}
+
+.stat-card span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---------- 地图 ---------- */
+.travel-map {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--soft);
+}
+
+.map-fallback {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 0 16px;
+  background: var(--paper);
+}
+
+.travel-pin {
+  display: grid;
+  place-items: center;
+}
+
+.travel-pin-img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  display: block;
+}
+
+.travel-pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  display: block;
+}
+
+.travel-pop {
+  min-width: 160px;
+  max-width: 260px;
+  padding: 4px 2px;
+  color: #241c33;
+}
+
+.travel-pop h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.travel-pop p {
+  margin: 0 0 6px;
+  color: #666;
+  font-size: 12px;
+}
+
+.travel-pop-photos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.travel-pop-photos img {
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+/* ---------- 时间轴 ---------- */
+.timeline-year {
+  margin: 22px 0 10px;
+  font-size: 15px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.trip-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--paper);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s ease;
+}
+
+.trip-card:hover {
+  border-color: var(--violet);
+}
+
+.trip-cover {
+  height: 150px;
+  background-size: cover;
+  background-position: center;
+}
+
+.trip-body {
+  padding: 12px 14px;
+}
+
+.trip-body h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.trip-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trip-summary {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+/* ---------- 相册 / 选图 ---------- */
+.cover-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cover-pick img {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.photo-item {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photo-item img {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.photo-item .field {
+  width: 100%;
+}
+
+.photo-add {
+  width: 120px;
+  height: 90px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.photo-add:hover {
+  border-color: var(--violet);
+}
+
+.stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stop-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--soft);
+}
+
+/* ---------- 选图弹层 ---------- */
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  padding: 16px;
+}
+
+.picker-panel {
+  width: min(880px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.picker-head,
+.picker-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.picker-foot {
+  border-bottom: none;
+  border-top: 1px solid var(--line);
+}
+
+.picker-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+
+.crumb {
+  background: none;
+  border: none;
+  color: var(--violet);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 13px;
+}
+
+.crumb-sep {
+  color: var(--muted);
+}
+
+.picker-body {
+  overflow: auto;
+  padding: 12px 16px;
+}
+
+.picker-sec-title {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0;
+}
+
+.picker-dirs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dir-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: var(--field);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dir-chip:hover {
+  border-color: var(--violet);
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.picker-cell {
+  position: relative;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--soft);
+  aspect-ratio: 1;
+}
+
+.picker-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.picker-cell.selected {
+  border-color: var(--violet);
+}
+
+.picker-tick {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--violet);
+  color: #fff;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- 详情页 ---------- */
+.detail-hero {
+  height: 220px;
+  border-radius: 16px;
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 16px;
+}
+
+.detail-content {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.gallery-grid figure {
+  margin: 0;
+}
+
+.gallery-grid img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: block;
+}
+
+.gallery-grid figcaption {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}

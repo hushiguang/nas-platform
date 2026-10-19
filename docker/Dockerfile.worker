@@ -1,0 +1,32 @@
+# 定时任务容器。
+#
+# Next.js 是请求驱动模型，跑不了常驻 cron，所以 worker 必须是独立进程。
+# 它只做与业务应用无关的事（待办扫描、提醒派发、通知重试）；业务应用自己的
+# 定时任务由 worker 通过内部接口叫醒（见 services/worker/src/jobs.ts）。
+
+FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json package-lock.json ./
+COPY packages/db/package.json packages/db/
+COPY packages/core/package.json packages/core/
+COPY packages/auth/package.json packages/auth/
+COPY packages/todo/package.json packages/todo/
+COPY packages/notify/package.json packages/notify/
+COPY packages/ui/package.json packages/ui/
+COPY services/worker/package.json services/worker/
+RUN npm ci
+
+FROM deps AS runner
+COPY . .
+RUN npx prisma generate --schema packages/db/prisma/schema.prisma
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    TZ=Asia/Shanghai
+
+# worker 直接用 tsx 跑 TS 源码，省掉一层编译产物。
+# 环境变量全部由 compose 注入，不在镜像里放 .env。
+CMD ["npx", "tsx", "services/worker/src/index.ts"]

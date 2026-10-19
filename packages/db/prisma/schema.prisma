@@ -1,0 +1,1065 @@
+// 家庭 NAS 一体化平台 · 数据模型
+// 单 schema，按模块分节：
+//   1. core    账户 / 权限（平台可见性 + 数据范围）
+//   2. todo    待办引擎 + 通知网关
+//   3. anniversary / work / pregnancy / travel  各业务平台
+//   4. bill    账单（P4 阶段随 SQLite 迁移落地，见 docs/技术方案.md 第七章）
+
+generator client {
+  provider = "prisma-client-js"
+  // monorepo 下必须显式指定产物路径。默认会生成到「离 schema 最近的 node_modules」，
+  // 而各应用 import 的 @prisma/client 会去根 node_modules/.prisma/client 找 —— 两边对不上，
+  // 表现为运行时报「did not initialize yet」。统一收进包内，由 @nas/db 转发。
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 1. core · 账户与权限
+// ============================================================
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum DataScope {
+  SELF
+  ALL
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  passwordHash String
+  nickname     String
+  email        String?
+  wecomId      String?
+  status       UserStatus @default(ACTIVE)
+  role         Role       @default(MEMBER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  platforms      UserPlatform[]
+  todos          Todo[]
+  todoLists      TodoList[]
+  todoListMems   TodoListMember[]
+  notifyChannels NotifyChannel[]
+  notifyLogs     NotifyLog[]
+
+  @@map("user")
+}
+
+// 应用注册表：每个平台/应用都是独立部署的服务。
+// 门户首页把它渲染成卡片网格，管理员可配置名称、图标、链接、分组。
+model Platform {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  name        String
+  description String?
+  // 图标：emoji 或 lucide 图标名（如 "wallet" / "calendar"）
+  icon        String  @default("🧩")
+  /// 卡片背景。复用纪念日同一套写法：`gallery:<id>` / `gradient:<id>` / 图床 URL
+  cover       String?
+  // 分组：用于门户分组展示（如 财务 / 生活 / 工具）
+  group       String?
+  // 外部独立部署地址（http://...），点击时新标签页打开
+  url         String?
+  // true 表示跳到外部；false 表示走内部路由（预留 nas-platform 子模块）
+  isExternal  Boolean @default(true)
+  sort        Int     @default(0)
+
+  users UserPlatform[]
+
+  @@index([sort])
+  @@map("platform")
+}
+
+// 平台可见性 + 平台内数据范围（两层权限）
+model UserPlatform {
+  userId     Int
+  platformId Int
+  dataScope  DataScope @default(SELF)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+
+  @@id([userId, platformId])
+  @@map("user_platform")
+}
+
+// ============================================================
+// 2. todo · 待办引擎 + 通知网关
+// ============================================================
+
+enum TodoSource {
+  MANUAL
+  BILL
+  ANNIVERSARY
+  WORK
+  PREGNANCY
+  TRAVEL
+}
+
+enum TodoPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TodoStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+  OVERDUE
+}
+
+/** 清单类型：个人清单只有自己看得见；共享清单的成员都能看、都能勾 */
+enum TodoListKind {
+  PERSONAL
+  SHARED
+}
+
+enum TodoListRole {
+  OWNER
+  MEMBER
+}
+
+model Todo {
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String?
+  source      TodoSource   @default(MANUAL)
+  // 来源业务记录标识（如 anniversary:12），用于跳回原平台与幂等去重
+  sourceBizId String?
+  priority    TodoPriority @default(MEDIUM)
+  dueTime     DateTime?
+  // 提醒规则：[{ "offsetDays": 7, "time": "09:00" }, ...]
+  remindRules Json?
+  status      TodoStatus   @default(PENDING)
+  ownerId     Int
+  // 归属清单。为空 = 未归类（收件箱）。清单删除时置空，不连带删待办
+  listId      Int?
+  // 图片地址数组：图床 URL 或本地 /api/... 读取地址
+  images      Json?
+  // 清单内手动排序位（同清单内从小到大）
+  sort        Int          @default(0)
+  // 幂等键：触发日期（source + sourceBizId + triggerDate 唯一，重复触发自动忽略）
+  triggerDate DateTime?    @db.Date
+  // 稍后提醒：在此时间之前不派发提醒（snooze）
+  snoozeUntil DateTime?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  owner      User        @relation(fields: [ownerId], references: [id])
+  list       TodoList?   @relation(fields: [listId], references: [id], onDelete: SetNull)
+  notifyLogs NotifyLog[]
+
+  @@unique([source, sourceBizId, triggerDate])
+  @@index([ownerId, status, dueTime])
+  @@index([listId, status, dueTime])
+  @@map("todo")
+}
+
+/**
+ * 清单（归类容器）：日常待办、购物清单这类分组。
+ *
+ * 与账单的「账本」是同一个思路：owner 拥有，SHARED 类型再挂成员，
+ * 成员之间共享同一批待办（谁买了谁勾掉）。
+ */
+model TodoList {
+  id        Int          @id @default(autoincrement())
+  name      String
+  // emoji 图标，纯展示
+  icon      String?
+  color     String?
+  kind      TodoListKind @default(PERSONAL)
+  ownerId   Int
+  sort      Int          @default(0)
+  archived  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  owner   User             @relation(fields: [ownerId], references: [id])
+  members TodoListMember[]
+  todos   Todo[]
+
+  @@index([ownerId, archived, sort])
+  @@map("todo_list")
+}
+
+model TodoListMember {
+  id        Int          @id @default(autoincrement())
+  listId    Int
+  userId    Int
+  role      TodoListRole @default(MEMBER)
+  createdAt DateTime     @default(now())
+
+  list TodoList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, userId])
+  @@map("todo_list_member")
+}
+
+enum NotifyStatus {
+  PENDING // 待发送（入队）
+  SENT
+  FAILED // 失败，等待重试（超过重试上限则终态）
+}
+
+/**
+ * 通知发送记录：所有渠道（企微/微信/邮件）统一走这里落库。
+ * dedupeKey 唯一做幂等——同一个提醒在同一天重复扫描不会重复发。
+ */
+model NotifyLog {
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  todoId      Int?
+  channel     NotifyChannelType
+  title       String
+  content     String
+  dedupeKey   String?           @unique
+  status      NotifyStatus      @default(PENDING)
+  retryCount  Int               @default(0)
+  nextRetryAt DateTime?
+  lastError   String?
+  sentAt      DateTime?
+  createdAt   DateTime          @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todo Todo? @relation(fields: [todoId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, nextRetryAt])
+  @@map("notify_log")
+}
+
+enum NotifyChannelType {
+  WECOM // 企业微信应用消息
+  WX // 微信（预留）
+  MAIL // 邮件
+}
+
+model NotifyChannel {
+  id      Int               @id @default(autoincrement())
+  userId  Int
+  type    NotifyChannelType
+  // WECOM: { toUser }（缺省取 user.wecomId）；MAIL: { to }（缺省取 user.email）
+  config  Json
+  enabled Boolean           @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@map("notify_channel")
+}
+
+/**
+ * 全局设置（键值对）：门户界面可改的服务端参数，如企业微信应用三件套。
+ * 环境变量仍是兜底 —— 库里没配才读 env，界面保存后即时生效（带短缓存）。
+ */
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("setting")
+}
+
+/**
+ * 操作日志：各应用在保存、修改、删除时写一条。
+ * 门户的日志管理按 app 筛选；失败不影响原来的保存。
+ */
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  app       String
+  action    String
+  target    String   @default("")
+  targetId  String?
+  summary   String
+  actorId   Int?
+  actorName String?
+  createdAt DateTime @default(now())
+
+  @@index([app, createdAt])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ============================================================
+// 3. anniversary · 纪念日平台
+// ============================================================
+
+enum CalendarType {
+  LUNAR
+  SOLAR
+}
+
+enum AnniversaryType {
+  BIRTHDAY
+  MARRIAGE
+  PROPOSAL
+  COUNTDOWN // 倒数日：从某一天起算已经过了多少天，不按年重复
+  OTHER
+}
+
+model Anniversary {
+  id         Int             @id @default(autoincrement())
+  name       String
+  type       AnniversaryType @default(OTHER)
+  // SOLAR：公历日期；LUNAR：农历日期（每年由 lunar-javascript 换算）
+  date       DateTime        @db.Date
+  calendar   CalendarType    @default(SOLAR)
+  ownerId    Int
+  // 提前提醒天数，可多个（如 [30, 7, 3, 1, 0]）
+  remindDays Int[]
+  remindTime String? // 当天推送时点 "09:00"
+  note       String?
+  icon       String?
+  /// 背景。图库条目是 `gallery:<id>`，纯色是 `gradient:<id>`，自己上传的是图床原图地址
+  background String?
+  /// 农历闰月。公历纪念日忽略
+  lunarLeap  Boolean         @default(false)
+  /// 农历月、日。公历纪念日留空；DATE 列放不下「二月三十」这种农历日，所以拆开存
+  lunarMonth Int?
+  lunarDay   Int?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  bills AnniversaryBill[]
+
+  @@index([ownerId])
+  @@map("anniversary")
+}
+
+/// 纪念日关联的账单。每年买的东西不一样，所以一条纪念日可以挂多笔。
+model AnniversaryBill {
+  id            Int         @id @default(autoincrement())
+  anniversaryId Int
+  /// 这笔对应哪一年。不填就只当一条链接
+  year          Int?
+  label         String
+  href          String
+  sort          Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  anniversary Anniversary @relation(fields: [anniversaryId], references: [id], onDelete: Cascade)
+
+  @@index([anniversaryId])
+  @@map("anniversary_bill")
+}
+
+// ============================================================
+// 3. work · 工作平台
+// ============================================================
+
+enum ProjectStatus {
+  PREPARING
+  RUNNING
+  PAUSED
+  DONE
+}
+
+enum NodeStatus {
+  PENDING
+  DONE
+  DELAYED
+}
+
+enum IssueStatus {
+  OPEN
+  RESOLVING
+  RESOLVED
+}
+
+enum IssueKind {
+  BUG
+  IMPROVEMENT
+}
+
+enum WorkPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum WorkPhaseKind {
+  BUSINESS
+  DEV
+  SIT
+  UAT
+  PRELAUNCH
+  LIVE
+}
+
+model WorkProject {
+  id          Int           @id @default(autoincrement())
+  name        String
+  code        String?
+  status      ProjectStatus @default(PREPARING)
+  startDate   DateTime?     @db.Date
+  endDate     DateTime?     @db.Date
+  ownerId     Int
+  /// 项目经理。导入的项目人是系统外人员、没有账号，这里单独留名字
+  managerName String?
+  description String?
+  /// 实际进度，由各启用阶段的实际进度汇总。预期进度不落库
+  progress    Int           @default(0) // 0-100
+  priority    WorkPriority  @default(MEDIUM)
+  /// 当前阶段。每个项目的阶段日期和人员各自配置
+  phase       WorkPhaseKind @default(BUSINESS)
+  /// 计划上线日
+  launchDate  DateTime?     @db.Date
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  nodes   WorkNode[]
+  members WorkMember[]
+  issues  WorkIssue[]
+  phases  WorkPhase[]
+
+  @@index([ownerId, status])
+  @@map("work_project")
+}
+
+model WorkNode {
+  id         Int        @id @default(autoincrement())
+  projectId  Int
+  name       String
+  planDate   DateTime   @db.Date
+  actualDate DateTime?  @db.Date
+  status     NodeStatus @default(PENDING)
+  ownerId    Int?
+
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, planDate])
+  @@map("work_node")
+}
+
+/// 项目预设的参加人员。多数不是系统用户，只留手填的名字；
+/// 名字碰巧对上某个账号时会记下 userId，方便数据范围判断。
+model WorkMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int?
+  name      String
+  role      String?
+  ratio     Int      @default(100) // 投入比例 %
+
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([userId])
+  @@map("work_member")
+}
+
+model WorkIssue {
+  id          Int         @id @default(autoincrement())
+  projectId   Int
+  description String
+  impact      String?
+  solution    String?
+  status      IssueStatus @default(OPEN)
+  kind        IssueKind   @default(BUG)
+  ownerId     Int?
+  /// 谁来处理，手填名字，不绑系统账号
+  handler     String?
+  nodeId      Int?
+  /// 挂在哪个阶段。六个阶段都可以
+  phaseId     Int?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project WorkProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@map("work_issue")
+}
+
+/// 项目自己的阶段配置。六个阶段都有一行，关掉的不出现在清单里。
+model WorkPhase {
+  id           Int           @id @default(autoincrement())
+  projectId    Int
+  kind         WorkPhaseKind
+  enabled      Boolean       @default(true)
+  startDate    DateTime?     @db.Date
+  endDate      DateTime?     @db.Date
+  /// SIT / UAT 研发进入的时间。其他阶段不用
+  devEnterDate DateTime?     @db.Date
+  /// 这个阶段自己的实际进度。预期进度按本阶段日期现算
+  progress     Int           @default(0)
+  sort         Int           @default(0)
+
+  project WorkProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members WorkPhaseMember[]
+
+  @@unique([projectId, kind])
+  @@index([projectId, sort])
+  @@map("work_phase")
+}
+
+/// 阶段上的人。userId 为空就是系统外的人，只留名字。
+model WorkPhaseMember {
+  id        Int       @id @default(autoincrement())
+  phaseId   Int
+  userId    Int?
+  name      String
+  role      String?
+  startDate DateTime? @db.Date
+  endDate   DateTime? @db.Date
+  ratio     Int       @default(100)
+
+  phase WorkPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  @@index([phaseId])
+  @@index([userId])
+  @@map("work_phase_member")
+}
+
+// ============================================================
+// 3. pregnancy · 孕期待办
+// ============================================================
+
+enum PregStage {
+  EARLY // 孕早期
+  MID // 孕中期
+  LATE // 孕晚期
+  POSTPARTUM // 产后
+}
+
+model Pregnancy {
+  id          Int       @id @default(autoincrement())
+  lmpDate     DateTime  @db.Date // 末次月经
+  dueDate     DateTime  @db.Date // 预产期
+  currentWeek Int       @default(0)
+  stage       PregStage @default(EARLY)
+  ownerId     Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  nodes     PregNode[]
+  medicines PregMedicine[]
+  dailies   PregDaily[]
+  checkups  PregCheckup[]
+  bagItems  PregBagItem[]
+
+  @@map("pregnancy")
+}
+
+model PregNode {
+  id          Int       @id @default(autoincrement())
+  pregnancyId Int
+  name        String
+  week        Int?
+  planDate    DateTime? @db.Date
+  done        Boolean   @default(false)
+  note        String?
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId, planDate])
+  @@map("preg_node")
+}
+
+model PregMedicine {
+  id          Int       @id @default(autoincrement())
+  pregnancyId Int
+  name        String
+  dosage      String?
+  startDate   DateTime? @db.Date
+  endDate     DateTime? @db.Date
+  freq        String? // 服药频次，如 "每日2次"
+  category    String? // 叶酸/钙片/铁剂...
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@map("preg_medicine")
+}
+
+model PregDaily {
+  id            Int      @id @default(autoincrement())
+  pregnancyId   Int
+  date          DateTime @db.Date
+  week          Int?
+  weight        Decimal? @db.Decimal(5, 2)
+  bloodPressure String?
+  bloodSugar    Decimal? @db.Decimal(5, 2)
+  symptom       String?
+  mood          String?
+  note          String?
+  photos        Json?
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@unique([pregnancyId, date])
+  @@map("preg_daily")
+}
+
+model PregCheckup {
+  id          Int      @id @default(autoincrement())
+  pregnancyId Int
+  date        DateTime @db.Date
+  items       String?
+  result      String?
+  attachments Json?
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@map("preg_checkup")
+}
+
+model PregBagItem {
+  id          Int     @id @default(autoincrement())
+  pregnancyId Int
+  category    String // 证件/妈妈/宝宝/其他
+  name        String
+  packed      Boolean @default(false)
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@map("preg_bag_item")
+}
+
+// ============================================================
+// 3. travel · 旅行平台
+// ============================================================
+
+enum CityStatus {
+  VISITED
+  WISHLIST
+}
+
+model TravelCity {
+  id         Int        @id @default(autoincrement())
+  name       String
+  country    String     @default("中国")
+  status     CityStatus @default(WISHLIST)
+  visits     Int        @default(0)
+  firstVisit DateTime?  @db.Date
+  lastVisit  DateTime?  @db.Date
+  ownerId    Int
+  geo        Json? // { "lat": ..., "lng": ... }
+
+  trips TravelTrip[]
+
+  @@index([ownerId, status])
+  @@map("travel_city")
+}
+
+model TravelTrip {
+  id          Int       @id @default(autoincrement())
+  cityId      Int?
+  title       String
+  startDate   DateTime  @db.Date
+  endDate     DateTime  @db.Date
+  companions  String?
+  cost        Decimal?  @db.Decimal(12, 2)
+  albumPath   String?
+  /// 封面。图库条目是 `gallery:<id>`，纯色是 `gradient:<id>`，
+  /// 否则是引用飞牛相册的相对路径（见 TravelPhoto.nasPath）
+  cover       String?
+  /// 时间轴上的一句话摘要
+  summary     String?
+  /// 日记正文（纯文本，保留换行）
+  content     String?
+  shareToken  String?   @unique
+  shareExpiry DateTime?
+  ownerId     Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  city   TravelCity?   @relation(fields: [cityId], references: [id])
+  stops  TravelStop[]
+  photos TravelPhoto[]
+
+  @@index([ownerId, startDate])
+  @@map("travel_trip")
+}
+
+/// 行程站点：地图上的自定义点标记。一个点可挂若干张引用的照片。
+/// photos 存的是相对 NAS_PHOTO_ROOT 的路径数组（引用，不复制文件）。
+model TravelStop {
+  id       Int       @id @default(autoincrement())
+  tripId   Int
+  name     String
+  lat      Float
+  lng      Float
+  stopDate DateTime? @db.Date
+  note     String?
+  photos   Json?
+  sort     Int       @default(0)
+
+  trip TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, sort])
+  @@map("travel_stop")
+}
+
+/// 行程照片。nasPath 是相对 NAS_PHOTO_ROOT 的路径 —— 只引用飞牛相册里的图，
+/// 不把文件复制进本应用。展示统一走 /api/media/photo?path=... 代理。
+model TravelPhoto {
+  id      Int       @id @default(autoincrement())
+  tripId  Int
+  nasPath String
+  takenAt DateTime?
+  geo     Json?
+  caption String?
+  sort    Int       @default(0)
+
+  trip TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, sort])
+  @@map("travel_photo")
+}
+
+// ============================================================
+// 4. bill · 账单模块（P4：由 cash-platform 的 SQLite 迁移而来）
+// ============================================================
+// 来源：cash-platform/server/data/ledger.db（24,843 条交易 / 97 个账户 / 69 个分类）
+// 迁移：scripts/migrate-bills.ts     对账基准：amountCents 合计 1,685,653,649 分
+//
+// 两条硬约定：
+//   1. 金额一律用「整数分」（*Cents: Int）。原库就是整数分，迁移零精度损失；
+//      不要改成浮点，也不要和 Decimal 混算。
+//   2. occurredAt 是记账当时的本地时间（Asia/Shanghai），迁移按 +08 解释。
+//
+// 外键一律用标量字段 + 索引（与 Anniversary / WorkProject 同风格），不声明 @relation：
+// 迁移可乱序写入，且各模块之间互不耦合。
+// ============================================================
+
+enum BillAccountKind {
+  ALIPAY
+  BANK
+  CASH
+  CREDIT // 信用卡（源库 accounts.kind 存在该值）
+  JD
+  OTHER
+  WECHAT
+}
+
+enum BillCategoryKind {
+  EXPENSE
+  INCOME
+}
+
+enum BillBookKind {
+  PERSONAL // 个人账本
+  FAMILY // 家庭账本
+  TRAVEL // 出游账本（共享）
+  AA // AA 账本
+}
+
+enum BillTxType {
+  EXPENSE
+  INCOME
+  TRANSFER
+}
+
+enum BillTxSource {
+  MANUAL
+  ALIPAY
+  WECHAT
+  CMB // 招商银行
+  JD // 京东
+  QIANJI // 钱迹
+  CUSTOM
+  RECURRING
+}
+
+/// 后续动作：账单需要跟进的事项，产生待办的核心驱动
+enum BillFollowAction {
+  NONE
+  REFUND // 待退款
+  REIMBURSE // 待报销
+  WARRANTY // 待保修
+  REVIEW // 待评价
+  RECEIVE // 待收货
+}
+
+enum BillFollowStatus {
+  NONE
+  PENDING // 待处理
+  PROCESSING // 处理中
+  DONE // 已完成
+  ABANDONED // 已放弃
+}
+
+/// 账户：现金 / 银行卡 / 支付宝 / 微信 / 京东等
+model BillAccount {
+  id           Int             @id @default(autoincrement())
+  ownerId      Int
+  name         String
+  kind         BillAccountKind
+  /// 账户初始余额（分）
+  initialCents Int             @default(0)
+  sort         Int             @default(0)
+  archived     Boolean         @default(false)
+  /// 归属于哪个统一账户（null = 自己就是统一账户）
+  mergedInto   Int?
+  /// 源库后补的列，绝大多数行为 NULL，不做默认值以保持原样
+  createdAt    DateTime?
+
+  @@index([ownerId])
+  @@map("bill_account")
+}
+
+/// 分类（两级，靠 parentId 自引用）
+model BillCategory {
+  id       Int              @id @default(autoincrement())
+  ownerId  Int
+  name     String
+  parentId Int?
+  kind     BillCategoryKind
+  sort     Int              @default(0)
+  archived Boolean          @default(false)
+
+  @@unique([ownerId, kind, name])
+  @@index([ownerId])
+  @@map("bill_category")
+}
+
+/// 账本：每个用户一个个人账本，另有出游 / 家庭 / AA 账本
+model BillBook {
+  id            Int          @id @default(autoincrement())
+  ownerId       Int
+  name          String
+  kind          BillBookKind @default(PERSONAL)
+  shareToken    String?      @unique
+  shareEnabled  Boolean      @default(false)
+  /// 分享链接是否允许补账（默认只读）
+  shareWritable Boolean      @default(false)
+  /// 是否开启 AA 平摊（出游/家庭账本可以只记账不算账）
+  aaEnabled     Boolean      @default(false)
+  archived      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
+  @@map("bill_book")
+}
+
+model BillBookMember {
+  id        Int      @id @default(autoincrement())
+  bookId    Int
+  userId    Int
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  @@unique([bookId, userId])
+  @@index([userId])
+  @@map("bill_book_member")
+}
+
+/// 账本参与人：AA / 出游账本先预设「都有谁」，记账时选付款人、平摊按这批人算
+model BillBookParticipant {
+  id        Int      @id @default(autoincrement())
+  bookId    Int
+  name      String
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([bookId, name])
+  @@index([bookId])
+  @@map("bill_book_participant")
+}
+
+/// 账单流水。amountCents 单位：分（整数，禁止浮点）
+model BillTransaction {
+  id              Int          @id @default(autoincrement())
+  ownerId         Int
+  bookId          Int?
+  type            BillTxType
+  /// 金额（分）
+  amountCents     Int
+  accountId       Int?
+  toAccountId     Int?
+  categoryId      Int?
+  /// 原始分类文本（导入时银行/平台给的，未必能对上分类表）
+  categoryLabel   String?
+  /// 记账时点的本地时间（Asia/Shanghai）
+  occurredAt      DateTime
+  payee           String?
+  note            String?
+  /// 账本内付款人姓名
+  memberName      String?
+  /// 这笔账单由哪些人分摊（JSON 数组）。null = 走老规矩全员平分
+  shareWith       Json?
+  source          BillTxSource @default(MANUAL)
+  /// 外部唯一标识（导入去重用）
+  externalId      String?
+  recurringRuleId Int?
+  createdAt       DateTime     @default(now())
+
+  // ---------- 后续动作 → 待办（本模块的核心增量）----------
+  /// 需要跟进的动作：退款 / 报销 / 保修 / 评价 / 收货
+  followAction BillFollowAction @default(NONE)
+  followStatus BillFollowStatus @default(NONE)
+  /// 退款（或报销）到账金额（分），支持部分退款
+  refundCents  Int?
+  refundedAt   DateTime?
+  followNote   String?
+  /// 是否计入收支合计。默认计入；取消后这笔不进支出/收入汇总，并生成待办
+  countExpense Boolean @default(true)
+
+  // 导入去重：externalId 为 null 时不参与唯一约束（PG 语义与源库的 partial unique index 一致）
+  @@unique([ownerId, source, externalId])
+  @@index([ownerId, occurredAt])
+  @@index([ownerId, type, amountCents, occurredAt])
+  @@index([bookId, occurredAt])
+  @@index([ownerId, followStatus])
+  @@map("bill_transaction")
+}
+
+model BillTransactionImage {
+  id            Int      @id @default(autoincrement())
+  transactionId Int
+  url           String
+  sort          Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([transactionId])
+  @@map("bill_transaction_image")
+}
+
+/// 定期账单规则
+model BillRecurringRule {
+  id           Int        @id @default(autoincrement())
+  ownerId      Int
+  bookId       Int?
+  type         BillTxType
+  amountCents  Int
+  accountId    Int
+  toAccountId  Int?
+  categoryId   Int?
+  payee        String?
+  note         String?
+  /// daily / weekly / monthly / yearly / interval
+  frequency    String
+  intervalDays Int?
+  weekdays     String?
+  monthDay     Int?
+  yearMonth    Int?
+  yearDay      Int?
+  startDate    DateTime   @db.Date
+  endDate      DateTime?  @db.Date
+  time         String     @default("09:00")
+  nextRun      DateTime?
+  paused       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@index([ownerId])
+  @@map("bill_recurring_rule")
+}
+
+/// 账户别名：导入时把「某某银行」映射到具体账户
+model BillAccountAlias {
+  id        Int    @id @default(autoincrement())
+  ownerId   Int
+  alias     String
+  accountId Int
+
+  @@unique([ownerId, alias])
+  @@map("bill_account_alias")
+}
+
+model BillCategoryAlias {
+  id         Int              @id @default(autoincrement())
+  ownerId    Int
+  kind       BillCategoryKind
+  alias      String
+  categoryId Int
+
+  @@unique([ownerId, kind, alias])
+  @@map("bill_category_alias")
+}
+
+/// 自动分类规则：账单的对方/备注里含这个关键词，就归到这个分类
+model BillCategoryRule {
+  id         Int      @id @default(autoincrement())
+  ownerId    Int
+  keyword    String
+  categoryId Int
+  createdAt  DateTime @default(now())
+
+  @@unique([ownerId, keyword])
+  @@index([ownerId])
+  @@map("bill_category_rule")
+}
+
+/// 转账规则：账单里出现某个关键词/正则，就当成「自己账户 → 自己账户」的转账
+model BillTransferRule {
+  id              Int      @id @default(autoincrement())
+  ownerId         Int
+  label           String
+  pattern         String
+  isRegex         Boolean  @default(false)
+  /// 目标账户（null = 只判类型、不指定去向）
+  targetAccountId Int?
+  enabled         Boolean  @default(true)
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([ownerId])
+  @@map("bill_transfer_rule")
+}
+
+/// 招商银行 PDF 乱码修正：错误解码的片段 → 正确文本
+model BillCmbTextFix {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  garbled   String
+  correct   String
+  enabled   Boolean  @default(true)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+  @@map("bill_cmb_text_fix")
+}
+
+model BillDuplicateIgnore {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  pairKey   String
+  createdAt DateTime @default(now())
+
+  @@unique([ownerId, pairKey])
+  @@map("bill_duplicate_ignore")
+}
+
+model BillImportTemplate {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  name      String
+  mapping   Json
+  createdAt DateTime @default(now())
+
+  @@map("bill_import_template")
+}
+
+/// 导入草稿（解析结果暂存，等待用户确认）
+model BillImportDraft {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  source    String
+  filename  String?
+  payload   Json
+  createdAt DateTime
+
+  @@map("bill_import_draft")
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@nas/anniversary",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3212",
+    "build": "next build",
+    "start": "next start -p 3212",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nas/auth": "*",
+    "@nas/core": "*",
+    "@nas/db": "*",
+    "@nas/media": "*",
+    "@nas/notify": "*",
+    "@nas/todo": "*",
+    "@nas/ui": "*",
+    "lunar-javascript": "^1.7.3",
+    "next": "^15.5.4",
+    "next-auth": "5.0.0-beta.29",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "tailwindcss": "^4.1.14",
+    "eslint-config-next": "^15.5.4"
+  }
+}

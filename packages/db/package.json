@@ -1,0 +1,28 @@
+{
+  "name": "@nas/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate --schema prisma/schema.prisma",
+    "migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts",
+    "migrate:users": "tsx --env-file=../../.env scripts/migrate-users.ts",
+    "migrate:bills": "tsx --env-file=../../.env scripts/migrate-bills.ts",
+    "verify:all": "tsx --env-file=../../.env scripts/verify-bills.ts",
+    "repair:dates": "tsx --env-file=../../.env scripts/repair-dates.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.3"
+  },
+  "devDependencies": {
+    "bcryptjs": "^3.0.2",
+    "prisma": "^6.16.3"
+  }
+}

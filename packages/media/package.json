@@ -1,0 +1,16 @@
+{
+  "name": "@nas/media",
+  "version": "0.1.0",
+  "private": true,
+  "description": "图床与背景图库。账单上传和纪念日背景共用这一份。",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./catalog": "./src/catalog.ts",
+    "./portal-covers": "./src/portal-covers.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
