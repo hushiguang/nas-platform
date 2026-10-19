@@ -48,6 +48,21 @@ RUN case "${APP}" in \
     esac \
  && npm run build -w "$WS"
 
+# Next 15.5 的 standalone 追踪会漏掉 cache-dir.js 运行时依赖的 is-docker
+# （它是个只有 package.json + index.js 的目录，追踪解析不到），
+# 表现为容器一启动就报：
+#   Error: Cannot find module 'next/dist/compiled/is-docker'
+# 显式补进 standalone 产物。上游若已修复，这一步只是幂等覆盖；
+# 若目录已不存在，也只是跳过，不让构建挂掉。
+RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist/compiled" \
+ && mkdir -p "$SND" \
+ && if [ -d node_modules/next/dist/compiled/is-docker ]; then \
+      cp -r node_modules/next/dist/compiled/is-docker "$SND/"; \
+      echo "已补齐 is-docker 到 standalone 产物"; \
+    else \
+      echo "next/dist/compiled/is-docker 不存在，跳过（上游可能已修复）"; \
+    fi
+
 # ---------------------------------------------------------------- 运行层
 FROM base AS runner
 ARG APP
