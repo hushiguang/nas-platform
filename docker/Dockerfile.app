@@ -48,20 +48,35 @@ RUN case "${APP}" in \
     esac \
  && npm run build -w "$WS"
 
-# Next 15.5 的 standalone 追踪会漏掉 cache-dir.js 运行时依赖的 is-docker
-# （它是个只有 package.json + index.js 的目录，追踪解析不到），
-# 表现为容器一启动就报：
-#   Error: Cannot find module 'next/dist/compiled/is-docker'
-# 显式补进 standalone 产物。上游若已修复，这一步只是幂等覆盖；
-# 若目录已不存在，也只是跳过，不让构建挂掉。
-RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist/compiled" \
- && mkdir -p "$SND" \
+# Next 15.5.27 的 standalone 文件追踪会漏拷部分 next 自带模块，容器一启动就报：
+#   Cannot find module 'next/dist/compiled/is-docker'          （cache-dir.js 依赖）
+#   Cannot find module '../../../lib/metadata/get-metadata-route'（filesystem.js 依赖）
+# 实测 filesystem.js 的 18 个相对依赖里只有 get-metadata-route 没被追踪到，
+# 属于 Next 的单点缺陷。lib + shared 合计才 4MB，整棵补齐最省事，
+# 也免得以后每冒出一个漏拷的模块就改一次 Dockerfile。
+# 补完在构建期做存在性自检：这类问题必须在这里暴露，而不是等容器启动崩溃。
+RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
+ && mkdir -p "$SND/lib" "$SND/shared" "$SND/compiled" \
+ && cp -r node_modules/next/dist/lib/. "$SND/lib/" \
+ && cp -r node_modules/next/dist/shared/. "$SND/shared/" \
  && if [ -d node_modules/next/dist/compiled/is-docker ]; then \
-      cp -r node_modules/next/dist/compiled/is-docker "$SND/"; \
-      echo "已补齐 is-docker 到 standalone 产物"; \
-    else \
-      echo "next/dist/compiled/is-docker 不存在，跳过（上游可能已修复）"; \
-    fi
+      mkdir -p "$SND/compiled/is-docker"; \
+      cp -r node_modules/next/dist/compiled/is-docker/. "$SND/compiled/is-docker/"; \
+    fi \
+ && APP="$APP" node -e '
+      const path = require("path");
+      const base = path.resolve("apps", process.env.APP, ".next/standalone/node_modules/next/dist");
+      const must = ["compiled/is-docker", "lib/metadata/get-metadata-route",
+                    "server/lib/router-utils/filesystem", "server/cache-dir"];
+      const missing = must.filter((m) => {
+        try { require.resolve(path.join(base, m)); return false; } catch { return true; }
+      });
+      if (missing.length) {
+        console.error("standalone 产物缺失 next 模块：" + missing.join(", "));
+        process.exit(1);
+      }
+      console.log("standalone 产物自检通过（next 运行时依赖齐全）");
+    '
 
 # ---------------------------------------------------------------- 运行层
 FROM base AS runner
