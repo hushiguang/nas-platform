@@ -6,19 +6,27 @@
 #   1) 仓库已在 NAS 上：        bash scripts/setup-fnos.sh
 #   2) 全新机器，直接跑本脚本： bash setup-fnos.sh   （脚本会自动 git clone）
 #
+# 目录规划（默认）：
+#   /vol1/1000/docker/nas-platform/
+#   ├── app/        代码（本仓库）
+#   ├── pgdata/     PostgreSQL 数据
+#   ├── bill/       账单票据照片（读写）
+#   ├── travel/     旅行相册（只读，把照片放这里）
+#   └── todo/       待办本地图片（没配图床时才用）
+#
 # 可用环境变量覆盖（可选）：
-#   REPO_URL    仓库地址，默认 https://github.com/hushiguang/nas-platform.git
-#   INSTALL_DIR 安装目录，默认 /vol1/1000/nas-platform
-#   PHOTO_DIR   照片/票据目录，默认 /vol1/1000/photos
-#   GIT_PROXY   克隆/拉取时走的代理，如 http://192.168.1.2:7890（国内克隆 GitHub 常用）
+#   REPO_URL      仓库地址，默认 https://github.com/hushiguang/nas-platform.git
+#   INSTALL_DIR   代码目录，默认 /vol1/1000/docker/nas-platform/app
+#   NAS_DATA_ROOT 数据根目录，默认 /vol1/1000/docker/nas-platform
+#   GIT_PROXY     克隆/拉取时走的代理，如 http://192.168.1.2:7890（国内克隆 GitHub 常用）
 #
 # 例：GIT_PROXY=http://192.168.1.2:7890 bash setup-fnos.sh
 #
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/hushiguang/nas-platform.git}"
-INSTALL_DIR="${INSTALL_DIR:-/vol1/1000/nas-platform}"
-PHOTO_DIR="${PHOTO_DIR:-/vol1/1000/photos}"
+NAS_DATA_ROOT="${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}"
+INSTALL_DIR="${INSTALL_DIR:-$NAS_DATA_ROOT/app}"
 GIT_PROXY="${GIT_PROXY:-}"
 
 c_bold=$'\033[1m'; c_cyan=$'\033[1;36m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
@@ -76,8 +84,8 @@ else
     echo "  密码不能为空，请重输。"
   done
 
-  read -rp "  数据库数据目录 [$INSTALL_DIR/pgdata]: " PG_DATA_DIR
-  PG_DATA_DIR="${PG_DATA_DIR:-$INSTALL_DIR/pgdata}"
+  read -rp "  数据根目录 [$NAS_DATA_ROOT]: " NAS_DATA_ROOT_INPUT
+  NAS_DATA_ROOT="${NAS_DATA_ROOT_INPUT:-$NAS_DATA_ROOT}"
 
   AUTH_SECRET="$(openssl rand -base64 32)"
   SERVICE_TOKEN="$(openssl rand -hex 24)"
@@ -87,9 +95,17 @@ else
   umask 077
   cat > .env <<EOF
 # 由 scripts/setup-fnos.sh 自动生成于 $(date '+%F %T')，请勿提交到仓库
+
+# 数据根目录：所有容器的持久化数据都在这下面，按应用分子目录
+#   <root>/pgdata  PostgreSQL 数据
+#   <root>/bill    账单票据照片（读写）
+#   <root>/travel  旅行相册（只读，把照片放这里）
+#   <root>/todo    待办本地图片（没配图床时才用）
+NAS_DATA_ROOT=${NAS_DATA_ROOT}
+
+# 数据库
 DATABASE_URL=postgresql://nas:${PG_PASSWORD}@localhost:5433/nas_platform
 PG_PASSWORD=${PG_PASSWORD}
-PG_DATA_DIR=${PG_DATA_DIR}
 
 NAS_ROOT_DOMAIN=${NAS_ROOT_DOMAIN}
 NAS_PUBLIC_PROTO=http
@@ -154,21 +170,30 @@ EOF
   log ".env 已生成：$INSTALL_DIR/.env"
 fi
 
-# 取 PG_DATA_DIR 用于建目录
-PG_DATA_DIR_VALUE="$(grep -E '^PG_DATA_DIR=' .env | tail -1 | cut -d= -f2-)"
-PG_DATA_DIR_VALUE="${PG_DATA_DIR_VALUE:-$INSTALL_DIR/pgdata}"
+# 取数据根目录用于建目录
+NAS_DATA_ROOT_VALUE="$(grep -E '^NAS_DATA_ROOT=' .env | tail -1 | cut -d= -f2-)"
+NAS_DATA_ROOT_VALUE="${NAS_DATA_ROOT_VALUE:-$NAS_DATA_ROOT}"
 
 # ---------------------------------------------------------------- 3. 准备挂载目录
 log "准备挂载目录"
-mkdir -p "$PG_DATA_DIR_VALUE"
-if ! chown -R 70:70 "$PG_DATA_DIR_VALUE" 2>/dev/null; then
-  sudo chown -R 70:70 "$PG_DATA_DIR_VALUE" 2>/dev/null \
-    || die "无法把 $PG_DATA_DIR_VALUE 的属主设为 70:70，请手动执行：sudo chown -R 70:70 '$PG_DATA_DIR_VALUE'"
-fi
-echo "  数据库目录就绪：$PG_DATA_DIR_VALUE（属主 70:70）"
+mkdir -p "$NAS_DATA_ROOT_VALUE"/{pgdata,bill,travel,todo}
 
-mkdir -p "$PHOTO_DIR" "$PHOTO_DIR/todo"
-echo "  照片/票据目录就绪：$PHOTO_DIR"
+# pgdata 属主必须是镜像里的 postgres 用户（uid 70），否则容器起不来
+if ! chown -R 70:70 "$NAS_DATA_ROOT_VALUE/pgdata" 2>/dev/null; then
+  sudo chown -R 70:70 "$NAS_DATA_ROOT_VALUE/pgdata" 2>/dev/null \
+    || die "无法把 pgdata 的属主设为 70:70，请手动执行：sudo chown -R 70:70 '$NAS_DATA_ROOT_VALUE/pgdata'"
+fi
+
+# 容器内进程以 uid 1001 运行，给照片/票据目录放宽权限，方便上传
+chmod -R 775 "$NAS_DATA_ROOT_VALUE"/{bill,travel,todo} 2>/dev/null \
+  || sudo chmod -R 775 "$NAS_DATA_ROOT_VALUE"/{bill,travel,todo} 2>/dev/null \
+  || echo "  （提示：照片目录权限放宽失败，上传报错时手动执行 chmod -R 775）"
+
+echo "  数据根目录就绪：$NAS_DATA_ROOT_VALUE"
+echo "    ├── pgdata  (属主 70:70)"
+echo "    ├── bill    (账单票据)"
+echo "    ├── travel  (旅行相册，把照片放这里)"
+echo "    └── todo    (待办图片)"
 
 # ---------------------------------------------------------------- 4. 构建并启动
 log "构建并启动（默认串行构建，避免小内存 NAS 构建 OOM）"
@@ -179,15 +204,21 @@ docker compose up -d --build
 log "当前容器状态"
 docker compose ps || true
 
-cat <<'TIP'
+cat <<TIP
 
 ==================== 完成 ====================
-直连门户：http://<NAS_IP>:3210
-经反代：  http(s)://nav.<你的域名>（在 Lucky 上把各子域转发到 NAS_IP:321x）
+数据目录：$NAS_DATA_ROOT_VALUE
+  pgdata / bill / travel / todo
+
+访问门户：
+  直连：http://<NAS_IP>:3210
+  反代：http(s)://nav.<你的域名>（Lucky 上把各子域转发到 NAS_IP:321x）
 
 · 首次登录用 .env 里的 ADMIN_USERNAME / ADMIN_PASSWORD，登录后立刻改密码
+· 把旅行照片放进 $NAS_DATA_ROOT_VALUE/travel，应用会自动读取（只读引用）
 · 看迁移/种子结果：docker compose logs -f migrator
 · 看某个服务日志：docker compose logs -f portal
-· 更新代码后重部署：git pull && docker compose up -d --build
+· 更新代码后重部署：cd $INSTALL_DIR && git pull && docker compose up -d --build
 ==============================================
+
 TIP

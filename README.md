@@ -27,9 +27,30 @@ docs/         部署说明与迁移文档
 
 ## 快速开始
 
+**NAS（飞牛 fnOS）一键部署**：把 `scripts/setup-fnos.sh` 传到 NAS 上执行即可。
+它会检查 Docker、克隆代码、交互式生成 `.env`、建好数据目录并构建启动：
+
 ```bash
-cp .env.example .env      # 填 PG_PASSWORD / AUTH_SECRET / 域名 等
+bash setup-fnos.sh
+# 国内克隆 GitHub 慢的话带上代理：
+GIT_PROXY=http://192.168.1.2:7890 bash setup-fnos.sh
+```
+
+**手动部署**：
+
+```bash
+cp .env.example .env      # 填 NAS_DATA_ROOT / PG_PASSWORD / AUTH_SECRET / 域名 等
 ./scripts/deploy.sh       # 构建并启动（等价于 docker compose up -d --build）
+```
+
+数据目录（默认 `/vol1/1000/docker/nas-platform`，见 `.env` 的 `NAS_DATA_ROOT`）：
+
+```
+├── app/       代码
+├── pgdata/    PostgreSQL 数据
+├── bill/      账单票据照片
+├── travel/    旅行相册（把照片放这里）
+└── todo/      待办本地图片
 ```
 
 打开门户：直连 `http://<NAS_IP>:3210`，或经 Lucky 子域名访问 `http(s)://nav.<你的域名>`。

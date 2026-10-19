@@ -10,6 +10,9 @@
 #
 # 首次启动会自动跑迁移与种子（migrator 服务，幂等）。
 #
+# 持久化数据统一收在 NAS_DATA_ROOT（见 .env，默认 /vol1/1000/docker/nas-platform）
+# 下，按应用分子目录：pgdata / bill / travel / todo。
+#
 # 对外反代：各应用各自监听独立端口（3210-3216），由外部反代（如 Lucky）按
 # 子域名分发，本文件不再内置 nginx 网关。SSO 仍靠 AUTH_COOKIE_DOMAIN=.<root>。
 # 详细部署步骤与域名解析见 docs/部署说明.md
@@ -79,7 +82,7 @@ services:
       <<: *app-env
     volumes:
       # 没配图床时待办图片落这里（配了图床就不会用到）。独立子目录，别和账单票据混
-      - /vol1/1000/photos/todo:/data/uploads/todo
+      - ${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/todo:/data/uploads/todo
     ports:
       - "3216:3000"
     depends_on:
@@ -98,7 +101,7 @@ services:
       NAS_PHOTO_ROOT: /data/photos
     volumes:
       # 票据照片。账单上传的图存这里，容器重建不丢
-      - /vol1/1000/photos:/data/photos
+      - ${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/bill:/data/photos
     ports:
       - "3211:3000"
     depends_on:
@@ -162,7 +165,7 @@ services:
       NAS_PHOTO_ROOT: /data/photos
     volumes:
       # 相册目录只读挂载：旅行应用只读照片，不往里写
-      - /vol1/1000/photos:/data/photos:ro
+      - ${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/travel:/data/photos:ro
     ports:
       - "3215:3000"
     depends_on:
@@ -222,11 +225,11 @@ services:
       TZ: Asia/Shanghai
     volumes:
       # 数据落在宿主机目录，方便直接在 NAS 上查看/备份/迁移。
-      # 飞牛上把它指到存储卷，例如 /vol1/1000/nas-platform/pgdata（见 .env 的 PG_DATA_DIR）。
+      # 默认落在 NAS_DATA_ROOT 下（见 .env），即 <root>/pgdata。
       # ⚠ 目录属主必须是镜像里的 postgres 用户（postgres:16-alpine 是 uid 70），
       #   否则容器启动会因权限被拒。首次部署前执行：
-      #     mkdir -p <PG_DATA_DIR> && chown -R 70:70 <PG_DATA_DIR>
-      - ${PG_DATA_DIR:-./pgdata}:/var/lib/postgresql/data
+      #     mkdir -p <root>/pgdata && chown -R 70:70 <root>/pgdata
+      - ${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nas -d nas_platform"]
       interval: 10s
