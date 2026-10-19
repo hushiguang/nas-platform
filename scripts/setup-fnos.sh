@@ -55,11 +55,11 @@ if [ -f "$SCRIPT_DIR/../docker-compose.yml" ]; then
   log "使用当前仓库：$INSTALL_DIR"
 elif [ -d "$INSTALL_DIR/.git" ]; then
   log "目录已存在，拉取最新代码：$INSTALL_DIR"
-  git -C "$INSTALL_DIR" "${gitc[@]}" pull --ff-only
+  git -C "$INSTALL_DIR" "${gitc[@]+"${gitc[@]}"}" pull --ff-only
 else
   log "克隆仓库到 $INSTALL_DIR"
   mkdir -p "$(dirname "$INSTALL_DIR")"
-  git "${gitc[@]}" clone "$REPO_URL" "$INSTALL_DIR"
+  git "${gitc[@]+"${gitc[@]}"}" clone "$REPO_URL" "$INSTALL_DIR"
 fi
 cd "$INSTALL_DIR"
 

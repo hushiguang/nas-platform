@@ -27,7 +27,7 @@ if [ "$#" -gt 0 ]; then
   echo "==> 重建服务: $*"
   docker compose up -d --build "$@"
 else
-  echo "==> 构建全部镜像（串行上限 $COMPOSE_PARALLEL_LIMIT）"
+  echo "==> 构建全部镜像（串行上限 ${COMPOSE_PARALLEL_LIMIT}）"
   docker compose build
   echo "==> 启动"
   docker compose up -d
