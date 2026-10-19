@@ -23,7 +23,11 @@ x-app-env: &app-env
   AUTH_SECRET: ${AUTH_SECRET}
   AUTH_TRUST_HOST: "true"
   # cookie 作用域默认由根域推导成 .<root> —— 门户登录一次，账单站直接认
-  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-.${NAS_ROOT_DOMAIN}}
+  # 用 ${VAR-默认} 而不是 ${VAR:-默认}：前者只在「未设置」时套用默认值，
+  # 后者会把「显式留空」也吃掉。而显式留空是有意义的场景 ——
+  # 直连 IP:3210 访问时必须留空，浏览器不接受 IP 主机上的 Domain cookie，
+  # 硬套 .<root> 会导致 cookie 存不下、登录报 MissingCSRF。
+  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN-.${NAS_ROOT_DOMAIN}}
   AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
   # 各应用地址默认按 NAS_ROOT_DOMAIN 拼出来，手工填了就以手工的为准。
   # 子域前缀可用 <APP>_SUBDOMAIN 覆盖（例如 ANNIVERSARY_SUBDOMAIN=birthday）。
