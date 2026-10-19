@@ -40,27 +40,61 @@ resolve_db_url() {
   die "没找到连接串：请设 DB_URL，或在仓库根目录 .env 里配 DATABASE_URL。"
 }
 
-# pg_dump 版本必须 >= 目标库（PG16），否则高版本库无法用老 pg_dump 导出。
-local_pg_dump_ok() {
-  command -v pg_dump >/dev/null 2>&1 || return 1
-  local v; v="$(pg_dump --version | sed -nE 's/.* ([0-9]+)(\.[0-9]+)?.*/\1/p')"
-  [ -n "$v" ] && [ "$v" -ge 16 ] 2>/dev/null
+# pg_dump 版本必须 >= 服务端大版本，否则报 "server version mismatch"。
+# 不要再写死「16」：本地开发库可能是 17/18，NAS 目标库又是别的版本。
+server_major() {
+  local url="$1" num
+  command -v psql >/dev/null 2>&1 || { echo 16; return; }
+  num="$(psql "$url" -tAc 'show server_version_num' 2>/dev/null | tr -dc '0-9' | head -c6)"
+  [ -n "$num" ] || { echo 16; return; }
+  echo $(( num / 10000 ))
+}
+
+pg_dump_major() {
+  "$1" --version 2>/dev/null | sed -nE 's/.* ([0-9]+)\.[0-9]+.*/\1/p'
+}
+
+# 在若干常见位置里挑一个够新的 pg_dump。Homebrew 的 libpq 常年是较新的大版本
+# （pg_dump 只需要客户端库，比服务端 major 新即可），比拉 Docker 镜像轻得多，
+# 也不依赖能否连上 Docker Hub。
+find_pg_dump() {
+  local need="$1" cand major best="" bestmajor=0
+  for cand in \
+    "$(command -v pg_dump || true)" \
+    /opt/homebrew/opt/libpq/bin/pg_dump \
+    /usr/local/opt/libpq/bin/pg_dump \
+    /opt/homebrew/Cellar/libpq/*/bin/pg_dump \
+    /usr/local/Cellar/libpq/*/bin/pg_dump \
+    /opt/homebrew/Cellar/postgresql@*/*/bin/pg_dump \
+    /usr/local/Cellar/postgresql@*/*/bin/pg_dump
+  do
+    [ -x "$cand" ] || continue
+    major="$(pg_dump_major "$cand")"
+    [ -n "$major" ] || continue
+    if [ "$major" -ge "$need" ] && [ "$major" -gt "$bestmajor" ]; then
+      best="$cand"; bestmajor="$major"
+    fi
+  done
+  [ -n "$best" ] || return 1
+  echo "$best"
 }
 
 # ---------------------------------------------------------------- 1) 导出
 do_export() {
   local url; url="$(resolve_db_url)"
+  local smajor; smajor="$(server_major "$url")"
   log "导出本地开发库"
-  echo "  连接串：${url%%:*}://***@$(printf '%s' "$url" | sed -nE 's#.*@##p')"
+  echo "  服务端版本：PostgreSQL $smajor"
 
   local out="nas-migrate.sql.gz"
   rm -f "$out"
 
-  if local_pg_dump_ok; then
-    log "使用本机 pg_dump（$(pg_dump --version)）"
-    pg_dump "$url" --no-owner --no-privileges | gzip -9 > "$out"
+  local dump_bin; dump_bin="$(find_pg_dump "$smajor" || true)"
+  if [ -n "$dump_bin" ]; then
+    log "使用 pg_dump：${dump_bin}（$("${dump_bin}" --version)）"
+    "$dump_bin" "$url" --no-owner --no-privileges | gzip -9 > "$out"
   else
-    warn "本机没有 pg_dump 或版本 < 16，改用 postgres:16-alpine 容器导出"
+    warn "本机找不到 major >= $smajor 的 pg_dump，改用 postgres:${smajor}-alpine 容器导出"
     need docker
     # 容器内访问宿主机上的数据库要把 localhost 换成 host.docker.internal
     local u="$url"
@@ -70,7 +104,7 @@ do_export() {
     esac
     docker run --rm -i \
       --add-host=host.docker.internal:host-gateway \
-      postgres:16-alpine \
+      "postgres:${smajor}-alpine" \
       sh -c "pg_dump '$u' --no-owner --no-privileges" | gzip -9 > "$out"
   fi
 
