@@ -1,5 +1,11 @@
-node_modules
-.next
+# 注意：这里的模式必须带 **/ 才能覆盖子目录。写 .next 只匹配仓库根级，
+# apps/*/.next 完全不受影响 —— 而各应用残留的构建产物合计 1.5GB，
+# 既撑爆构建上下文，又会被 next 的 outputFileTracing（root 指向仓库根）全量扫描，
+# 直接把构建进程内存打穿（表现为 exit code 1 + JavaScript heap out of memory）。
+**/node_modules
+**/.next
+**/dist
+**/tsconfig.tsbuildinfo
 .git
 .env
 .env.*

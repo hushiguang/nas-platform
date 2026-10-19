@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
-/* Tailwind v4 默认只扫描本文件所在的目录，而这份样式被六个应用共用，
-   各应用页面里的类名扫不到就会被裁掉。这里显式把应用源码纳入扫描范围。 */
-@source "../../../apps/*/src";
+/* Tailwind v4 默认只扫描本文件所在的目录，而这份样式被七个应用共用，
+   各应用页面里的类名扫不到就会被裁掉。这里显式把应用源码纳入扫描范围。
+
+   必须逐个列举，不能用目录通配。通配写法里星号紧跟斜杠，
+   两者连在一起恰好构成 CSS 的注释结束符，会把紧邻的注释从中间截断，
+   产出一条没有闭合的残注释。下一步 cssnano 压缩时，commentParser
+   遇到孤立的注释起始符后找不到配对的结束符，游标回退形成死循环，
+   内部数组被无限 push 把堆吃光。最终报出来的是
+   "JavaScript heap out of memory" + webpack "Invalid array length"，
+   和编译错误、内存上限都毫无关系，纯属误判。
+   注释里出现「星号紧跟斜杠」的组合都会踩到，加新应用时继续按行补。 */
+@source "../../../apps/portal/src";
+@source "../../../apps/todo/src";
+@source "../../../apps/bill/src";
+@source "../../../apps/anniversary/src";
+@source "../../../apps/work/src";
+@source "../../../apps/pregnancy/src";
+@source "../../../apps/travel/src";
 @source "../src";
 
 /* ============================================================

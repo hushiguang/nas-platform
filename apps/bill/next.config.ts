@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
   // Prisma / bcrypt 不进打包，按原生 node_modules 引入（standalone 会追踪复制）。
   // xlsx / pdf-parse 同理：pdf-parse 内嵌了一整个 pdfjs，让 webpack 去打它会
   // 把构建拖到十分钟以上（实测卡住），只能在运行时从 node_modules 直接 require。
+  // 刻意不加 max-old-space-size / cpus 之类的「加内存」开关：
+  // 之前 bill 构建失败报 JavaScript heap out of memory，很容易被判成内存不够，
+  // 于是去调堆上限 —— 但 4096 / 6144 / 10240 / 12288 依次试过，都是同样报错。
+  // 真正的死因是 packages/ui/src/globals.css 里 @source 路径用了目录通配，
+  // 星号紧跟斜杠恰好构成 CSS 注释结束符，压缩时触发 cssnano commentParser 死循环，
+  // 与堆大小无关。已在那里逐条列举路径修掉，详见该文件注释。
   serverExternalPackages: [
     "@prisma/client",
     "prisma",
