@@ -162,8 +162,15 @@ do_import() {
     -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
 
   # 2.3 导入
+  # 高版本库导出的 dump 里会带目标库不认识的语法，必须滤掉，否则 ON_ERROR_STOP 会中断：
+  #   SET transaction_timeout  —— 该参数 PG17 才引入，目标若是 PG16 会报
+  #                              "unrecognized configuration parameter"
+  #   \restrict / \unrestrict  —— psql 17.6+/18 才有的元命令，老版本 psql 不认
+  # 滤掉是无害的：前者只是设置超时，后者只是导入期间的安全开关。
   log "导入数据"
-  gzip -dc "$dump" | docker compose exec -T postgres psql -U nas -d nas_platform -v ON_ERROR_STOP=1 -q
+  gzip -dc "$dump" \
+    | sed -E '/^SET transaction_timeout =/d; /^\\(restrict|unrestrict) /d' \
+    | docker compose exec -T postgres psql -U nas -d nas_platform -v ON_ERROR_STOP=1 -q
   log "导入完成"
 
   # 2.4 体检
