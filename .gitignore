@@ -30,6 +30,11 @@ backups/
 *.db-journal
 *.sqlite
 *.sqlite3
+# 数据库导出与导入备份，含全量真实数据
+*.sql.gz
+*.sql
+nas-migrate.sql.gz
+backup-before-import-*.sql.gz
 
 # 运行时上传（待办图片的本地兜底目录）。真实数据，不进仓库
 data/
