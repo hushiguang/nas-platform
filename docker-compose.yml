@@ -67,7 +67,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: portal }
+      args:
+        APP: portal
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -88,7 +93,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: todo }
+      args:
+        APP: todo
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -107,7 +117,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: bill }
+      args:
+        APP: bill
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -127,7 +142,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: anniversary }
+      args:
+        APP: anniversary
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -143,7 +163,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: work }
+      args:
+        APP: work
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -159,7 +184,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: pregnancy }
+      args:
+        APP: pregnancy
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -175,7 +205,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: travel }
+      args:
+        APP: travel
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -195,6 +230,11 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
+      args:
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -221,7 +261,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
-      args: { APP: portal }
+      args:
+        APP: portal
+        # Prisma 查询引擎不在 npm 包里，prisma generate 要联网下载。
+        # binaries.prisma.sh 在部分网络下不可达，指向可达的镜像即可；
+        # 留空则用官方源。
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
       target: builder
     environment:
       DATABASE_URL: postgresql://nas:${PG_PASSWORD}@postgres:5432/nas_platform

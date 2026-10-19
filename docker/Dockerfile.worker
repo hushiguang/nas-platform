@@ -20,8 +20,23 @@ COPY services/worker/package.json services/worker/
 RUN npm ci
 
 FROM deps AS runner
+# Prisma 的查询引擎不在 npm 包里，prisma generate 要从 binaries.prisma.sh 下载
+# 与当前平台匹配的二进制（这里是 linux-musl）。该站点在部分网络下不可达，
+# 构建就报：
+#   request to https://binaries.prisma.sh/.../libquery_engine.so.node.gz.sha256 failed
+# 这是纯网络问题，与代码无关。
+#
+# PRISMA_ENGINES_MIRROR 指向可达的镜像即可。留空则用官方源。
+# 国内可用：--build-arg PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
+ARG PRISMA_ENGINES_MIRROR=
+ENV PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR}
 COPY . .
-RUN npx prisma generate --schema packages/db/prisma/schema.prisma
+# 引擎缓存挂成 BuildKit cache：引擎有几十 MB，每次构建都重下既慢又依赖网络。
+# Prisma 自己在缓存路径里带了 binaryTarget（linux-musl / linux-x64 等），
+# 不同平台的二进制不会互相覆盖。
+# --mount=type=cache 需要 BuildKit，compose 默认走 buildx，无需额外配置。
+RUN --mount=type=cache,target=/root/.cache/prisma,sharing=locked \
+    npx prisma generate --schema packages/db/prisma/schema.prisma
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
