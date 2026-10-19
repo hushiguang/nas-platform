@@ -53,6 +53,10 @@ x-app-env: &app-env
   # 待办图片的本地兜底目录（没用图床时才走这里）
   TODO_UPLOAD_DIR: /data/uploads/todo
   TZ: Asia/Shanghai
+  # Docker 默认网络没有 IPv6。Node 解析主机名时可能先试 AAAA 记录，
+  # 回源图床（image.<root>）就会 ENETUNREACH，表现为全站图片裂开。
+  # 强制 IPv4 优先 —— 与 cash-ledger 的既有做法一致。
+  NODE_OPTIONS: ${NODE_OPTIONS:---dns-result-order=ipv4first}
 
 services:
   # ---------------------------------------------------------------- 门户
