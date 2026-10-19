@@ -13,6 +13,26 @@ import type { NextAuthConfig } from "next-auth";
  */
 export const SESSION_COOKIE = "nas.session";
 
+/**
+ * 回调地址 cookie 名。Auth.js 登录后用它记住「登录前想去哪」。
+ *
+ * 必须显式改名，不能沿用默认的 __Secure-authjs.callback-url ——
+ * 前缀名在 https 下要求 Secure，且 csrf 那个 __Host- 前缀还额外禁止
+ * 带 Domain 属性。而跨子域共享 cookie 就必须带 Domain。
+ * 两个要求互斥，只能放弃前缀。
+ */
+export const CALLBACK_URL_COOKIE = "nas.callback-url";
+
+/**
+ * CSRF token cookie 名。
+ *
+ * 默认名在 https 下是 __Host-authjs.csrf-token，而 __Host- 前缀**禁止**
+ * cookie 带 Domain 属性（浏览器会直接拒收，且不报错）。跨子域共享必须
+ * 带 Domain，所以必须改用不带前缀的自定义名。
+ * 带 Domain 却被拒的典型症状就是 MissingCSRF。
+ */
+export const CSRF_TOKEN_COOKIE = "nas.csrf-token";
+
 /** 会话有效期。家里自用，别让用户三天两头登录 */
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
@@ -61,13 +81,42 @@ export const authConfig = {
   pages: { signIn: "/login" },
   // 自部署场景 Host 由我们自己的反代/直连决定，没有第三方 Host 注入面
   trustHost: true,
+  // cookie 名与作用域。
+  //
+  // 三个 cookie 都必须**显式给 name**，不能只改 options。
+  //
+  // Auth.js 的默认名带前缀：session 是 __Secure-authjs.session-token，
+  // CSRF 更严，是 __Host-authjs.csrf-token。而前缀是浏览器强制校验的：
+  //   __Secure- 要求 Secure 属性；
+  //   __Host-  除了 Secure，还要求**不能有 Domain 属性**、Path 必须是 /。
+  // 只要给 __Host- 的 cookie 带上 Domain，浏览器会**直接拒收**它，不报错、不提示。
+  // 于是回调时服务端拿不到 CSRF token，报 MissingCSRF:
+  //   "CSRF token was missing during an action callback"
+  // 症状是「登录永远失败」，而日志里看不出任何 cookie 被拒的痕迹。
+  //
+  // 我们要跨子域共享 cookie，就必须加 Domain；加了 Domain 就不能再用
+  // __Host- 前缀。所以这里把三个名字都换成自己的、不带前缀的名字 ——
+  // 前缀带来的安全增益（防止子域越权写 cookie）在自建家用场景里
+  // 抵不过「登录完全不可用」的代价。
+  //
+  // sessionToken 的名字尤其不能省：SSE（Server-Sent Events）无法自定义
+  // header，Auth.js 只能把 token 放进名为 __Secure-authjs.session-token
+  // 的 cookie 里传给浏览器；改了名就得同步告诉 Auth.js，
+  // 否则 SSE 的流式响应根本收不到 session。
   cookies: {
     sessionToken: {
       name: SESSION_COOKIE,
       options: { domain: cookieDomain(), secure: useSecureCookies() },
     },
-    callbackUrl: { options: { domain: cookieDomain(), secure: useSecureCookies() } },
-    csrfToken: { options: { domain: cookieDomain(), secure: useSecureCookies() } },
+    // callbackUrl / csrfToken 同样要显式改名，且与 Auth.js 内部引用保持一致
+    callbackUrl: {
+      name: CALLBACK_URL_COOKIE,
+      options: { domain: cookieDomain(), secure: useSecureCookies() },
+    },
+    csrfToken: {
+      name: CSRF_TOKEN_COOKIE,
+      options: { domain: cookieDomain(), secure: useSecureCookies() },
+    },
   },
   callbacks: {
     authorized({ auth, request }) {

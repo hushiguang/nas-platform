@@ -9,7 +9,8 @@
     "./edge": "./src/edge.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:cookies": "node scripts/check-cookie-prefix.js"
   },
   "dependencies": {
     "@nas/core": "*",

@@ -29,7 +29,7 @@
     "start:pregnancy": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/pregnancy'",
     "start:travel": "sh -c 'set -a; . ./.env; set +a; exec npm run start -w @nas/travel'",
     "build:all": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present && npm run check:cookies -w @nas/auth"
   },
   "devDependencies": {
     "@types/node": "^22.18.8",

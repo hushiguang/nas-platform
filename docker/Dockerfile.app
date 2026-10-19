@@ -40,6 +40,10 @@ ARG APP
 COPY . .
 # Prisma 产物在包内 generated/，不生成的话类型和运行时都会缺
 RUN npx prisma generate --schema packages/db/prisma/schema.prisma
+# cookie 前缀校验：跨子域 SSO 要求 cookie 带 Domain，而 Auth.js 默认名带
+# __Host- 前缀（浏览器禁止 __Host- 带 Domain，会静默拒收 → MissingCSRF）。
+# 这类问题在运行期表现为「登录永远失败」且日志无线索，必须在构建期拦住。
+RUN npm run check:cookies -w @nas/auth
 # apps/todo 的工作区包名是 @nas/todo-app —— @nas/todo 已经被 packages/todo
 # 占用了（它是待办引擎，不是应用）。其余应用目录名与包名一致。
 RUN case "${APP}" in \
