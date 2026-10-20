@@ -147,9 +147,9 @@ export interface ProjectView {
   nodeTotal: number;
   nextLabel: string;
   nextDays: number | null;
-  /** 当前阶段的到期文案，按该阶段结束日算：UAT阶段 · 逾期 2 天 / 5 天后到期 / 未排期 / 已上线 */
+  /** 当前阶段的到期文案，按该阶段结束日算：UAT阶段 · 逾期 2 天 / 今天到期 / 5 天后到期 / 未排期 / 已上线 */
   phaseDueLabel: string;
-  /** 当前阶段逾期天数：未逾期、未排期、已上线都是 null */
+  /** 当前阶段逾期天数：未逾期（含当天到期）、未排期、已上线都是 null */
   phaseOverdue: number | null;
   delayed: number;
   draft: ProjectDraft;
@@ -179,7 +179,7 @@ export function nodeBizId(nodeId: number): string {
   return `work-node:${nodeId}`;
 }
 
-/** 当前阶段的到期文案。逾期天数按结束日和今天的差算，已上线或没排期不算逾期。 */
+/** 当前阶段的到期文案。结束日当天 23:59:59 前都算今天到期，不再算逾期；已上线或没排期不算逾期。 */
 export function phaseDueOf(
   phaseLabel: string,
   phase: WorkPhaseKind,
@@ -189,7 +189,8 @@ export function phaseDueOf(
   if (phase === "LIVE") return { label: `${phaseLabel} · 已上线`, overdue: null };
   if (!endDate) return { label: `${phaseLabel} · 未排期`, overdue: null };
   const late = dayDiff(endDate, today);
-  if (late <= 0) return { label: `${phaseLabel} · 逾期 ${late} 天`, overdue: late };
+  if (late < 0) return { label: `${phaseLabel} · 逾期 ${-late} 天`, overdue: late };
+  if (late === 0) return { label: `${phaseLabel} · 今天到期`, overdue: null };
   if (late === 1) return { label: `${phaseLabel} · 明天到期`, overdue: null };
   return { label: `${phaseLabel} · ${late} 天后到期`, overdue: null };
 }

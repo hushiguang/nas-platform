@@ -6,7 +6,7 @@
 // 边界：worker 只做**与业务应用无关**的事（待办扫描、提醒派发、通知重试）。
 // 业务应用自己的定时任务（比如账单的定期入账）由各应用自己实现，
 // worker 通过内部接口触发 —— 这样账单应用可以独立升级，worker 不用跟着改。
-import { callInternal, appBaseUrl, zonedDate } from "@nas/core";
+import { callInternal, internalAppBaseUrl, zonedDate } from "@nas/core";
 import { prisma } from "@nas/db";
 import { flushNotifyLogs, wecomWebhook } from "@nas/notify";
 import { dispatchTodoReminders, scanOverdueTodos } from "@nas/todo";
@@ -77,7 +77,7 @@ async function pushSummary() {
  * 应用没配置地址、或该应用容器没起来时返回 false —— 一个应用掉线不能拖垮整轮调度。
  */
 async function triggerAppJob(code: string, job: string): Promise<boolean> {
-  const base = appBaseUrl(code as never);
+  const base = internalAppBaseUrl(code as never);
   if (!base) return false;
   const result = await callInternal<{ ok?: boolean }>(`${base}/api/internal/job/${job}`, {
     method: "POST",

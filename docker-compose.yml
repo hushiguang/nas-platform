@@ -40,11 +40,28 @@ x-app-env: &app-env
   WORK_BASE_URL: ${WORK_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${WORK_SUBDOMAIN:-work}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
   PREGNANCY_BASE_URL: ${PREGNANCY_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${PREGNANCY_SUBDOMAIN:-pregnancy}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
   TRAVEL_BASE_URL: ${TRAVEL_BASE_URL:-${NAS_PUBLIC_PROTO:-http}://${TRAVEL_SUBDOMAIN:-travel}.${NAS_ROOT_DOMAIN}${NAS_PUBLIC_PORT:-}}
+  # 服务器之间（门户/worker → 各应用）调用走容器内网服务名，不走对外域名。
+  # 对外域名往往只有 AAAA 记录（IPv6），而 Docker 默认桥接网络只有 IPv4，
+  # 容器回源 https://work.<root> 会 ENETUNREACH —— 门户卡片表现为「暂无概览数据」。
+  # 走服务名既绕开 IPv6/DNS，也不经过反向代理和自签证书。
+  # 这几项由 compose 写死，不需要在 .env 里配。
+  TODO_INTERNAL_URL: ${TODO_INTERNAL_URL:-http://nas-platform-todo:3000}
+  BILL_INTERNAL_URL: ${BILL_INTERNAL_URL:-http://nas-platform-bill:3000}
+  ANNIVERSARY_INTERNAL_URL: ${ANNIVERSARY_INTERNAL_URL:-http://nas-platform-anniversary:3000}
+  WORK_INTERNAL_URL: ${WORK_INTERNAL_URL:-http://nas-platform-work:3000}
+  PREGNANCY_INTERNAL_URL: ${PREGNANCY_INTERNAL_URL:-http://nas-platform-pregnancy:3000}
+  TRAVEL_INTERNAL_URL: ${TRAVEL_INTERNAL_URL:-http://nas-platform-travel:3000}
   SERVICE_TOKEN: ${SERVICE_TOKEN}
   CRON_SECRET: ${CRON_SECRET}
   # 图床。账单上传和纪念日背景共用，不配则只能用内置图库
   IMAGE_HOST_URL: ${IMAGE_HOST_URL:-}
   IMAGE_HOST_TOKEN: ${IMAGE_HOST_TOKEN:-}
+  # 回源改写（可选）。对外域名只有 AAAA、容器没有 IPv6 时，把回源指到 IPv4
+  # 地址，如 https://192.168.1.10:1443；留空则直连 IMAGE_HOST_URL 的主机
+  IMAGE_HOST_FETCH_BASE: ${IMAGE_HOST_FETCH_BASE:-}
+  # 只把 DNS 固定到 NAS 的局域网 IPv4，Host/SNI 仍是 image.<root>。
+  # 图床在 Lucky 后面按域名分流时用这个（fetchBase 用 IP 会匹配不到站点）。
+  IMAGE_HOST_FETCH_IP: ${IMAGE_HOST_FETCH_IP:-}
   IMAGE_HOST_ALLOW_HOSTS: ${IMAGE_HOST_ALLOW_HOSTS:-}
   IMAGE_PROXY_CACHE_TTL: ${IMAGE_PROXY_CACHE_TTL:-86400}
   IMAGE_MAX_BYTES: ${IMAGE_MAX_BYTES:-12582912}
@@ -55,9 +72,10 @@ x-app-env: &app-env
   # 待办图片的本地兜底目录（没用图床时才走这里）
   TODO_UPLOAD_DIR: /data/uploads/todo
   TZ: Asia/Shanghai
-  # Docker 默认网络没有 IPv6。Node 解析主机名时可能先试 AAAA 记录，
-  # 回源图床（image.<root>）就会 ENETUNREACH，表现为全站图片裂开。
-  # 强制 IPv4 优先 —— 与 cash-ledger 的既有做法一致。
+  # Docker 默认网络没有 IPv6。若图床域名是双栈（A + AAAA），Node 可能先试
+  # AAAA，回源就会 ENETUNREACH。这里强制 IPv4 优先。
+  # 注意：域名**只有 AAAA** 时这条不起作用（没有 A 可退），得靠下面的
+  # *_INTERNAL_URL / IMAGE_HOST_FETCH_BASE 或给域名加 A 记录。
   NODE_OPTIONS: ${NODE_OPTIONS:---dns-result-order=ipv4first}
 
 services:

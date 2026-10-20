@@ -27,6 +27,11 @@ export async function GET() {
       // url 与 token 都配了才算数，缺一个上传接口就返回 501
       configured: Boolean(imageHostConfig.token && imageHostConfig.url),
       allowHosts: allowHostsDiagnostic(),
+      // 回源是否改走另一个（容器可达的）地址。没配时容器直连对外域名，
+      // 若该域名只有 AAAA 记录而 Docker 没有 IPv6，图片会全部裂开
+      fetchBase: imageHostConfig.fetchBase || null,
+      // 只固定 DNS 解析、不改 Host/SNI（适合反代按域名分流）
+      fetchIp: imageHostConfig.fetchIp || null,
     },
   });
 }

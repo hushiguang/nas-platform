@@ -70,3 +70,8 @@ npm run worker            # 定时任务
 
 本地各应用共用仓库根目录的 `.env`（通过 `@next/env` 显式加载），
 只需维护这一份。
+
+如果这份 `.env` 是 NAS 的生产配置，不要直接改它，另建 `.env.local` 覆盖本地专用值：
+数据库指向本机库（`nas-pg-dev`，端口 5433）、`AUTH_COOKIE_SECURE=false`（本地 http 必须关）、
+各应用地址指向 `localhost:321x`。加载顺序是 `.env` → `.env.local`，后者优先，
+且 `.env.local` 已被 `.gitignore` / `.dockerignore` 排除，不会进仓库也不会进镜像。

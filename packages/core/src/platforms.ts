@@ -22,6 +22,16 @@ const BASE_URL_ENV: Record<AppCode, string> = {
   travel: "TRAVEL_BASE_URL",
 };
 
+/** 服务器之间互相调用用的地址（容器内网），与浏览器地址分开配 */
+const INTERNAL_URL_ENV: Record<AppCode, string> = {
+  todo: "TODO_INTERNAL_URL",
+  bill: "BILL_INTERNAL_URL",
+  anniversary: "ANNIVERSARY_INTERNAL_URL",
+  work: "WORK_INTERNAL_URL",
+  pregnancy: "PREGNANCY_INTERNAL_URL",
+  travel: "TRAVEL_INTERNAL_URL",
+};
+
 function trimSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
@@ -39,6 +49,23 @@ export function portalUrl(): string {
  */
 export function appBaseUrl(code: AppCode): string {
   return trimSlash(process.env[BASE_URL_ENV[code]] ?? "");
+}
+
+/**
+ * 服务器之间（门户/worker → 各应用）调用用的地址。
+ *
+ * 不能用 `appBaseUrl` 顶替：那是给浏览器用的对外地址，通常指向反向代理
+ * （https://work.<root>:1443）。容器里再绕回本机反代有两个坑 ——
+ * 域名可能只有 AAAA 记录，而 Docker 默认桥接网络没有 IPv6，直接
+ * ENETUNREACH；就算能走通，也是绕了一圈 NAT + 自签证书。
+ *
+ * compose 里把 *_INTERNAL_URL 指到容器名（http://nas-platform-work:3000，
+ * 服务名 work 同样可解析），容器间直接在同一张桥上通信，跟域名解析、
+ * IPv6、证书都没关系。
+ * 没配时退回对外地址，单机开发（localhost:321x）照旧能用。
+ */
+export function internalAppBaseUrl(code: AppCode): string {
+  return trimSlash(process.env[INTERNAL_URL_ENV[code]] || "") || appBaseUrl(code);
 }
 
 /** 某张应用卡片点进去应该去哪里：数据库里配了 url 就用它，否则回退到环境变量 */

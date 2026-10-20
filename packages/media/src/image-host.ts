@@ -10,6 +10,8 @@
  */
 import http from "node:http";
 import https from "node:https";
+import net from "node:net";
+import type { LookupFunction } from "node:net";
 import { imageHostConfig } from "./config";
 import { MediaError } from "./errors";
 
@@ -26,10 +28,14 @@ function hostOf(value: string | undefined): string {
 
 /**
  * 图片代理只允许回源到图床，避免变成任意 URL 抓取（SSRF）。
- * 没单独配白名单时，默认放行 IMAGE_HOST_URL 的主机。
+ * 没单独配白名单时，默认放行 IMAGE_HOST_URL 的主机；配了回源改写
+ * （IMAGE_HOST_FETCH_BASE）时，也放行改写后的主机 —— 图床可能按请求
+ * Host 返回地址，上传走内网 IP 时存下来的就是 IP，不放行会读不出来。
  */
 const ALLOWED_HOSTS = new Set(
-  [imageHostConfig.url, ...imageHostConfig.allowHosts].map(hostOf).filter(Boolean),
+  [imageHostConfig.url, imageHostConfig.fetchBase, ...imageHostConfig.allowHosts]
+    .map(hostOf)
+    .filter(Boolean),
 );
 
 /**
@@ -45,6 +51,87 @@ export function allowHostsDiagnostic(): string {
 
 /** 图床是否已配置。没配就整块上传关闭，接口返回 501 */
 export const imageHostConfigured = Boolean(imageHostConfig.token && imageHostConfig.url);
+
+/**
+ * 把请求地址改写成「容器能走通」的回源地址。
+ *
+ * 对外域名（常见于经 Lucky/反代暴露的 image.<root>）可能只有 AAAA 记录，
+ * 而 Docker 默认桥接网络没有 IPv6。只替换协议/主机/端口，路径和查询保持
+ * 不变，这样白名单仍然是按原域名判断，图床返回的 URL 也照旧存。
+ */
+function outboundUrl(raw: string | URL): URL {
+  const target = typeof raw === "string" ? new URL(raw) : new URL(raw.toString());
+  const base = imageHostConfig.fetchBase.trim();
+  if (!base) return target;
+  const rewrite = new URL(/^https?:\/\//i.test(base) ? base : `https://${base}`);
+  target.protocol = rewrite.protocol;
+  target.hostname = rewrite.hostname;
+  target.port = rewrite.port;
+  return target;
+}
+
+/**
+ * 上传走内网地址时，图床可能按请求 Host 返回 http://192.168.x.x:15622/...
+ * 这种地址。存库前统一改回 IMAGE_HOST_URL 的协议/主机/端口，库里的地址
+ * 就始终是对外域名；以后换回源方式也不用迁移老数据。
+ */
+function publicizeUrl(value: string): string {
+  if (!value || !imageHostConfig.fetchBase.trim()) return value;
+  try {
+    const parsed = new URL(value);
+    const publicUrl = new URL(imageHostConfig.url);
+    parsed.protocol = publicUrl.protocol;
+    parsed.hostname = publicUrl.hostname;
+    parsed.port = publicUrl.port;
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * 把域名的 DNS 查询固定到某个 IPv4，但 URL 的 Host / TLS SNI 保持不变。
+ *
+ * 直接用 IP 访问反向代理（fetchBase）时，Lucky 之类按域名分流的反代会
+ * 匹配不到站点。这个 lookup 只改「连到哪」，不改 Host，反代仍能按
+ * image.<root> 路由。和 fetchBase 二选一。
+ */
+function fixedLookup(address: string): LookupFunction {
+  return ((
+    _hostname: string,
+    options: { all?: boolean } | number | undefined,
+    callback: (
+      err: NodeJS.ErrnoException | null,
+      address: string | Array<{ address: string; family: number }>,
+      family?: number,
+    ) => void,
+  ) => {
+    if (options && typeof options === "object" && options.all) {
+      callback(null, [{ address, family: 4 }]);
+    } else {
+      callback(null, address, 4);
+    }
+  }) as unknown as LookupFunction;
+}
+
+/** 网络层的失败给一句能照着排查的话，别只剩「取不到这张图」 */function netError(err: unknown, target: URL): MediaError {
+  const code = (err as NodeJS.ErrnoException)?.code ?? "";
+  const host = target.hostname;
+  if (code === "ENETUNREACH" || code === "EADDRNOTAVAIL") {
+    return new MediaError(
+      `连不上图床 ${host}（${code}）：容器网络没有 IPv6，而该域名可能只有 AAAA 记录。` +
+        "给 image 子域加一条指向 NAS 局域网 IPv4 的 A 记录，或配 IMAGE_HOST_FETCH_IP 指到 NAS 的 IPv4",
+      502,
+    );
+  }
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") {
+    return new MediaError(`图床域名 ${host} 解析失败（${code}），检查容器 DNS`, 502);
+  }
+  if (code === "ETIMEDOUT" || code === "ECONNREFUSED") {
+    return new MediaError(`连不上图床 ${host}（${code}），检查地址/端口是否可达`, 502);
+  }
+  return new MediaError(`连不上图床 ${host}：${err instanceof Error ? err.message : String(err)}`, 502);
+}
 
 export interface ImageUploadInput {
   buffer?: Buffer | Uint8Array | null;
@@ -68,8 +155,15 @@ interface RawResponse {
 function rawRequest(url: URL, options: http.RequestOptions = {}, body: Buffer | null = null) {
   return new Promise<RawResponse>((resolve, reject) => {
     const lib = url.protocol === "http:" ? http : https;
+    const requestOptions: https.RequestOptions = { rejectUnauthorized: false, ...options };
+    // 固定解析到指定 IPv4，且只在没配 fetchBase（直接改写地址）时生效。
+    // Host / SNI 仍是 URL 里的域名，反代可以正常按域名分流。
+    const ip = imageHostConfig.fetchIp.trim();
+    if (ip && !imageHostConfig.fetchBase.trim() && net.isIPv4(ip)) {
+      requestOptions.lookup = fixedLookup(ip);
+    }
     // 图床用自签证书，只在这里放过校验
-    const req = lib.request(url, { rejectUnauthorized: false, ...options }, (res) => {
+    const req = lib.request(url, requestOptions, (res) => {
       const chunks: Buffer[] = [];
       res.on("data", (chunk: Buffer) => chunks.push(chunk));
       res.on("end", () =>
@@ -117,17 +211,24 @@ export async function uploadImage(input: ImageUploadInput): Promise<ImageUploadR
   ];
   const payload = Buffer.concat(parts);
 
-  const res = await rawRequest(
-    new URL(imageHostConfig.url),
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": payload.length,
+  const target = outboundUrl(imageHostConfig.url);
+  let res: RawResponse;
+  try {
+    res = await rawRequest(
+      target,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+          "Content-Length": payload.length,
+        },
       },
-    },
-    payload,
-  );
+      payload,
+    );
+  } catch (err) {
+    console.error(`[media] 上传图床失败 ${target.host}:`, err);
+    throw netError(err, target);
+  }
 
   let data: { result?: string; url?: string; thumb?: string; del?: string; srcName?: string; message?: string };
   try {
@@ -137,9 +238,9 @@ export async function uploadImage(input: ImageUploadInput): Promise<ImageUploadR
   }
   if (data.result !== "success" || !data.url) throw new MediaError(data.message || "上传失败", 502);
   return {
-    url: data.url,
-    thumb: data.thumb || data.url,
-    del: data.del || "",
+    url: publicizeUrl(data.url),
+    thumb: publicizeUrl(data.thumb || data.url),
+    del: data.del ? publicizeUrl(data.del) : "",
     name: data.srcName || safeName,
   };
 }
@@ -173,7 +274,14 @@ export function isAllowedImageUrl(value: unknown): [boolean, string | null] {
 
 /** 代理取图：绕开自签证书，浏览器就能直接显示了 */
 export async function fetchImage(url: string) {
-  const res = await rawRequest(new URL(url), { method: "GET" });
+  const target = outboundUrl(url);
+  let res: RawResponse;
+  try {
+    res = await rawRequest(target, { method: "GET" });
+  } catch (err) {
+    console.error(`[media] 回源图片失败 ${target.host}:`, err);
+    throw netError(err, target);
+  }
   if (res.status !== 200) throw new MediaError("取不到这张图", 502);
   const contentType = res.headers["content-type"];
   return {

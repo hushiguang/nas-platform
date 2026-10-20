@@ -1,4 +1,4 @@
-import { appBaseUrl, callInternal, zonedDate, zonedDayRange, zonedTime, dayDiff } from "@nas/core";
+import { appBaseUrl, callInternal, internalAppBaseUrl, zonedDate, zonedDayRange, zonedTime, dayDiff } from "@nas/core";
 import { prisma, type TodoStatus } from "@nas/db";
 import { todoVisibilityWhere } from "@nas/todo";
 import type { PlatformAccess, SessionUser } from "@nas/core";
@@ -146,10 +146,11 @@ interface AnniversarySummaryPayload {
  */
 async function anniversarySummary(userId: number): Promise<PortalSummary | null> {
   const base = appBaseUrl("anniversary");
-  if (!base) return null;
+  const callBase = internalAppBaseUrl("anniversary");
+  if (!base || !callBase) return null;
 
   const data = await callInternal<AnniversarySummaryPayload>(
-    `${base}/api/internal/summary?userId=${userId}`,
+    `${callBase}/api/internal/summary?userId=${userId}`,
   );
   if (!data) return null;
 
@@ -191,9 +192,10 @@ async function anniversarySummary(userId: number): Promise<PortalSummary | null>
  */
 async function workSummary(userId: number): Promise<PortalSummary | null> {
   const base = appBaseUrl("work");
-  if (!base) return null;
+  const callBase = internalAppBaseUrl("work");
+  if (!base || !callBase) return null;
 
-  const data = await callInternal<WorkSummaryPayload>(`${base}/api/internal/summary?userId=${userId}`);
+  const data = await callInternal<WorkSummaryPayload>(`${callBase}/api/internal/summary?userId=${userId}`);
   if (!data) return null;
 
   const lines: SummaryLine[] = data.items.map((item) => ({
@@ -230,10 +232,11 @@ async function workSummary(userId: number): Promise<PortalSummary | null> {
  */
 async function billSummary(userId: number): Promise<PortalSummary | null> {
   const base = appBaseUrl("bill");
-  if (!base) return null;
+  const callBase = internalAppBaseUrl("bill");
+  if (!base || !callBase) return null;
 
   const data = await callInternal<BillSummaryPayload>(
-    `${base}/api/internal/summary?userId=${userId}`,
+    `${callBase}/api/internal/summary?userId=${userId}`,
   );
   if (!data) return null;
 
@@ -266,9 +269,10 @@ interface TravelSummaryPayload {
  */
 async function travelSummary(userId: number): Promise<PortalSummary | null> {
   const base = appBaseUrl("travel");
-  if (!base) return null;
+  const callBase = internalAppBaseUrl("travel");
+  if (!base || !callBase) return null;
 
-  const data = await callInternal<TravelSummaryPayload>(`${base}/api/internal/summary?userId=${userId}`);
+  const data = await callInternal<TravelSummaryPayload>(`${callBase}/api/internal/summary?userId=${userId}`);
   if (!data) return null;
 
   const lines: SummaryLine[] = data.recent.slice(0, 3).map((trip) => ({
@@ -322,13 +326,14 @@ export interface AnniversaryHint {
 /** 近30天临近的纪念日提醒，带上可以点开的账单。管理员看全部 */
 export async function anniversaryHints(user: SessionUser): Promise<Map<number, AnniversaryHint>> {
   const base = appBaseUrl("anniversary");
+  const callBase = internalAppBaseUrl("anniversary");
   const hints = new Map<number, AnniversaryHint>();
-  if (!base) return hints;
+  if (!base || !callBase) return hints;
 
   const url =
     user.role === "ADMIN"
-      ? `${base}/api/internal/summary?scope=all`
-      : `${base}/api/internal/summary?userId=${user.id}`;
+      ? `${callBase}/api/internal/summary?scope=all`
+      : `${callBase}/api/internal/summary?userId=${user.id}`;
   const data = await callInternal<AnniversarySummaryPayload>(url);
   if (!data) return hints;
 
@@ -352,14 +357,14 @@ export async function anniversaryHints(user: SessionUser): Promise<Map<number, A
 
 /** 先把临近纪念日收成待办，再查汇总，数字才对得上 */
 export async function ensureAnniversaryTodos(): Promise<void> {
-  const base = appBaseUrl("anniversary");
+  const base = internalAppBaseUrl("anniversary");
   if (!base) return;
   await callInternal(`${base}/api/internal/job/generate-todos`, { method: "POST", timeoutMs: 8000 });
 }
 
 /** 把勾了后续跟进、或不计入费用的账单收成待办 */
 export async function ensureBillFollowTodos(): Promise<void> {
-  const base = appBaseUrl("bill");
+  const base = internalAppBaseUrl("bill");
   if (!base) return;
   await callInternal(`${base}/api/internal/job/generate-todos`, { method: "POST", timeoutMs: 8000 });
 }

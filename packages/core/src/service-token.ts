@@ -49,9 +49,18 @@ export async function callInternal<T>(
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // 调用方只能看到 null，日志里必须留下是哪一路、什么状态码。
+      // 最常见的两种：地址是只有 AAAA 的域名（容器 ENETUNREACH，直接抛错）
+      // 与 SERVICE_TOKEN 各容器不一致（401）。
+      const text = (await res.text().catch(() => "")).slice(0, 200);
+      console.error(`[internal] ${rest.method ?? "GET"} ${url} -> ${res.status} ${text}`);
+      return null;
+    }
     return (await res.json()) as T;
-  } catch {
+  } catch (err) {
+    const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error(`[internal] ${rest.method ?? "GET"} ${url} 失败: ${reason}`);
     return null;
   }
 }
