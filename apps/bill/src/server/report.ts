@@ -6,7 +6,8 @@
  *
  * ⚠ 时区：`occurredAt` 存的是 UTC 墙钟（迁移旧账单库时的既定约定），
  *   所有「按本地日期」的分组/区间都必须先 +8 小时，否则跨零点的账单会被算到前一天。
- *   本文件里统一用 LOCAL_DAY / LOCAL_TS 两个片段，不要另写。
+ *   分组用 LOCAL_TS（+8h 挪到列上），区间筛选用 localDayRange()
+ *   （+8h 挪到常量侧，裸列比较才有索引可用 —— 见 query.ts 文件头的说明）。
  */
 import { prisma } from "@nas/db";
 import { centsToYuan } from "./money";
@@ -20,16 +21,16 @@ import {
   daysBetween,
   eachDay,
   eachMonth,
+  localDayRange,
   parseLocalDate,
   resolveBounds,
+  TZ_SHIFT,
   type AaBillRow,
   type TxQuery,
 } from "./query";
 
 /** 本地时间戳（墙钟 + 8h），用于分组与日期区间比较 */
-const LOCAL_TS = `(t."occurredAt" + INTERVAL '8 hours')`;
-/** 本地日期 */
-const LOCAL_DAY = `${LOCAL_TS}::date`;
+const LOCAL_TS = `(t."occurredAt" + ${TZ_SHIFT})`;
 
 /** 把 ? 占位符按顺序换成 $1..$n；fragments 之间用 AND 连接 */
 function build(fragments: string[], params: unknown[]): { text: string; params: unknown[] } {
@@ -46,13 +47,15 @@ export async function billSummary(actor: Actor, query: TxQuery) {
   const { start, end } = resolveBounds(query, now);
   const scope = await bookScope(actor, query);
 
-  // 整个可见范围内最早/最晚一笔的**本地**日期，前端选「全部」时拿它当区间
+  // 整个可见范围内最早/最晚一笔的**本地**日期，前端选「全部」时拿它当区间。
+  // MIN/MAX 也用裸列：加常量是单调的，MIN(x + 8h) 与 MIN(x) + 8h 等价，
+  // 写成后者 PG 才能走 (bookId, occurredAt) / (ownerId, occurredAt) 索引的极值扫描。
   const bounds = build([scope.sql], [...scope.params]);
   const boundRows = await prisma.$queryRawUnsafe<
     Array<{ first: string | null; last: string | null }>
   >(
-    `SELECT to_char(MIN(${LOCAL_TS}), 'YYYY-MM-DD') AS first,
-            to_char(MAX(${LOCAL_TS}), 'YYYY-MM-DD') AS last
+    `SELECT to_char(MIN(t."occurredAt") + ${TZ_SHIFT}, 'YYYY-MM-DD') AS first,
+            to_char(MAX(t."occurredAt") + ${TZ_SHIFT}, 'YYYY-MM-DD') AS last
      FROM bill_transaction t WHERE ${bounds.text}`,
     ...bounds.params,
   );
@@ -60,10 +63,8 @@ export async function billSummary(actor: Actor, query: TxQuery) {
   const lastDate = boundRows[0]?.last ?? null;
 
   // 区间内收支合计（转账是资金搬家，不计入）
-  const range = build(
-    [scope.sql, `${LOCAL_DAY} >= ?::date`, `${LOCAL_DAY} <= ?::date`],
-    [...scope.params, start, end],
-  );
+  const rangeDays = localDayRange(start, end);
+  const range = build([scope.sql, ...rangeDays.clauses], [...scope.params, ...rangeDays.params]);
   const totalRows = await prisma.$queryRawUnsafe<
     Array<{ income: bigint | null; expense: bigint | null }>
   >(
@@ -185,7 +186,7 @@ export async function billTrend(actor: Actor, query: TxQuery) {
     if (range === "all") {
       const scopeOnly = build([scope.sql], [...scope.params]);
       const rows = await prisma.$queryRawUnsafe<Array<{ first: string | null }>>(
-        `SELECT to_char(MIN(${LOCAL_TS}), 'YYYY-MM-DD') AS first
+        `SELECT to_char(MIN(t."occurredAt") + ${TZ_SHIFT}, 'YYYY-MM-DD') AS first
          FROM bill_transaction t
          WHERE ${scopeOnly.text} AND t.type IN ('EXPENSE', 'INCOME')`,
         ...scopeOnly.params,
@@ -203,9 +204,10 @@ export async function billTrend(actor: Actor, query: TxQuery) {
   const end = parseLocalDate(to);
   const keys = unit === "month" ? eachMonth(start, end) : eachDay(start, end);
 
+  const trendDays = localDayRange(from, to);
   const w = build(
-    [scope.sql, `${LOCAL_DAY} >= ?::date`, `${LOCAL_DAY} <= ?::date`],
-    [...scope.params, from, to],
+    [scope.sql, ...trendDays.clauses],
+    [...scope.params, ...trendDays.params],
   );
   const bucket =
     unit === "month"
@@ -248,9 +250,10 @@ export async function billTrend(actor: Actor, query: TxQuery) {
 export async function monthTotals(actor: Actor, year: number, month: number) {
   const scope = await bookScope(actor, {});
   const bounds = monthBounds(year, month);
+  const monthDays = localDayRange(bounds.start, bounds.end);
   const w = build(
-    [scope.sql, `${LOCAL_DAY} >= ?::date`, `${LOCAL_DAY} <= ?::date`],
-    [...scope.params, bounds.start, bounds.end],
+    [scope.sql, ...monthDays.clauses],
+    [...scope.params, ...monthDays.params],
   );
   const rows = await prisma.$queryRawUnsafe<
     Array<{ income: bigint | null; expense: bigint | null; n: bigint }>

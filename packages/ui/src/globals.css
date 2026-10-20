@@ -2407,3 +2407,54 @@ a.work-side-row:hover { color: var(--coral); background: var(--hover); }
 /* 汇总/简报双栏：左主右次，窄屏自动单列 */
 .digest-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; align-items: start; }
 @media (max-width: 1100px) { .digest-grid { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   加载骨架：路由级 loading.tsx 与页面内 Suspense 的 fallback
+   ------------------------------------------------------------
+   这些应用的数据都在服务端取，页面在等查询返回时浏览器只有一片空白，
+   用户会以为「卡死」。骨架先画出来，数据到了再顶替，
+   感知上的等待时间就从「页面空白」变成「内容渐显」。
+
+   配色只用主题变量，浅色/深色自动跟随，不需要写两套。
+   ============================================================ */
+.skeleton {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--soft) 25%, var(--hover) 37%, var(--soft) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.skeleton-card { display: flex; flex-direction: column; gap: 10px; }
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.skeleton-list { display: flex; flex-direction: column; gap: 14px; }
+.skeleton-row { display: flex; align-items: center; gap: 10px; }
+.skeleton-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+
+.page-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.page-loading-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--violet);
+  animation: skeleton-spin 0.8s linear infinite;
+}
+@keyframes skeleton-spin {
+  to { transform: rotate(360deg); }
+}

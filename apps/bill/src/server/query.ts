@@ -8,6 +8,17 @@
  *   所以凡是「按用户看到的本地日期」做比较的地方，都必须先 +8 小时：
  *       (t."occurredAt" + INTERVAL '8 hours')::date
  *   漏掉这个偏移，跨零点的账单会被算到前一天。
+ *
+ * ⚠ 但**筛选**不要这么写。表达式套在列上，索引就用不上了，PG 只能整表扫：
+ *   写法 A（旧）：((t."occurredAt" + INTERVAL '8 hours')::date) >= $1
+ *                 → Seq Scan，25,046 行时单条查询 5ms、带 join 100ms
+ *   写法 B（新）：t."occurredAt" >= ($1::date - INTERVAL '8 hours')
+ *                 → Index Scan using bill_transaction_bookId_occurredAt_idx，0.16ms
+ *   两者结果完全一致（本地日本来就是按 +8h 整日截断的），
+ *   区别只在于 PG 能不能把区间条件推到索引上。所以：
+ *   - 筛选（WHERE）用 localDayRange()，+8h 挪到常量侧；
+ *   - 分组（GROUP BY / to_char）仍然要把 +8h 套在列上，那是输出形态，
+ *     report.ts / calendar.ts 里的 LOCAL_TS 就是干这个的。
  */
 import { prisma } from "@nas/db";
 import type { BillCategoryKind, BillTxType } from "@nas/db";
@@ -19,10 +30,26 @@ import { canSeeBook, transactionImages, visibleBookIds } from "./book";
 import { parseShareWith, presentTransaction, type TransactionRow } from "./transaction";
 
 /** 本地时区相对 UTC 的偏移；库里的墙钟时间要加回这个量才是本地时间 */
-const TZ_SHIFT = `INTERVAL '8 hours'`;
+export const TZ_SHIFT = `INTERVAL '8 hours'`;
 
-/** 把 t."occurredAt" 转成「用户看到的本地日期」 */
-const LOCAL_DAY = `((t."occurredAt" + ${TZ_SHIFT})::date)`;
+/**
+ * 本地日期区间 → 库里的墙钟区间。
+ *
+ * 本地日 >= from  ⇔  occurredAt >= from 00:00 - 8h
+ * 本地日 <= to    ⇔  occurredAt <  (to+1) 00:00 - 8h
+ *
+ * 返回两条 WHERE 片段 + 两个参数（from、to 都是 'YYYY-MM-DD'）。
+ * 用裸列比较，(bookId, occurredAt) / (ownerId, occurredAt) 两个索引都能用上。
+ */
+export function localDayRange(from: string, to: string): { clauses: string[]; params: string[] } {
+  return {
+    clauses: [
+      `t."occurredAt" >= (?::date - ${TZ_SHIFT})`,
+      `t."occurredAt" < (?::date + INTERVAL '1 day' - ${TZ_SHIFT})`,
+    ],
+    params: [from, to],
+  };
+}
 
 export interface TxQuery {
   bookId?: unknown;
@@ -107,11 +134,12 @@ export async function buildWhere(actor: Actor, query: TxQuery) {
   }
 
   if (query.from) {
-    where.push(`${LOCAL_DAY} >= ?::date`);
+    // 用裸列比较（+8h 挪到常量侧），索引才用得上。见文件头的说明。
+    where.push(`t."occurredAt" >= (?::date - ${TZ_SHIFT})`);
     params.push(String(query.from).slice(0, 10));
   }
   if (query.to) {
-    where.push(`${LOCAL_DAY} < (?::date + INTERVAL '1 day')`);
+    where.push(`t."occurredAt" < (?::date + INTERVAL '1 day' - ${TZ_SHIFT})`);
     params.push(String(query.to).slice(0, 10));
   }
 

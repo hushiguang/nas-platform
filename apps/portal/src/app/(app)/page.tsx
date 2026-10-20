@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import { SiteLink } from "@nas/ui";
+import { SiteLink, SkeletonGrid } from "@nas/ui";
 import { getUserPlatforms, resolvePlatformHref, zonedDate, zonedTime } from "@nas/core";
 import { galleryById, gradientById } from "@nas/media/catalog";
 import { appCoverByCode } from "@nas/media/portal-covers";
@@ -220,12 +221,14 @@ function TodayOverview({ summaries }: { summaries: Record<string, PortalSummary 
 }
 
 // 导航门户 · 应用卡片：入口 + 每个应用最近的数据摘要。
+//
+// 首屏只等「本地的一次查询」（可见应用列表），概览数据全部丢进 Suspense 里
+// 流式补上。原因是概览要跨容器调五个应用的内部接口，还要先跑一次待办收数，
+// 慢的时候能等好几秒；这些数字只是卡片上的一行小字，不该拖住整页。
 export default async function PortalPage() {
   const user = await requireUser();
   // 人已经在门户上，不再给自己放一张卡片
   const platforms = (await getUserPlatforms(user)).filter((item) => item.code !== "portal");
-  await Promise.all([ensureAnniversaryTodos(), ensureBillFollowTodos()]);
-  const summaries = await getPortalSummaries(user, platforms);
   const now = new Date();
 
   return (
@@ -244,6 +247,46 @@ export default async function PortalPage() {
         )}
       </div>
 
+      <Suspense fallback={<PortalSkeleton />}>
+        <PortalSummaries user={user} platforms={platforms} />
+      </Suspense>
+    </div>
+  );
+}
+
+/** 概览骨架：顶部一排指标 + 卡片网格 */
+function PortalSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="overview">
+        <span className="overview-title">今日概览</span>
+        <span className="skeleton" style={{ width: 92, height: 26, borderRadius: 8 }} />
+        <span className="skeleton" style={{ width: 92, height: 26, borderRadius: 8 }} />
+        <span className="skeleton" style={{ width: 92, height: 26, borderRadius: 8 }} />
+      </div>
+      <SkeletonGrid count={6} />
+    </div>
+  );
+}
+
+/**
+ * 概览区（今日概览 + 应用卡片）。
+ *
+ * 两步都可能慢：待办收数是跨容器调用，超时上限 8 秒；概览是五路跨容器调用，
+ * 每路超时 3 秒。所以整块放进 Suspense，骨架先顶着，数据到了再顶替。
+ */
+async function PortalSummaries({
+  user,
+  platforms,
+}: {
+  user: Awaited<ReturnType<typeof requireUser>>;
+  platforms: PlatformAccess[];
+}) {
+  await Promise.all([ensureAnniversaryTodos(), ensureBillFollowTodos()]);
+  const summaries = await getPortalSummaries(user, platforms);
+
+  return (
+    <>
       <TodayOverview summaries={summaries} />
 
       {platforms.length === 0 ? (
@@ -260,6 +303,6 @@ export default async function PortalPage() {
           </section>
         ))
       )}
-    </div>
+    </>
   );
 }
