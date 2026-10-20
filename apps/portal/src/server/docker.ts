@@ -121,11 +121,19 @@ export async function readDockerLogs(service: DockerService, tail = 300): Promis
       message: container.State ? `状态：${container.State}` : undefined,
     };
   } catch (err) {
-    return {
-      ok: false,
-      service,
-      text: "",
-      message: err instanceof Error ? err.message : "读取 Docker 失败",
-    };
+    const code = (err as NodeJS.ErrnoException)?.code;
+    const message =
+      code === "EACCES"
+        ? "没有权限读 Docker 套接字（EACCES）：门户容器里的用户不在 docker 组。" +
+          "在 .env 里设置 DOCKER_GID=宿主机 `stat -c '%g' /var/run/docker.sock` 的值，" +
+          "然后 docker compose up -d --force-recreate portal。"
+        : code === "ENOENT"
+          ? "Docker 套接字不存在：检查 .env 的 DOCKER_SOCKET 是否指向宿主机上真实存在的路径。"
+          : code === "ECONNREFUSED" || code === "EPIPE"
+            ? "连不上 Docker 守护进程：宿主机 Docker 可能没运行。"
+            : err instanceof Error
+              ? err.message
+              : "读取 Docker 失败";
+    return { ok: false, service, text: "", message };
   }
 }

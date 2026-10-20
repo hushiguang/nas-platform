@@ -69,8 +69,10 @@ x-app-env: &app-env
   AMAP_KEY: ${AMAP_KEY:-}
   AMAP_JSCODE: ${AMAP_JSCODE:-}
   AMAP_WEB_KEY: ${AMAP_WEB_KEY:-}
-  # 待办图片的本地兜底目录（没用图床时才走这里）
+  # 待办图片的本地目录。默认只作历史数据读取用；上传一律走图床
   TODO_UPLOAD_DIR: /data/uploads/todo
+  # 图床传不上去时是否改存本地。默认 false：宁可上传报错，也不留 local: 死链
+  TODO_IMAGE_LOCAL_FALLBACK: ${TODO_IMAGE_LOCAL_FALLBACK:-false}
   TZ: Asia/Shanghai
   # Docker 默认网络没有 IPv6。若图床域名是双栈（A + AAAA），Node 可能先试
   # AAAA，回源就会 ENETUNREACH。这里强制 IPv4 优先。
@@ -99,6 +101,12 @@ services:
     volumes:
       # 只读挂载 Docker 套接字，门户的日志页才能看到各容器输出
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    # 套接字一般是 root:<docker组> 660。容器默认以 uid 1001 运行，不加这个
+    # 补充组就会 EACCES。DOCKER_GID 填宿主机 docker 组的 GID：
+    #   stat -c '%g' /var/run/docker.sock
+    # 若套接字是 root:root（group=0），保持默认 0 即可。
+    group_add:
+      - "${DOCKER_GID:-0}"
     depends_on:
       postgres: { condition: service_healthy }
       migrator: { condition: service_completed_successfully }

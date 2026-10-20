@@ -112,6 +112,9 @@ else
   SERVICE_TOKEN="$(openssl rand -hex 24)"
   CRON_SECRET="$(openssl rand -hex 24)"
   PG_PASSWORD="$(openssl rand -hex 16)"
+  # 门户容器以 uid 1001 运行，读 docker.sock 得和套接字同组。生成时直接取
+  # 宿主机当前的组 ID；取不到就回 0（root:root 套接字能直接匹配）。
+  DOCKER_GID="$(stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 0)"
 
   umask 077
   cat > .env <<EOF
@@ -158,6 +161,8 @@ TRAVEL_BASE_URL=
 
 SERVICE_TOKEN=${SERVICE_TOKEN}
 DOCKER_SOCKET=
+# 门户读 Docker 日志要访问 /var/run/docker.sock，得和它同组
+DOCKER_GID=${DOCKER_GID}
 CRON_SECRET=${CRON_SECRET}
 
 ADMIN_USERNAME=${ADMIN_USERNAME}

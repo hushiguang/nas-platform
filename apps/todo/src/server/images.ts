@@ -1,21 +1,21 @@
 /**
  * 待办的图片存取。
  *
- * 两套后端，自动选：
- *   1. 配了图床（IMAGE_HOST_URL / IMAGE_HOST_TOKEN）→ 走 @nas/media 转发上传，
- *      与账单、纪念日共用同一份配置；
- *   2. 没配图床 → 存 NAS 本地目录（TODO_UPLOAD_DIR，compose 里挂卷）。
+ * 默认只走图床：配了 IMAGE_HOST_URL / IMAGE_HOST_TOKEN 就转发到 @nas/media，
+ * 与账单、纪念日共用同一份配置；图床传不上去就报错，不再悄悄改存本地。
  *
- * 之所以要第 2 条：图床是可选项，但「待办能加图片」是核心需求。没配就整块
- * 功能失效不可接受，所以给一个不依赖任何外部服务的兜底。
+ * 本地目录只在显式打开 TODO_IMAGE_LOCAL_FALLBACK=true 时才用（离线环境）。
+ * 原因：本地兜底的文件在容器卷里，卷没挂好或容器重建就会留下 `local:`
+ * 死链，表现是「图片不存在」，而上传时一切正常，很难第一时间发现。
  *
  * 存进 todo.images 的是**原始地址**，展示一律经过 /api/image?u=... 这一层：
- *   - 本地图：`local:<文件名>`
+ *   - 本地图：`local:<文件名>`（仅历史数据 / 显式兜底时出现）
  *   - 图床图：`https://...`（自签证书由服务端代理绕开）
  */
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { prisma, type Prisma } from "@nas/db";
 import {
   fetchImage,
   imageHostConfigured,
@@ -30,6 +30,12 @@ import {
  */
 const LOCAL_DIR = process.env.TODO_UPLOAD_DIR || path.resolve(process.cwd(), "../../data/uploads/todo");
 const LOCAL_PREFIX = "local:";
+
+/**
+ * 是否允许「图床传不上去时改存本地」。默认关闭。
+ * 打开后表现为上传永远成功，但图片可能落在容器卷里，换机器/重建即丢。
+ */
+const LOCAL_FALLBACK = /^(1|true|yes|on)$/i.test(process.env.TODO_IMAGE_LOCAL_FALLBACK || "");
 
 /** 单张图片上限。图床自己也有上限，这里提前拦一道 */
 const MAX_BYTES = Number(process.env.IMAGE_MAX_BYTES || 12 * 1024 * 1024);
@@ -71,15 +77,26 @@ export async function saveImage(input: SaveImageInput): Promise<string> {
   const mimetype = String(input.mimetype || "").toLowerCase();
   if (mimetype && !mimetype.startsWith("image/")) throw new MediaError("只能传图片");
 
-  if (imageBackend() === "host") {
+  if (imageHostConfigured) {
     try {
       const result = await uploadImage({ buffer, mimetype, filename: input.filename });
       return result.url;
     } catch (err) {
-      // 图床配置在但传不上去（服务挂了/令牌过期），退回本地并留个日志，
-      // 用户侧照常能记待办 —— 比直接报错有用得多
-      console.error("[todo] 图床上传失败，改存本地：", err instanceof Error ? err.message : err);
+      const detail = err instanceof Error ? err.message : String(err);
+      if (!LOCAL_FALLBACK) {
+        // 默认路径：图床失败就失败，绝不再落到本地目录 ——
+        // 本地文件一旦丢了，库里只会留下一批「图片不存在」的死链
+        console.error("[todo] 图床上传失败（本地兜底已关闭）：", detail);
+        throw new MediaError(`图床上传失败：${detail}`, 502);
+      }
+      console.error("[todo] 图床上传失败，按 TODO_IMAGE_LOCAL_FALLBACK 改存本地：", detail);
     }
+  } else if (!LOCAL_FALLBACK) {
+    throw new MediaError(
+      "图床还没配置（IMAGE_HOST_URL / IMAGE_HOST_TOKEN），且本地兜底已关闭；" +
+        "确实需要离线可用时把 TODO_IMAGE_LOCAL_FALLBACK 设为 true",
+      501,
+    );
   }
 
   return saveLocal(buffer, mimetype || "image/jpeg");
@@ -127,4 +144,81 @@ function contentTypeOf(name: string): string {
   const ext = path.extname(name).toLowerCase();
   const found = Object.entries(EXT_BY_TYPE).find(([, e]) => e === ext);
   return found ? found[0] : "application/octet-stream";
+}
+
+export interface LocalImageMigration {
+  /** 含 local: 图片的待办数 */
+  scanned: number;
+  /** 成功传到图床并替换的图片数 */
+  migrated: number;
+  /** 本地文件已丢失、只能保留原引用的图片数 */
+  missing: number;
+  /** 上传失败的图片数 */
+  failed: number;
+  details: string[];
+}
+
+/**
+ * 把历史遗留的 `local:` 图片搬到图床，并把 todo.images 改写成图床地址。
+ *
+ * 只处理文件还在本地目录里的；文件已经丢了的原样保留（避免静默删数据），
+ * 由调用方根据 missing 决定是否人工清理。可重复执行：已经搬过的不会重复上传。
+ */
+export async function migrateLocalImages(): Promise<LocalImageMigration> {
+  if (!imageHostConfigured) throw new MediaError("图床还没配置，先把 IMAGE_HOST_URL / TOKEN 填上", 501);
+
+  const rows = await prisma.todo.findMany({ select: { id: true, images: true } });
+  const details: string[] = [];
+  let scanned = 0;
+  let migrated = 0;
+  let missing = 0;
+  let failed = 0;
+
+  for (const row of rows) {
+    const list = Array.isArray(row.images) ? row.images : [];
+    if (!list.some((value) => typeof value === "string" && isLocalImage(value))) continue;
+    scanned += 1;
+
+    const next: Prisma.JsonValue[] = [];
+    let changed = false;
+    for (const value of list) {
+      if (typeof value !== "string" || !isLocalImage(value)) {
+        next.push(value);
+        continue;
+      }
+      const name = path.basename(value.slice(LOCAL_PREFIX.length));
+      try {
+        const body = await fs.readFile(path.join(LOCAL_DIR, name));
+        const result = await uploadImage({
+          buffer: body,
+          filename: name,
+          mimetype: contentTypeOf(name),
+        });
+        next.push(result.url);
+        migrated += 1;
+        changed = true;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException)?.code === "ENOENT") {
+          missing += 1;
+          details.push(`#${row.id} ${name}: 本地文件不存在，保留原引用`);
+        } else {
+          failed += 1;
+          details.push(`#${row.id} ${name}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+        next.push(value);
+      }
+    }
+
+    if (changed) {
+      await prisma.todo.update({
+        where: { id: row.id },
+        data: { images: next as Prisma.InputJsonValue },
+      });
+    }
+  }
+
+  console.log(
+    `[todo] local 图迁移：扫描 ${scanned} 条待办，成功 ${migrated}，缺失 ${missing}，失败 ${failed}`,
+  );
+  return { scanned, migrated, missing, failed, details };
 }
