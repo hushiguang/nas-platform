@@ -57,8 +57,6 @@ interface Bar {
   to: string;
   bg: string;
   members?: string[];
-  devCount?: number;
-  qaCount?: number;
   conflict?: boolean;
 }
 
@@ -83,24 +81,6 @@ export default async function BoardPage({
   const today = new Date().toISOString().slice(0, 10);
   const anchor = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? (sp.date as string) : today;
 
-  let start: string;
-  let end: string;
-  if (mode === "week") {
-    const dow = (new Date(`${anchor}T00:00:00Z`).getUTCDay() + 6) % 7;
-    start = addDays(anchor, -dow);
-    end = addDays(start, 6);
-  } else {
-    start = anchor.slice(0, 7) + "-01";
-    const next = new Date(`${start}T00:00:00Z`);
-    next.setUTCMonth(next.getUTCMonth() + 1);
-    end = addDays(next.toISOString().slice(0, 10), -1);
-  }
-  const nDays = diffDays(end, start) + 1;
-  const days: string[] = Array.from({ length: nDays }, (_, i) => addDays(start, i));
-  const step = mode === "week" ? 7 : 31;
-  const prev = addDays(start, -step);
-  const next = addDays(start, step);
-
   let rows: Row[] = [];
   if (view === "project") {
     const items = await listProjects(access, user.id);
@@ -111,8 +91,6 @@ export default async function BoardPage({
           .filter((p) => p.enabled && p.startDate && p.endDate)
           .map((p) => {
             const names = (p.members ?? []).map((m) => m.name).filter(Boolean);
-            const devs = (p.members ?? []).filter((m) => /研发|开发|前端|后端/.test(m.role || "")).map((m) => m.name);
-            const qas = (p.members ?? []).filter((m) => /测试/.test(m.role || "")).map((m) => m.name);
             const who = names.length > 0 ? `｜${names.slice(0, 4).join("、")}${names.length > 4 ? `等${names.length}人` : ""}` : "｜未排人";
             return {
               key: String(p.id),
@@ -123,8 +101,6 @@ export default async function BoardPage({
               to: toDay(p.endDate),
               bg: PHASE_BG[p.label] ?? "#dbe7fb",
               members: names,
-              devCount: devs.length,
-              qaCount: qas.length,
             };
           });
         if (item.launchDate) {
@@ -170,6 +146,36 @@ export default async function BoardPage({
     });
   }
 
+  // 时间轴范围：周视图固定一周；月视图从锚点月份开始，并延伸到所有排期的最晚月份，保证能一直滑到最右侧
+  let start: string;
+  let end: string;
+  if (mode === "week") {
+    const dow = (new Date(`${anchor}T00:00:00Z`).getUTCDay() + 6) % 7;
+    start = addDays(anchor, -dow);
+    end = addDays(start, 6);
+  } else {
+    start = anchor.slice(0, 7) + "-01";
+    const nextMonth = new Date(`${start}T00:00:00Z`);
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    end = addDays(nextMonth.toISOString().slice(0, 10), -1);
+    let latest = end;
+    for (const row of rows) {
+      for (const b of row.bars) {
+        if (b.to > latest) latest = b.to;
+      }
+    }
+    if (latest > end) {
+      const [ly, lm] = latest.split("-").map(Number);
+      const monthAfter = new Date(Date.UTC(ly, lm, 1));
+      end = addDays(monthAfter.toISOString().slice(0, 10), -1);
+    }
+  }
+  const nDays = diffDays(end, start) + 1;
+  const days: string[] = Array.from({ length: nDays }, (_, i) => addDays(start, i));
+  const step = mode === "week" ? 7 : 31;
+  const prev = addDays(start, -step);
+  const next = addDays(start, step);
+
   const filteredRows =
     view === "project" && activePhase
       ? rows.filter((row) =>
@@ -193,7 +199,9 @@ export default async function BoardPage({
   }));
   const showToday = today >= start && today <= end;
   const todayLeft = ((diffDays(today, start) + 0.5) / nDays) * 100;
-  const minTrack = nDays * 48;
+  const dayWidth = nDays > 200 ? 26 : nDays > 90 ? 30 : nDays > 45 ? 38 : 48;
+  const minTrack = nDays * dayWidth;
+  const dayFont = nDays > 90 ? 9.5 : 11;
 
   const tab = (active: boolean) => ({
     textDecoration: "none" as const,
@@ -225,7 +233,10 @@ export default async function BoardPage({
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 700 }}>{monthLabel(start)}</span>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>
+          {monthLabel(start)}
+          {end.slice(0, 7) !== start.slice(0, 7) ? ` – ${monthLabel(end)}` : ""}
+        </span>
         <span style={{ display: "inline-flex", gap: 4 }}>
           <Link href={qs({ view, mode: "week", date: anchor })} style={tab(mode === "week")}>
             周
@@ -285,7 +296,7 @@ export default async function BoardPage({
               ✕ 清除阶段筛选
             </Link>
           ) : (
-            <span className="muted" style={{ fontSize: 12 }}>👨‍💻=研发人数 🧪=测试人数；悬停条块看完整名单</span>
+            <span className="muted" style={{ fontSize: 12 }}>悬停条块查看完整名单</span>
           )}
         </div>
       ) : (
@@ -314,8 +325,9 @@ export default async function BoardPage({
                     className={`gantt-day${weekend ? " weekend" : ""}`}
                     style={{
                       flex: "1 0 0",
-                      padding: "8px 4px",
-                      fontSize: 11,
+                      padding: nDays > 90 ? "8px 2px" : "8px 4px",
+                      fontSize: dayFont,
+                      whiteSpace: "nowrap",
                       textAlign: "center",
                       color: d === today ? "var(--coral)" : undefined,
                       fontWeight: d === today ? 700 : undefined,
@@ -375,14 +387,14 @@ export default async function BoardPage({
                       alignItems: "center",
                     }}
                   >
-                    <span style={{ fontWeight: 700, flex: "none" }}>{b.label}</span>
+                    <span style={{ fontWeight: 600, flex: "none", fontSize: 10.5 }}>{b.label}</span>
                     {b.members && b.members.length > 0 ? (
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11 }}>
-                        👨‍💻{b.devCount ?? 0} 🧪{b.qaCount ?? 0} {b.members.slice(0, 3).join("、")}
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10, opacity: 0.85 }}>
+                        {b.members.slice(0, 3).join("、")}
                         {b.members.length > 3 ? `等${b.members.length}人` : ""}
                       </span>
                     ) : b.members ? (
-                      <span style={{ fontSize: 11, opacity: 0.7 }}>未排人</span>
+                      <span style={{ fontSize: 10, opacity: 0.7 }}>未排人</span>
                     ) : null}
                   </div>
                 ))}
