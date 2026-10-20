@@ -28,6 +28,7 @@ interface DockerContainer {
   Id: string;
   Names?: string[];
   State?: string;
+  Created?: number;
   Labels?: Record<string, string>;
 }
 
@@ -71,14 +72,31 @@ function demux(buf: Buffer): string {
 
 function nameMatches(name: string, service: string): boolean {
   const bare = name.replace(/^\//, "");
-  return bare === service || bare.includes(`-${service}-`) || bare.includes(`_${service}_`);
+  // 兼容三种命名：
+  //   - compose 默认       <项目>-<服务>-<序号>   → 含 -<服务>-
+  //   - container_name 指定 nas-platform-<服务>   → 以 -<服务> 结尾
+  //   - 裸服务名           <服务>
+  return (
+    bare === service ||
+    bare.endsWith(`-${service}`) ||
+    bare.endsWith(`_${service}`) ||
+    bare.includes(`-${service}-`) ||
+    bare.includes(`_${service}_`)
+  );
 }
 
 function pickContainer(rows: DockerContainer[], service: string): DockerContainer | undefined {
-  return (
-    rows.find((row) => row.Labels?.["com.docker.compose.service"] === service) ||
-    rows.find((row) => (row.Names || []).some((name) => nameMatches(name, service)))
+  const candidates = rows.filter(
+    (row) =>
+      row.Labels?.["com.docker.compose.service"] === service ||
+      (row.Names || []).some((name) => nameMatches(name, service)),
   );
+  // 停掉的旧容器也会出现在 all=1 列表里，优先取运行中的、再取最新的
+  return candidates.sort((a, b) => {
+    const running = Number(b.State === "running") - Number(a.State === "running");
+    if (running !== 0) return running;
+    return (b.Created ?? 0) - (a.Created ?? 0);
+  })[0];
 }
 
 export function isDockerService(value: string): value is DockerService {
@@ -104,7 +122,16 @@ export async function readDockerLogs(service: DockerService, tail = 300): Promis
     const rows = JSON.parse(listed.body.toString("utf8")) as DockerContainer[];
     const container = pickContainer(rows, service);
     if (!container) {
-      return { ok: false, service, text: "", message: `没有找到 ${service} 容器。` };
+      const seen = rows
+        .slice(0, 12)
+        .map((row) => (row.Names?.[0] ?? row.Id.slice(0, 12)).replace(/^\//, ""))
+        .join("、");
+      return {
+        ok: false,
+        service,
+        text: "",
+        message: `没有找到 ${service} 容器。门户按容器名（如 nas-platform-${service}）或 compose 服务标签匹配；当前看到的容器：${seen || "（无）"}`,
+      };
     }
     const logs = await dockerGet(
       sock,
