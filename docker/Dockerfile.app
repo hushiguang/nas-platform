@@ -95,6 +95,25 @@ RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
       mkdir -p "$dest"; \
       cp -r "node_modules/$pkg/." "$dest/"; \
     done \
+# 还有一类漏拷：optionalDependencies。pdf-parse 把 @napi-rs/canvas 放在
+# optionalDependencies 里，Next 的文件追踪不跟 optional 分支，产物里
+# node_modules/pdf-parse 在、node_modules/@napi-rs 整棵都不在。
+# pdf-parse 启动时会 createRequire 去找 @napi-rs/canvas（用来补 DOMMatrix /
+# ImageData / Path2D），找不到就打印
+#   Warning: Cannot load "@napi-rs/canvas" package: "Error: Cannot find module ..."
+# 文本抽取不受影响，但渲染（截图/表格）会直接坏掉，日志里这条告警也吵。
+# 这里把 @napi-rs 作用域整棵拷进去：canvas 本体 + 当前平台的二进制包
+# （alpine 上是 *-linux-*-musl，x64/arm64 随构建机而定），整棵拷不用关心
+# 具体平台包名。只有用到 pdf-parse 的应用（bill）才拷，其它应用不受影响。
+ && if [ -d "apps/${APP}/.next/standalone/node_modules/pdf-parse" ]; then \
+      dest="apps/${APP}/.next/standalone/node_modules/@napi-rs"; \
+      mkdir -p "$dest"; \
+      for pkg in node_modules/@napi-rs/*; do \
+        [ -d "$pkg" ] || continue; \
+        mkdir -p "$dest/$(basename "$pkg")"; \
+        cp -r "$pkg/." "$dest/$(basename "$pkg")/"; \
+      done; \
+    fi \
  && APP="$APP" node scripts/check-standalone.js
 
 # ---------------------------------------------------------------- 运行层

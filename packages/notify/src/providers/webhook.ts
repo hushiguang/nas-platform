@@ -11,13 +11,14 @@
  * 推荐走界面配，一次填写长期有效；环境变量是容器兜底。
  */
 
-/** 企微 markdown 内容上限 4096 字节，超出会整条被拒，这里按字符保守截断 */
-const MAX_MARKDOWN = 3800;
+import { splitByBytes } from "../split";
 
-function truncate(text: string): string {
-  if (text.length <= MAX_MARKDOWN) return text;
-  return `${text.slice(0, MAX_MARKDOWN)}\n\n…（内容过长已截断）`;
-}
+/**
+ * 企微群机器人 markdown.content 的上限是 4096 **字节**。
+ * 留一点余量：企微按 UTF-8 字节算，中文一个字 3 字节，
+ * 卡在 4096 正上方容易因为多一个字符整条被拒。
+ */
+const MAX_MARKDOWN_BYTES = 3800;
 
 /** 从完整 webhook 地址里抠出 key，也接受直接粘贴 key */
 export function webhookKey(raw: string): string {
@@ -31,21 +32,39 @@ export function webhookKey(raw: string): string {
   }
 }
 
-export async function sendWecomWebhook(raw: string, markdown: string): Promise<void> {
+/**
+ * 发一条 markdown。内容超长时按字节拆成多条依次发出 ——
+ * 整条被截掉意味着汇总里的项目/待办全丢了，拆开发反而看得全。
+ *
+ * 返回实际发出的条数。
+ */
+export async function sendWecomWebhook(raw: string, markdown: string): Promise<number> {
   // raw 可能是完整地址或纯 key，这里统一归一化，避免调用方传完整地址
   // 导致 key=整个URL 被二次编码（会报 93000 invalid webhook url）
   const key = webhookKey(raw);
   if (!key) throw new Error("未配置群机器人 webhook");
   const url = `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${encodeURIComponent(key)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ msgtype: "markdown", markdown: { content: truncate(markdown) } }),
-  });
-  const json = (await res.json()) as { errcode?: number; errmsg?: string };
-  if (json.errcode !== 0) {
-    throw new Error(`企微群机器人发送失败: ${json.errcode} ${json.errmsg ?? ""}`);
+
+  const parts = splitByBytes(markdown, MAX_MARKDOWN_BYTES);
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i];
+    // 拆出来的后续段落加个序号，免得群里看成分了好几条互不相干的消息
+    const content = parts.length > 1 ? `${part}\n\n> （第 ${i + 1}/${parts.length} 段）` : part;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ msgtype: "markdown", markdown: { content } }),
+    });
+    const json = (await res.json()) as { errcode?: number; errmsg?: string };
+    if (json.errcode !== 0) {
+      throw new Error(
+        `企微群机器人发送失败: ${json.errcode} ${json.errmsg ?? ""}${
+          parts.length > 1 ? `（第 ${i + 1}/${parts.length} 段）` : ""
+        }`,
+      );
+    }
   }
+  return parts.length;
 }
 
 /** 连通性测试：发一条极短消息，用户能在群里直接看到 */

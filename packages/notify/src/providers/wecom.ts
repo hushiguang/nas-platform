@@ -7,7 +7,15 @@
  * 每个用户的接收人 userid 走 NotifyChannel.config.toUser 或 User.wecomId。
  */
 
+import { splitByBytes } from "../split";
 import { wecomConfig } from "../settings";
+
+/**
+ * 应用消息 text.content 的上限是 2048 **字节**。
+ * 每日汇总很容易超过（中文一个字 3 字节），超了整条发不出去。
+ * 这里按字节拆成多条依次发，宁可多发几条也别把整份汇总丢掉。
+ */
+const MAX_TEXT_BYTES = 1900;
 
 // access_token 有效期 7200s，进程内缓存，提前 60s 过期。
 // 改了配置要立即生效，所以按 corpId+secret 分桶，换了配置自然重新取 token。
@@ -61,24 +69,33 @@ export interface WecomPayload {
 export async function sendWecomAppMessage({ toUser, title, content }: WecomPayload): Promise<void> {
   const { agentId } = await wecomEnv();
   const token = await getAccessToken();
-  const body = {
-    touser: toUser,
-    msgtype: "text",
-    agentid: agentId,
-    text: { content: `${title}\n${content}` },
-    safe: 0,
-    duplicate_check_interval: 600, // 10 分钟内重复内容自动去重（企微侧兜底）
-  };
-  const res = await fetch(`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as { errcode?: number; errmsg?: string };
-  if (json.errcode !== 0) {
-    // token 过期/失效：清缓存，交给重试机制重来一次
-    if (json.errcode === 42001 || json.errcode === 40014) cached = null;
-    throw new Error(`企微消息发送失败: ${json.errcode} ${json.errmsg ?? ""}`);
+  const full = `${title}\n${content}`;
+  // 超长就按字节拆成多条发，企微对 text.content 也只认 2048 字节
+  const parts = splitByBytes(full, MAX_TEXT_BYTES);
+  for (let i = 0; i < parts.length; i += 1) {
+    const body = {
+      touser: toUser,
+      msgtype: "text",
+      agentid: agentId,
+      text: { content: parts[i] },
+      safe: 0,
+      duplicate_check_interval: 600, // 10 分钟内重复内容自动去重（企微侧兜底）
+    };
+    const res = await fetch(`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json()) as { errcode?: number; errmsg?: string };
+    if (json.errcode !== 0) {
+      // token 过期/失效：清缓存，交给重试机制重来一次
+      if (json.errcode === 42001 || json.errcode === 40014) cached = null;
+      throw new Error(
+        `企微消息发送失败: ${json.errcode} ${json.errmsg ?? ""}${
+          parts.length > 1 ? `（第 ${i + 1}/${parts.length} 段）` : ""
+        }`,
+      );
+    }
   }
 }
 

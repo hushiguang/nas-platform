@@ -85,6 +85,33 @@ const missing = MUST_EXIST.filter((m) => {
   }
 });
 
+// optionalDependencies 不进 Next 的文件追踪。pdf-parse 把 @napi-rs/canvas
+// 挂在 optionalDependencies 下，产物里 pdf-parse 在、@napi-rs 不在，
+// 容器一跑就刷
+//   Warning: Cannot load "@napi-rs/canvas" package: "Error: Cannot find module ..."
+// 文本抽取还能用，渲染直接坏。Dockerfile.app 会把 @napi-rs 整棵拷进产物，
+// 这里验证拷贝确实到位，拷漏了就在构建期失败。
+function canvasMissingReason() {
+  const pdfParseDir = path.join(standaloneRoot, "node_modules/pdf-parse");
+  if (!fs.existsSync(pdfParseDir)) return null;
+  try {
+    // 用 paths 限定在产物内部的 node_modules 里找：Node 默认会一路往上层
+    // node_modules 找，本地开发时可能在仓库根 node_modules 命中 —— 那不算数，
+    // 容器里产物被单独 COPY 出来，没有上层 node_modules。
+    const resolved = require.resolve("@napi-rs/canvas", {
+      paths: [path.join(standaloneRoot, "node_modules")],
+    });
+    if (!resolved.startsWith(standaloneRoot + path.sep)) {
+      return `解析到了产物之外的位置：${resolved}`;
+    }
+    return null;
+  } catch (e) {
+    return e && e.message ? e.message : String(e);
+  }
+}
+
+const canvasReason = canvasMissingReason();
+
 const missingPkgs = moduleSyncPackages().filter((name) => {
   const dest = path.join(standaloneRoot, "node_modules", name);
   try {
@@ -95,7 +122,7 @@ const missingPkgs = moduleSyncPackages().filter((name) => {
   }
 });
 
-if (missing.length || missingPkgs.length) {
+if (missing.length || missingPkgs.length || canvasReason) {
   if (missing.length) {
     console.error(`standalone 产物缺失 next 模块（APP=${app}）：${missing.join(", ")}`);
     console.error(`产物目录：${base}`);
@@ -103,6 +130,12 @@ if (missing.length || missingPkgs.length) {
   if (missingPkgs.length) {
     console.error(`standalone 产物缺失 module-sync 包（APP=${app}）：${missingPkgs.join(", ")}`);
     console.error(`产物目录：${path.join(standaloneRoot, "node_modules")}`);
+  }
+  if (canvasReason) {
+    console.error(
+      `standalone 产物缺失 @napi-rs/canvas（APP=${app}，pdf-parse 的 optional 依赖未追踪）：${canvasReason}`
+    );
+    console.error(`产物目录：${path.join(standaloneRoot, "node_modules/@napi-rs")}`);
   }
   process.exit(1);
 }
