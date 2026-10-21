@@ -269,6 +269,19 @@ export function IssuePanel({
   const [lightbox, setLightbox] = useState<string | null>(null);
   const quickRef = useRef<HTMLInputElement>(null);
 
+  // 大图 Esc 关闭；捕获阶段掐断传播，避免把同页的编辑弹窗一起关掉
+  useEffect(() => {
+    if (!lightbox) return undefined;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setLightbox(null);
+    }
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [lightbox]);
+
   function openForm(issue: IssueView | null) {
     setError(null);
     setEditing(issue);
@@ -478,8 +491,9 @@ export function IssuePanel({
 
       {lightbox ? (
         <div className="work-lightbox" role="dialog" aria-modal="true" onClick={() => setLightbox(null)}>
+          {/* 点大图本身也直接关闭（与待办应用的灯箱保持一致） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={proxyUrl(lightbox)} alt="问题截图" onClick={(event) => event.stopPropagation()} />
+          <img src={proxyUrl(lightbox)} alt="问题截图" />
           <button type="button" className="btn ghost sm" onClick={() => setLightbox(null)}>
             关闭
           </button>

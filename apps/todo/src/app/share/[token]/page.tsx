@@ -51,6 +51,8 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
     .filter((todo) => todo.status === "DONE")
     .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0));
   const readOnly = !list.shareWritable;
+  // 编辑弹窗里的「归到清单」：访客只能看到当前这一个清单
+  const listOption = { id: list.id, name: list.name, icon: list.icon };
 
   return (
     <div className="share-page">
@@ -65,7 +67,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
             {readOnly ? "只读分享" : "可勾选分享"}
           </span>
           <span className="muted">
-            {readOnly ? "只能查看清单内容" : "点圆圈勾掉，也可以补充新条目"}
+            {readOnly ? "只能查看清单内容" : "点圆圈勾掉，点条目可以编辑，也可以补充新条目"}
           </span>
         </div>
         <div className="share-stats">
@@ -92,7 +94,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         ) : (
           <ul className="todo-list">
             {pending.map((todo) => (
-              <SharedTodoRow key={todo.id} todo={todo} token={token} writable={!readOnly} />
+              <SharedTodoRow key={todo.id} todo={todo} token={token} writable={!readOnly} list={listOption} />
             ))}
           </ul>
         )}
@@ -106,7 +108,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
           </summary>
           <ul className="todo-list">
             {done.map((todo) => (
-              <SharedTodoRow key={todo.id} todo={todo} token={token} writable={!readOnly} />
+              <SharedTodoRow key={todo.id} todo={todo} token={token} writable={!readOnly} list={listOption} />
             ))}
           </ul>
         </details>

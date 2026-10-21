@@ -1042,7 +1042,8 @@ function ImageViewer({ src, onClose }) {
   return createPortal(
     <div className="image-viewer" role="dialog" aria-modal="true" aria-label="查看图片" onClick={onClose}>
       <button className="image-viewer-close" type="button" onClick={onClose}>关闭</button>
-      <img src={src} alt="" onClick={(event) => event.stopPropagation()} />
+      {/* 点大图本身也直接关闭（Esc / 点空白处 / 点图，全站一致） */}
+      <img src={src} alt="" />
     </div>,
     document.body,
   );

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { zonedDate, zonedTime } from "@nas/core";
 import type { TodoView } from "@nas/todo";
-import { guestToggleTodoAction } from "@/app/share/actions";
+import { guestToggleTodoAction, guestUpdateTodoAction } from "@/app/share/actions";
 import { LightboxImage } from "./lightbox";
+import { TodoDialog, type ListOption } from "./todo-dialog";
 
 const PRIORITY_COLOR: Record<string, string> = {
   HIGH: "var(--coral)",
@@ -24,21 +25,26 @@ function dueText(due: Date | null): string {
 /**
  * 分享页的待办行：跟待办应用里的行保持同一套展示 ——
  * 图片直接铺成缩略图、点了看大图；长备注收起成一行，点一下展开全文。
- * 区别只在不带编辑/删除这些要登录的操作，勾选走免登录 Server Action。
+ * 「可勾选」分享里点条目就能打开编辑弹窗，保存走免登录 Server Action；
+ * 只读分享保持纯展示。
  */
 export function SharedTodoRow({
   todo,
   token,
   writable,
+  list,
 }: {
   todo: TodoView;
   token: string;
   writable: boolean;
+  /** 当前清单信息：编辑弹窗里的「归到清单」只有这一个选项 */
+  list: ListOption;
 }) {
   const done = todo.status === "DONE";
   const overdue = todo.status === "OVERDUE";
   // 长备注默认收起，点「备注」展开全文，行高不被大段文字撑爆
   const [noteOpen, setNoteOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const notePreview =
     todo.description && todo.description.length > 42
       ? `${todo.description.slice(0, 42)}…`
@@ -47,6 +53,18 @@ export function SharedTodoRow({
   // 图片不能走 /api/image（要登录），走这个清单自己的免登录代理
   function imageSrc(address: string): string {
     return `/share/${encodeURIComponent(token)}/image?u=${encodeURIComponent(address)}`;
+  }
+
+  /** 点条目的内容区也能打开编辑弹窗；勾选框、按钮、链接各走各的，划选备注文字时不弹窗 */
+  function openFromRow(event: React.MouseEvent<HTMLDivElement>) {
+    if (!writable) return;
+    const target = event.target as HTMLElement;
+    // 大图灯箱是 portal 到 body 的，React 事件仍会冒泡到这里；不在本行里的点击忽略
+    if (!event.currentTarget.contains(target)) return;
+    if (target.closest("button, a, input, select, textarea, label")) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim()) return;
+    setDialogOpen(true);
   }
 
   return (
@@ -84,11 +102,25 @@ export function SharedTodoRow({
         </span>
       )}
 
-      <div className="todo-main">
+      <div
+        className={`todo-main${writable ? " is-clickable" : ""}`}
+        onClick={openFromRow}
+      >
         <div className="todo-line">
-          <span className="todo-title" title={todo.title}>
-            {todo.title}
-          </span>
+          {writable ? (
+            <button
+              type="button"
+              className="todo-title"
+              title="点击编辑这条待办"
+              onClick={() => setDialogOpen(true)}
+            >
+              {todo.title}
+            </button>
+          ) : (
+            <span className="todo-title" title={todo.title}>
+              {todo.title}
+            </span>
+          )}
           <span
             className={`todo-due${overdue ? " is-overdue" : ""}${!todo.dueTime ? " is-none" : ""}`}
           >
@@ -120,6 +152,24 @@ export function SharedTodoRow({
           </div>
         )}
       </div>
+
+      {writable && (
+        <TodoDialog
+          lists={[list]}
+          action={guestUpdateTodoAction}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          imageUrl={imageSrc}
+          hiddenFields={{ token }}
+          basic
+          initial={{
+            id: todo.id,
+            title: todo.title,
+            description: todo.description,
+            images: todo.imageList,
+          }}
+        />
+      )}
     </li>
   );
 }

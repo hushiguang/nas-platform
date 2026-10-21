@@ -288,6 +288,11 @@
   flex: 1;
 }
 
+/* 整块内容区可点开编辑弹窗时才显示手型（只读分享页的行不装可点） */
+.todo-main.is-clickable {
+  cursor: pointer;
+}
+
 .todo-line {
   display: flex;
   align-items: center;
@@ -304,6 +309,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* 标题是「点击即编辑」的按钮：抹掉按钮默认外观，只留文字和指针光标 */
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
 }
 
 .todo-due {
@@ -925,6 +939,13 @@ table.data .todo-ops {
 }
 
 .share-add-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--coral);
+}
+
+/* 编辑弹窗里的错误提示（访客分享时图片超限等） */
+.todo-dialog-error {
   margin: 0;
   font-size: 12px;
   color: var(--coral);

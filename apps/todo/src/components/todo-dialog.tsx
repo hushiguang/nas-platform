@@ -23,13 +23,14 @@ export interface TodoInitial {
   id: number;
   title: string;
   description: string | null;
-  listId: number | null;
-  priority: string;
-  dueDate: string;
-  dueTime: string;
-  remindOffsets: number[];
-  remindTime: string;
   images: string[];
+  /** 以下字段精简模式（分享页）不展示，可以不传 */
+  listId?: number | null;
+  priority?: string;
+  dueDate?: string;
+  dueTime?: string;
+  remindOffsets?: number[];
+  remindTime?: string;
 }
 
 /** 常用提醒档位。勾多个会各推一条（引擎按 offsetDays 逐条派发） */
@@ -58,16 +59,39 @@ export function TodoDialog({
   defaultListId,
   defaultDueDate,
   trigger,
+  open: openProp,
+  onOpenChange,
+  imageUrl,
+  hiddenFields,
+  basic = false,
 }: {
   lists: ListOption[];
-  action: (form: FormData) => Promise<void>;
+  /** 可以返回 { message } 把失败原因显示在弹窗里（分享页的图片超限等） */
+  action: (form: FormData) => Promise<{ message?: string } | void>;
   initial?: TodoInitial;
   defaultListId?: number | null;
   /** 新建时"哪天"默认填今天（只定日期，几点留空） */
   defaultDueDate?: string;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
+  /** 受控打开：传了 open 就由外部决定开合（行内点标题、点「编辑」共用同一个弹窗） */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** 图片地址 → 可显示 URL。分享页要换成免登录代理（/api/image 需要登录） */
+  imageUrl?: (address: string) => string;
+  /** 额外随表单提交的隐藏字段（分享页的 token） */
+  hiddenFields?: Record<string, string>;
+  /** 精简模式：只留标题、备注、图片（分享给外部的人改，清单/日期/提醒这些不给动） */
+  basic?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openState;
+  const setOpen = (next: boolean) => {
+    if (!controlled) setOpenState(next);
+    onOpenChange?.(next);
+  };
+  const showImage = imageUrl ?? imageSrc;
+  const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [keepImages, setKeepImages] = useState<string[]>(initial?.images ?? []);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -94,8 +118,32 @@ export function TodoDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, imagesKey]);
 
+  // 每次打开都从干净状态开始：上一轮的错误提示不该带到下一次
+  useEffect(() => {
+    if (open) setError(null);
+  }, [open]);
+
+  // Esc 关闭弹窗：写在 window 上而不是弹窗节点上，输入框里按 Esc 也能收起来
+  useEffect(() => {
+    if (!open) return undefined;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      if (controlled) onOpenChange?.(false);
+      else setOpenState(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, controlled, onOpenChange]);
+
   async function submit(form: FormData) {
-    await action(form);
+    const result = await action(form);
+    if (result && typeof result.message === "string" && result.message) {
+      setError(result.message);
+      return;
+    }
+    setError(null);
     setOpen(false);
   }
 
@@ -119,9 +167,11 @@ export function TodoDialog({
 
   return (
     <>
-      <span onClick={() => setOpen(true)} className="todo-trigger">
-        {trigger}
-      </span>
+      {trigger && (
+        <span onClick={() => setOpen(true)} className="todo-trigger">
+          {trigger}
+        </span>
+      )}
 
       {open && (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
@@ -135,6 +185,9 @@ export function TodoDialog({
 
             <form action={submit} className="form-stack">
               {isEdit && <input type="hidden" name="id" value={initial!.id} />}
+              {Object.entries(hiddenFields ?? {}).map(([key, value]) => (
+                <input key={key} type="hidden" name={key} value={value} />
+              ))}
 
               <label className="field">
                 <span className="form-label">要做什么</span>
@@ -153,69 +206,75 @@ export function TodoDialog({
                 <textarea className="input" name="description" rows={2} defaultValue={initial?.description ?? ""} />
               </label>
 
-              <div className="form-row">
-                <label className="field">
-                  <span className="form-label">归到清单</span>
-                  <select className="input" name="listId" defaultValue={String(initial?.listId ?? defaultListId ?? "")}>
-                    <option value="">（不归类）</option>
-                    {lists.map((list) => (
-                      <option key={list.id} value={list.id}>
-                        {list.icon ? `${list.icon} ` : ""}
-                        {list.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {!basic && (
+                <div className="form-row">
+                  <label className="field">
+                    <span className="form-label">归到清单</span>
+                    <select className="input" name="listId" defaultValue={String(initial?.listId ?? defaultListId ?? "")}>
+                      <option value="">（不归类）</option>
+                      {lists.map((list) => (
+                        <option key={list.id} value={list.id}>
+                          {list.icon ? `${list.icon} ` : ""}
+                          {list.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <label className="field">
-                  <span className="form-label">优先级</span>
-                  <select className="input" name="priority" defaultValue={initial?.priority ?? "MEDIUM"}>
-                    {PRIORITIES.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="form-row">
-                <label className="field">
-                  <span className="form-label">哪天（默认今天）</span>
-                  <input className="input" type="date" name="dueDate" defaultValue={initial?.dueDate ?? defaultDueDate ?? ""} />
-                </label>
-                <label className="field">
-                  <span className="form-label">几点（可空）</span>
-                  <input className="input" type="time" name="dueTime" defaultValue={initial?.dueTime ?? ""} />
-                </label>
-              </div>
-
-              <div className="field">
-                <span className="form-label">什么时候提醒我</span>
-                <div className="choice-row">
-                  {REMIND_PRESETS.map((preset) => (
-                    <label key={preset.value} className="choice">
-                      <input
-                        type="checkbox"
-                        name="remindOffsets"
-                        value={preset.value}
-                        defaultChecked={initial?.remindOffsets?.includes(preset.value) ?? preset.value === 0}
-                      />
-                      <span>{preset.label}</span>
-                    </label>
-                  ))}
-                  <input
-                    className="input"
-                    type="time"
-                    name="remindTime"
-                    defaultValue={initial?.remindTime ?? "09:00"}
-                    style={{ width: 110 }}
-                  />
+                  <label className="field">
+                    <span className="form-label">优先级</span>
+                    <select className="input" name="priority" defaultValue={initial?.priority ?? "MEDIUM"}>
+                      {PRIORITIES.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-                <span className="muted" style={{ fontSize: 12 }}>
-                  都不勾就不提醒。日期没填的话，提醒不会触发。
-                </span>
-              </div>
+              )}
+
+              {!basic && (
+                <div className="form-row">
+                  <label className="field">
+                    <span className="form-label">哪天（默认今天）</span>
+                    <input className="input" type="date" name="dueDate" defaultValue={initial?.dueDate ?? defaultDueDate ?? ""} />
+                  </label>
+                  <label className="field">
+                    <span className="form-label">几点（可空）</span>
+                    <input className="input" type="time" name="dueTime" defaultValue={initial?.dueTime ?? ""} />
+                  </label>
+                </div>
+              )}
+
+              {!basic && (
+                <div className="field">
+                  <span className="form-label">什么时候提醒我</span>
+                  <div className="choice-row">
+                    {REMIND_PRESETS.map((preset) => (
+                      <label key={preset.value} className="choice">
+                        <input
+                          type="checkbox"
+                          name="remindOffsets"
+                          value={preset.value}
+                          defaultChecked={initial?.remindOffsets?.includes(preset.value) ?? preset.value === 0}
+                        />
+                        <span>{preset.label}</span>
+                      </label>
+                    ))}
+                    <input
+                      className="input"
+                      type="time"
+                      name="remindTime"
+                      defaultValue={initial?.remindTime ?? "09:00"}
+                      style={{ width: 110 }}
+                    />
+                  </div>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    都不勾就不提醒。日期没填的话，提醒不会触发。
+                  </span>
+                </div>
+              )}
 
               <div className="field">
                 <span className="form-label">图片（可空，最多 9 张；也能直接粘贴截图）</span>
@@ -232,7 +291,7 @@ export function TodoDialog({
                 {(keepImages.length > 0 || previews.length > 0) && (
                   <div className="todo-thumbs">
                     {keepImages.map((address) => (
-                      <LightboxImage key={address} src={imageSrc(address)}>
+                      <LightboxImage key={address} src={showImage(address)}>
                         {/* 已有图片走 hidden 回传，删掉就是移除 */}
                         <input type="hidden" name="images" value={address} />
                         <button
@@ -251,6 +310,12 @@ export function TodoDialog({
                   </div>
                 )}
               </div>
+
+              {error && (
+                <p className="todo-dialog-error" role="alert">
+                  {error}
+                </p>
+              )}
 
               <div className="form-row">
                 <button type="submit" className="btn">
