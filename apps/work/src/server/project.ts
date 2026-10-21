@@ -92,6 +92,8 @@ export interface PhaseView {
   startDate: string;
   endDate: string;
   range: string;
+  /** 所需天数，含首尾；没排期或结束早于开始时为 null */
+  days: number | null;
   devEnterDate: string;
   devEnterLabel: string;
   progress: number;
@@ -341,6 +343,7 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
         startDate: start,
         endDate: end,
         range: start || end ? rangeLabel(start, end) : "",
+        days: start && end && end >= start ? dayDiff(end, start) + 1 : null,
         devEnterDate,
         devEnterLabel: devEnterDate ? dayLabel(devEnterDate) : "",
         progress: phase.progress,
@@ -454,15 +457,43 @@ async function loadViews(where: Prisma.WorkProjectWhereInput, access: PlatformAc
   return rows.map((row) => present(row, names, access, userId));
 }
 
+/**
+ * 到期分组：逾期的最前，其次是有结束日的（越近越前），再次是未排期，最后是已上线。
+ * 卡片上的到期文案也是按当前阶段结束日算的，排序跟文案保持一致。
+ */
+function dueBucket(item: ProjectView): number {
+  if (item.phase === "LIVE") return 3;
+  if (item.phaseOverdue != null) return 0;
+  const end = item.phases.find((phase) => phase.kind === item.phase)?.endDate;
+  return end ? 1 : 2;
+}
+
+function phaseEndOf(item: ProjectView): string {
+  return item.phases.find((phase) => phase.kind === item.phase)?.endDate ?? "";
+}
+
 export async function listProjects(access: PlatformAccess, userId: number): Promise<ProjectView[]> {
   await refreshDelayedNodes();
   await ensurePhases();
   const items = await loadViews(visibleWhere(access, userId), access, userId);
   return items.sort((a, b) => {
-    const live = Number(a.phase === "LIVE") - Number(b.phase === "LIVE");
-    if (live !== 0) return live;
+    const bucket = dueBucket(a) - dueBucket(b);
+    if (bucket !== 0) return bucket;
+    // 都逾期：逾期越久越靠前（phaseOverdue 是负数）
+    if (a.phaseOverdue != null && b.phaseOverdue != null && a.phaseOverdue !== b.phaseOverdue) {
+      return a.phaseOverdue - b.phaseOverdue;
+    }
+    // 都未逾期：到期日近的靠前
+    const ae = phaseEndOf(a);
+    const be = phaseEndOf(b);
+    if (ae !== be) {
+      if (!ae) return 1;
+      if (!be) return -1;
+      return ae < be ? -1 : 1;
+    }
     const priority = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
     if (priority !== 0) return priority;
+    if (a.delayed !== b.delayed) return b.delayed - a.delayed;
     return a.id - b.id;
   });
 }

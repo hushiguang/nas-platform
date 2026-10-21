@@ -40,6 +40,9 @@ export function PhaseBoard({
               <span className="work-phase-name">
                 <span className={item.kind === current ? "badge" : "badge soft"}>{item.label}</span>
               </span>
+              <span className="work-phase-days" title="所需天数">
+                {item.days != null ? `${item.days} 天` : "—"}
+              </span>
               <span className="work-phase-meta">
                 {!item.enabled ? <span className="badge soft">未启用</span> : null}
                 <span>{item.range || "未排期"}</span>
@@ -162,6 +165,9 @@ function PhaseDialog({
               <input className="field" name="endDate" type="date" defaultValue={phase.endDate} />
             </label>
           </div>
+          <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+            所需天数 {phase.days == null ? "—" : `${phase.days} 天`}，按开始和结束日自动算，含首尾。
+          </p>
           {needsDevEnter ? (
             <label className="form-label">
               研发进入

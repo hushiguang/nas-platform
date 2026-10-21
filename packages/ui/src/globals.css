@@ -2224,7 +2224,7 @@ a.work-row:hover {
   background: var(--paper);
 }
 .work-phase-row {
-  grid-template-columns: 128px minmax(0, 1fr) 132px 40px;
+  grid-template-columns: 128px 64px minmax(0, 1fr) 132px 40px;
   width: 100%;
   padding: 12px 14px;
   border: 0;
@@ -2237,6 +2237,12 @@ a.work-row:hover {
 }
 .work-phase-row .work-phase-meta {
   color: inherit;
+}
+.work-phase-days {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .work-phase-row:last-child {
   border-bottom: 0;
@@ -2535,6 +2541,7 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   .row-actions > * { flex: 1 1 auto; }
   /* 工作台阶段行：窄屏上下排 */
   .work-phase-lines li, .work-phase-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .work-phase-row .work-phase-meta { grid-column: 1 / -1; }
   .work-phase-lines li .work-segments, .work-phase-row .work-segments { grid-column: 1 / -1; order: 3; }
   .phase-pct { width: auto; }
   .work-project-head { flex-direction: column; }
