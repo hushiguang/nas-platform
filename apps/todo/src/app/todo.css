@@ -1091,7 +1091,7 @@ html.is-scroll-locked body {
   /* 分享页：内边距收小，底部给悬浮按钮留出空间，避免盖住最后一条 */
   .share-page {
     gap: 12px;
-    padding: calc(14px + env(safe-area-inset-top)) 12px calc(104px + env(safe-area-inset-bottom));
+    padding: calc(14px + env(safe-area-inset-top)) 12px calc(132px + env(safe-area-inset-bottom));
   }
   .share-page .card {
     padding: 13px 14px;
@@ -1156,6 +1156,8 @@ html.is-scroll-locked body {
     padding: 0;
     background: rgba(12, 8, 20, 0.66);
     backdrop-filter: blur(6px) saturate(0.85);
+    /* 遮罩上不响应手势滚动：背景列表不会被拖着滑 */
+    touch-action: none;
   }
   .share-sheet .share-add {
     position: relative;
@@ -1198,6 +1200,8 @@ html.is-scroll-locked body {
     padding: calc(10px + env(safe-area-inset-top)) 10px 10px;
     background: rgba(12, 8, 20, 0.66);
     backdrop-filter: blur(6px) saturate(0.85);
+    /* 遮罩上不响应手势滚动：背景列表不会被拖着滑 */
+    touch-action: none;
   }
   .todo-modal {
     width: 100%;
