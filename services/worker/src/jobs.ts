@@ -98,8 +98,9 @@ export const JOBS: Record<string, () => Promise<void>> = {
   // 报告本身走 notifyLog（失败会进 notify-retry 退避重发）。
   digest: pushSummary,
 
-  // 用户自己记的待办提醒：按 remindRules 的时点投递（高频跑，保证时点准确）。
+  // 用户自己记的待办提醒：按 remindRules 的时点提醒（高频跑，保证时点准确）。
   // 不跑它，待办应用里勾的「提前 3 天 09:00 提醒」就不会发。
+  // 同一个人这一轮到点的提醒会合成一条消息，不会一条待办一个推送。
   // 工作台 / 纪念日 / 账单自动收的待办不在这里单推，它们只在每日汇总里出现。
   "dispatch-reminders": async () => {
     const purged = await purgeAutoTodoReminders();

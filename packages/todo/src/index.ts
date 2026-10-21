@@ -80,17 +80,62 @@ function normalizeRules(rules: Prisma.JsonValue | null): RemindRule[] {
     const offsetDays = Number((r as Record<string, unknown>).offsetDays);
     if (!Number.isFinite(offsetDays)) return [];
     const time = (r as Record<string, unknown>).time;
-    return [{ offsetDays, time: typeof time === "string" ? time : undefined }];
+    const lastFired = (r as Record<string, unknown>).lastFired;
+    return [
+      {
+        offsetDays,
+        time: typeof time === "string" ? time : undefined,
+        lastFired: typeof lastFired === "string" ? lastFired : undefined,
+      },
+    ];
   });
 }
 
+interface DueReminder {
+  todoId: number;
+  ownerId: number;
+  title: string;
+  description: string | null;
+  due: Date;
+  dueTime: Date | null;
+  /** 这条待办的全部规则快照，写回 lastFired 时用 */
+  rules: RemindRule[];
+  /** 这一轮一并算作「已提醒」的规则：补扫时旧的提前提醒不再逐个补发 */
+  firedRules: RemindRule[];
+  rule: RemindRule;
+  fireDate: string;
+  key: string;
+}
+
+function dueText(item: DueReminder): string {
+  return `到期：${zonedDate(item.due)}${item.dueTime ? ` ${zonedTime(item.dueTime)}` : ""}`;
+}
+
+function whenText(item: DueReminder): string {
+  return item.rule.offsetDays === 0 ? "今天到期" : `提前 ${item.rule.offsetDays} 天提醒`;
+}
+
+/** 批量提醒的幂等键：把这一批的 key 压成短串，免得 dedupeKey 撞索引长度上限 */
+function batchHash(keys: string[]): string {
+  const text = [...keys].sort().join("|");
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `${keys.length}-${hash.toString(36)}`;
+}
+
 /**
- * 提醒派发：按 remindRules（提前 N 天 + 时点）计算应触发的提醒并投递到通知网关。
- * 幂等键 todo:{id}:{offsetDays}:{触发日期} —— 同一条提醒同一天只投一次。
+ * 提醒派发：按 remindRules（提前 N 天 + 时点）算出这一轮该提醒的待办，然后**按人合并**发出。
+ *
+ * - 一条待办同时过了好几条规则（比如补扫时 7 天 / 3 天 / 1 天 / 当天都到点了）只发一条，
+ *   取最接近到期的那条；发过的规则写回 lastFired，之后不再重复补发。
+ * - 同一个人这一轮到点的待办合成一条消息（`【待办提醒】N 条`），不再一条一个推送。
  *
  * 只发用户自己记的待办（source = MANUAL）。工作台 / 纪念日 / 账单自动收上来的
  * 待办本身就是每日汇总里的那些行（风险预报、待修问题、纪念日、待办清单），
- * 再按条单推一次等于同一件事发两遍 —— 一天能刷出十几条，所以这里直接跳过。
+ * 再按条单推一次等于同一件事发两遍，所以这里直接跳过。
  */
 export async function dispatchTodoReminders(now = new Date()): Promise<number> {
   const todos = await prisma.todo.findMany({
@@ -104,37 +149,91 @@ export async function dispatchTodoReminders(now = new Date()): Promise<number> {
 
   const today = zonedDate(now);
   const nowMinutes = zonedMinutes(now);
-  let sent = 0;
+  const dueItems: DueReminder[] = [];
 
   for (const todo of todos) {
     const due = todo.dueTime ?? (todo.triggerDate && todo.triggerDate.getTime() > 0 ? todo.triggerDate : null);
     if (!due) continue;
 
-    for (const rule of normalizeRules(todo.remindRules)) {
+    const rules = normalizeRules(todo.remindRules);
+    let hit: { rule: RemindRule; fireDate: string } | null = null;
+    const passedRules: RemindRule[] = [];
+    for (const rule of rules) {
       // 触发日期 = 到期日 - 提前天数
       const fireDate = zonedDate(addDays(due, -rule.offsetDays));
+      // 这条规则已经提醒过（哪怕是因为补扫迟发的），不再重复
+      if (rule.lastFired && rule.lastFired >= fireDate) continue;
       // 已过触发日，或当天且已到提醒时点
       const passed = fireDate < today || (fireDate === today && nowMinutes >= (parseHm(rule.time) ?? 0));
       if (!passed) continue;
-
-      const dedupeKey = `todo:${todo.id}:${rule.offsetDays}:${fireDate}`;
-      const result = await sendNotify({
-        userId: todo.ownerId,
-        todoId: todo.id,
-        title: `【待办提醒】${todo.title}`,
-        content: [
-          todo.description,
-          `到期：${zonedDate(due)}${todo.dueTime ? ` ${zonedTime(todo.dueTime)}` : ""}`,
-          rule.offsetDays === 0 ? "今天到期" : `提前 ${rule.offsetDays} 天提醒`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-        dedupeKey,
-      });
-      sent += result.queued;
+      passedRules.push(rule);
+      if (!hit || rule.offsetDays < hit.rule.offsetDays) hit = { rule, fireDate };
     }
+    if (!hit) continue;
+
+    dueItems.push({
+      todoId: todo.id,
+      ownerId: todo.ownerId,
+      title: todo.title,
+      description: todo.description,
+      due,
+      dueTime: todo.dueTime,
+      rules,
+      firedRules: passedRules,
+      rule: hit.rule,
+      fireDate: hit.fireDate,
+      key: `todo:${todo.id}:${hit.rule.offsetDays}:${hit.fireDate}`,
+    });
   }
-  return sent;
+
+  const byUser = new Map<number, DueReminder[]>();
+  for (const item of dueItems) {
+    const list = byUser.get(item.ownerId) ?? [];
+    list.push(item);
+    byUser.set(item.ownerId, list);
+  }
+
+  let queued = 0;
+  const fired: DueReminder[] = [];
+  for (const [userId, items] of byUser) {
+    const result =
+      items.length === 1
+        ? await sendNotify({
+            userId,
+            todoId: items[0].todoId,
+            title: `【待办提醒】${items[0].title}`,
+            content: [items[0].description, dueText(items[0]), whenText(items[0])].filter(Boolean).join("\n"),
+            dedupeKey: items[0].key,
+          })
+        : await sendNotify({
+            userId,
+            title: `【待办提醒】${items.length} 条`,
+            content: items
+              .map((item) => `- ${item.title}（${whenText(item)}｜${dueText(item).replace("到期：", "")}）`)
+              .join("\n"),
+            dedupeKey: `todo-batch:${userId}:${batchHash(items.map((item) => item.key))}`,
+          });
+    queued += result.queued;
+    // 入队成功才算提醒过：没配渠道 / 全部幂等冲突时留到下一轮再试
+    if (result.queued > 0) fired.push(...items);
+  }
+
+  for (const item of fired) {
+    // 标今天而不是规则自己的触发日：补扫时 7 天 / 3 天 / 1 天这些早就过点的规则
+    // 一并算作已提醒，否则下一轮又会挑出下一条旧的挨个补发。
+    const firedOffsets = new Set(item.firedRules.map((rule) => rule.offsetDays));
+    const next = item.rules.map((rule) =>
+      firedOffsets.has(rule.offsetDays)
+        ? { offsetDays: rule.offsetDays, time: rule.time, lastFired: today }
+        : rule,
+    );
+    await prisma.todo.update({
+      where: { id: item.todoId },
+      data: { remindRules: next as unknown as Prisma.InputJsonValue },
+    });
+  }
+
+  return queued;
 }
 
 /**

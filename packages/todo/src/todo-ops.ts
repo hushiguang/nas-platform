@@ -137,6 +137,31 @@ export async function updateTodo(
   }
 
   const remindChanged = data.remindRules !== undefined || data.dueTime !== undefined;
+  // 界面只提交「提前 N 天 + 时点」，引擎写回的 lastFired 按 offsetDays 继承下来，
+  // 否则改个标题就会把当天已发过的提醒再补一遍。到期日改了则不继承：新日期该重新提醒。
+  let remindRules = data.remindRules;
+  if (remindRules && remindRules.length > 0) {
+    const previous = await prisma.todo.findUnique({
+      where: { id: todoId },
+      select: { remindRules: true, dueTime: true },
+    });
+    const dueChanged =
+      data.dueTime !== undefined && (data.dueTime?.getTime() ?? 0) !== (previous?.dueTime?.getTime() ?? 0);
+    if (!dueChanged && Array.isArray(previous?.remindRules)) {
+      const firedAt = new Map<number, string>();
+      for (const raw of previous.remindRules) {
+        if (typeof raw !== "object" || raw === null) continue;
+        const offset = Number((raw as Record<string, unknown>).offsetDays);
+        const last = (raw as Record<string, unknown>).lastFired;
+        if (Number.isFinite(offset) && typeof last === "string") firedAt.set(offset, last);
+      }
+      remindRules = remindRules.map((rule) => {
+        const last = firedAt.get(rule.offsetDays);
+        return last ? { ...rule, lastFired: last } : rule;
+      });
+    }
+  }
+
   const row = await prisma.todo.update({
     where: { id: todoId },
     data: {
@@ -144,8 +169,8 @@ export async function updateTodo(
       ...(data.description !== undefined ? { description: data.description || null } : {}),
       ...(data.priority !== undefined ? { priority: data.priority } : {}),
       ...(data.dueTime !== undefined ? { dueTime: data.dueTime } : {}),
-      ...(data.remindRules !== undefined
-        ? { remindRules: (data.remindRules ?? undefined) as Prisma.InputJsonValue | undefined }
+      ...(remindRules !== undefined
+        ? { remindRules: (remindRules ?? undefined) as Prisma.InputJsonValue | undefined }
         : {}),
       ...(data.status !== undefined
         ? { status: data.status, completedAt: data.status === "DONE" ? new Date() : null }

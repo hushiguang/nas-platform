@@ -11,6 +11,11 @@ export interface RemindRule {
   offsetDays: number;
   /** 推送时点 "09:00" */
   time?: string;
+  /**
+   * 这条规则已经提醒过的触发日（YYYY-MM-DD）。引擎写回，界面不提交 ——
+   * 没有它，逾期很久的待办每天都会被重新扫出来发一遍。
+   */
+  lastFired?: string;
 }
 
 export interface CreateTodoInput {
