@@ -23248,6 +23248,7 @@ export namespace Prisma {
     handler: number
     nodeId: number
     phaseId: number
+    images: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -23314,6 +23315,7 @@ export namespace Prisma {
     handler?: true
     nodeId?: true
     phaseId?: true
+    images?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -23417,6 +23419,7 @@ export namespace Prisma {
     handler: string | null
     nodeId: number | null
     phaseId: number | null
+    images: JsonValue | null
     createdAt: Date
     updatedAt: Date
     _count: WorkIssueCountAggregateOutputType | null
@@ -23452,6 +23455,7 @@ export namespace Prisma {
     handler?: boolean
     nodeId?: boolean
     phaseId?: boolean
+    images?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
@@ -23469,6 +23473,7 @@ export namespace Prisma {
     handler?: boolean
     nodeId?: boolean
     phaseId?: boolean
+    images?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
@@ -23486,6 +23491,7 @@ export namespace Prisma {
     handler?: boolean
     nodeId?: boolean
     phaseId?: boolean
+    images?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
@@ -23503,11 +23509,12 @@ export namespace Prisma {
     handler?: boolean
     nodeId?: boolean
     phaseId?: boolean
+    images?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type WorkIssueOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "description" | "impact" | "solution" | "status" | "kind" | "ownerId" | "handler" | "nodeId" | "phaseId" | "createdAt" | "updatedAt", ExtArgs["result"]["workIssue"]>
+  export type WorkIssueOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "description" | "impact" | "solution" | "status" | "kind" | "ownerId" | "handler" | "nodeId" | "phaseId" | "images" | "createdAt" | "updatedAt", ExtArgs["result"]["workIssue"]>
   export type WorkIssueInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
   }
@@ -23541,6 +23548,10 @@ export namespace Prisma {
        * 挂在哪个阶段。六个阶段都可以
        */
       phaseId: number | null
+      /**
+       * 问题截图。存图床返回的地址数组，允许只传图不写文字
+       */
+      images: Prisma.JsonValue | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["workIssue"]>
@@ -23978,6 +23989,7 @@ export namespace Prisma {
     readonly handler: FieldRef<"WorkIssue", 'String'>
     readonly nodeId: FieldRef<"WorkIssue", 'Int'>
     readonly phaseId: FieldRef<"WorkIssue", 'Int'>
+    readonly images: FieldRef<"WorkIssue", 'Json'>
     readonly createdAt: FieldRef<"WorkIssue", 'DateTime'>
     readonly updatedAt: FieldRef<"WorkIssue", 'DateTime'>
   }
@@ -56021,6 +56033,7 @@ export namespace Prisma {
     handler: 'handler',
     nodeId: 'nodeId',
     phaseId: 'phaseId',
+    images: 'images',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -58178,6 +58191,7 @@ export namespace Prisma {
     handler?: StringNullableFilter<"WorkIssue"> | string | null
     nodeId?: IntNullableFilter<"WorkIssue"> | number | null
     phaseId?: IntNullableFilter<"WorkIssue"> | number | null
+    images?: JsonNullableFilter<"WorkIssue">
     createdAt?: DateTimeFilter<"WorkIssue"> | Date | string
     updatedAt?: DateTimeFilter<"WorkIssue"> | Date | string
     project?: XOR<WorkProjectScalarRelationFilter, WorkProjectWhereInput>
@@ -58195,6 +58209,7 @@ export namespace Prisma {
     handler?: SortOrderInput | SortOrder
     nodeId?: SortOrderInput | SortOrder
     phaseId?: SortOrderInput | SortOrder
+    images?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     project?: WorkProjectOrderByWithRelationInput
@@ -58215,6 +58230,7 @@ export namespace Prisma {
     handler?: StringNullableFilter<"WorkIssue"> | string | null
     nodeId?: IntNullableFilter<"WorkIssue"> | number | null
     phaseId?: IntNullableFilter<"WorkIssue"> | number | null
+    images?: JsonNullableFilter<"WorkIssue">
     createdAt?: DateTimeFilter<"WorkIssue"> | Date | string
     updatedAt?: DateTimeFilter<"WorkIssue"> | Date | string
     project?: XOR<WorkProjectScalarRelationFilter, WorkProjectWhereInput>
@@ -58232,6 +58248,7 @@ export namespace Prisma {
     handler?: SortOrderInput | SortOrder
     nodeId?: SortOrderInput | SortOrder
     phaseId?: SortOrderInput | SortOrder
+    images?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: WorkIssueCountOrderByAggregateInput
@@ -58256,6 +58273,7 @@ export namespace Prisma {
     handler?: StringNullableWithAggregatesFilter<"WorkIssue"> | string | null
     nodeId?: IntNullableWithAggregatesFilter<"WorkIssue"> | number | null
     phaseId?: IntNullableWithAggregatesFilter<"WorkIssue"> | number | null
+    images?: JsonNullableWithAggregatesFilter<"WorkIssue">
     createdAt?: DateTimeWithAggregatesFilter<"WorkIssue"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"WorkIssue"> | Date | string
   }
@@ -61607,6 +61625,7 @@ export namespace Prisma {
     handler?: string | null
     nodeId?: number | null
     phaseId?: number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     project: WorkProjectCreateNestedOneWithoutIssuesInput
@@ -61624,6 +61643,7 @@ export namespace Prisma {
     handler?: string | null
     nodeId?: number | null
     phaseId?: number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -61638,6 +61658,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: WorkProjectUpdateOneRequiredWithoutIssuesNestedInput
@@ -61655,6 +61676,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -61671,6 +61693,7 @@ export namespace Prisma {
     handler?: string | null
     nodeId?: number | null
     phaseId?: number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -61685,6 +61708,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -61701,6 +61725,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -65349,6 +65374,7 @@ export namespace Prisma {
     handler?: SortOrder
     nodeId?: SortOrder
     phaseId?: SortOrder
+    images?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -70981,6 +71007,7 @@ export namespace Prisma {
     handler?: string | null
     nodeId?: number | null
     phaseId?: number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -70996,6 +71023,7 @@ export namespace Prisma {
     handler?: string | null
     nodeId?: number | null
     phaseId?: number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -71131,6 +71159,7 @@ export namespace Prisma {
     handler?: StringNullableFilter<"WorkIssue"> | string | null
     nodeId?: IntNullableFilter<"WorkIssue"> | number | null
     phaseId?: IntNullableFilter<"WorkIssue"> | number | null
+    images?: JsonNullableFilter<"WorkIssue">
     createdAt?: DateTimeFilter<"WorkIssue"> | Date | string
     updatedAt?: DateTimeFilter<"WorkIssue"> | Date | string
   }
@@ -73305,6 +73334,7 @@ export namespace Prisma {
     handler?: string | null
     nodeId?: number | null
     phaseId?: number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -73379,6 +73409,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -73394,6 +73425,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -73409,6 +73441,7 @@ export namespace Prisma {
     handler?: NullableStringFieldUpdateOperationsInput | string | null
     nodeId?: NullableIntFieldUpdateOperationsInput | number | null
     phaseId?: NullableIntFieldUpdateOperationsInput | number | null
+    images?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

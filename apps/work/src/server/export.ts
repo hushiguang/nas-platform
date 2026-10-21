@@ -83,7 +83,7 @@ function issueText(item: ProjectView): string {
       const meta = [issue.kindLabel, issue.statusLabel, issue.handler, issue.phaseLabel]
         .filter((part): part is string => Boolean(part))
         .join(" · ");
-      const text = issue.description.replace(/\s+/g, " ").trim();
+      const text = issue.description.replace(/\s+/g, " ").trim() || (issue.images.length ? `截图 ${issue.images.length} 张` : "未填写问题");
       return `${index + 1}. ${text}${meta ? `（${meta}）` : ""}`;
     })
     .join("\n");

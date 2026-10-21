@@ -1,6 +1,7 @@
 import { Children, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useImagePaste } from '@nas/ui';
 import { api, apiUrl, getApiBase, getToken, setToken, subscribeBusy, track } from './api';
 import { consumePayDraft, isNative, lastPayNotice, openPayAccessibilitySettings, openPayApp, openPayNotifySettings, openPayPopupSettings } from './platform';
 
@@ -1068,10 +1069,8 @@ function ImagePicker({ images, onChange, uploadPath = '/api/upload/image', disab
   const [error, setError] = useState('');
   const list = Array.isArray(images) ? images : String(images || '').split('\n').map((s) => s.trim()).filter(Boolean);
 
-  async function pick(event) {
-    const files = [...event.target.files];
-    event.target.value = '';
-    if (!files.length) return;
+  async function upload(files) {
+    if (!files.length || busy) return;
     setBusy(true);
     setError('');
     try {
@@ -1090,6 +1089,15 @@ function ImagePicker({ images, onChange, uploadPath = '/api/upload/image', disab
     }
   }
 
+  async function pick(event) {
+    const files = [...event.target.files];
+    event.target.value = '';
+    await upload(files);
+  }
+
+  // 表单开着时，剪贴板里的截图直接传图床；文字照常粘贴
+  useImagePaste((files) => { if (!disabled) void upload(files); }, !disabled);
+
   return (
     <div className="image-picker">
       <div className="row" style={{ flexWrap: 'wrap' }}>
@@ -1097,7 +1105,7 @@ function ImagePicker({ images, onChange, uploadPath = '/api/upload/image', disab
           {busy ? '上传中…' : '选择图片'}
           <input type="file" accept="image/*" multiple onChange={pick} disabled={busy || disabled} hidden />
         </label>
-        <span className="tiny muted">{list.length}/9，最多 9 张</span>
+        <span className="tiny muted">{list.length}/9，最多 9 张；可直接粘贴截图</span>
       </div>
       {error && <div className="error">{error}</div>}
       {list.length > 0 && (

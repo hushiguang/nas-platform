@@ -315,6 +315,7 @@ exports.Prisma.WorkIssueScalarFieldEnum = {
   handler: 'handler',
   nodeId: 'nodeId',
   phaseId: 'phaseId',
+  images: 'images',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

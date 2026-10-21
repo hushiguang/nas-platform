@@ -64,6 +64,14 @@ function short(text: string, max = 42): string {
   return clean.length > max ? `${clean.slice(0, max)}…` : clean;
 }
 
+/** 纯图片记录没有文字，摘要改用截图张数，避免预报里出现空条目。 */
+function issueText(issue: { description: string; images: Prisma.JsonValue | null }, max = 42): string {
+  const clean = issue.description.replace(/\s+/g, " ").trim();
+  if (clean) return short(clean, max);
+  const count = Array.isArray(issue.images) ? issue.images.length : 0;
+  return count > 0 ? `截图 ${count} 张` : "未填写问题";
+}
+
 /** 上海时区的那天 09:00。和纪念日提醒用的是同一种墙钟换算。 */
 function shanghaiDue(iso: string): Date {
   const [year, month, day] = iso.split("-").map(Number);
@@ -121,7 +129,7 @@ function buildDigest(rows: DigestRow[], now = new Date()): DigestView {
       const item: DigestItem = {
         projectId: project.id,
         projectName: project.name,
-        text: short(issue.description),
+        text: issueText(issue),
         tone: issue.status === "OPEN" ? "warn" : undefined,
       };
       if (issue.kind === "IMPROVEMENT") improvements.push(item);
@@ -263,7 +271,7 @@ export async function syncPhaseTodos(): Promise<number> {
         .slice(0, 8)
         .map(
           (issue) =>
-            `·【${ISSUE_KIND_LABEL[issue.kind]}·${ISSUE_LABEL[issue.status]}】${short(issue.description, 60)}`,
+            `·【${ISSUE_KIND_LABEL[issue.kind]}·${ISSUE_LABEL[issue.status]}】${issueText(issue, 60)}`,
         );
       if (project.issues.length > 8) lines.push(`还有 ${project.issues.length - 8} 条`);
       due.push({

@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   // 运行时报「找不到模块」。必须指到仓库根。
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   // 共享包直接以 TS 源码被消费，交给 Next 编译，省掉每个包的构建产物
-  transpilePackages: ["@nas/core", "@nas/db", "@nas/auth", "@nas/todo", "@nas/notify", "@nas/ui"],
+  transpilePackages: ["@nas/core", "@nas/db", "@nas/auth", "@nas/todo", "@nas/notify", "@nas/ui", "@nas/media"],
   // Prisma / bcrypt 不进打包，按原生 node_modules 引入（standalone 会追踪复制）
   serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
 };

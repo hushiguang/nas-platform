@@ -63,8 +63,14 @@ async function pushSummary() {
     try {
       const result = await sendDigest(user.id, { skipWecom: group && wecomDone });
       if (result.WECOM) wecomDone = true;
-      if (Object.keys(result).length === 0) skipped += 1;
-      ok += 1;
+      if (Object.keys(result).length === 0) {
+        skipped += 1;
+        // 空结果 = 这个人一个可用渠道都没有（企微/邮件都没启用），
+        // 不单独记一笔的话，日志里只看到 sent 数字，根本不知道谁被跳过了
+        console.log(`[job] digest ${user.username} 跳过：没有启用的通知渠道`);
+      } else {
+        ok += 1;
+      }
     } catch (err) {
       console.error(`[job] digest ${user.username} 失败:`, err);
     }

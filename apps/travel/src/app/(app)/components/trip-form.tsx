@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useImagePaste } from "@nas/ui";
 import type { TripDraft } from "@/server";
 import { saveTripAction } from "../mutate";
 import { PhotoPicker } from "./photo-picker";
@@ -21,6 +22,7 @@ interface StopRow {
 type PickerTarget = "cover" | "photos" | { stop: number } | null;
 
 function photoSrc(path: string): string {
+  if (/^https?:\/\//i.test(path)) return `/api/media/image?u=${encodeURIComponent(path)}`;
   return `/api/media/photo?path=${encodeURIComponent(path)}`;
 }
 
@@ -38,6 +40,7 @@ export function TripForm({
   const [stops, setStops] = useState<StopRow[]>(initial.stops);
   const [picker, setPicker] = useState<PickerTarget>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function onPick(paths: string[]) {
@@ -57,6 +60,45 @@ export function TripForm({
       );
     }
   }
+
+  /**
+   * 粘贴截图直接传图床。正在选封面就设封面，正在给某个站点选图就进那个站点，
+   * 否则当成相册里的新照片。
+   */
+  async function pasteUpload(files: File[]) {
+    if (uploading) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const added: string[] = [];
+      for (const file of files.slice(0, 9)) {
+        const body = new FormData();
+        body.set("image", file);
+        const res = await fetch("/api/media/upload", { method: "POST", body });
+        const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+        if (!res.ok || !data.url) {
+          setError(data.message || "上传失败");
+          break;
+        }
+        added.push(data.url);
+      }
+      if (added.length === 0) return;
+      if (picker === "cover") {
+        setCover(added[0]);
+      } else if (picker && typeof picker === "object") {
+        const index = picker.stop;
+        setStops((rows) =>
+          rows.map((row, i) => (i === index ? { ...row, photos: [...row.photos, ...added] } : row)),
+        );
+      } else {
+        setPhotos((rows) => [...rows, ...added.map((path) => ({ path, caption: "" }))]);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  useImagePaste((files) => void pasteUpload(files), !uploading);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -228,7 +270,8 @@ export function TripForm({
           </button>
         </div>
         <span className="muted" style={{ fontSize: 12 }}>
-          照片目录：{photoRootPath}（只引用，不复制文件）
+          照片目录：{photoRootPath}（只引用，不复制文件）。也可以直接粘贴截图上传
+          {uploading ? "，上传中…" : ""}。
         </span>
       </div>
 

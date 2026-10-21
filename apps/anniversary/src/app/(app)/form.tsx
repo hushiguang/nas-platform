@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AnniversaryType } from "@nas/db";
 import { GALLERY, GRADIENTS } from "@nas/media/catalog";
+import { useImagePaste } from "@nas/ui";
 import { LUNAR_DAYS, LUNAR_MONTHS, REMIND_CHOICES, TYPE_OPTIONS, lunarDayName } from "@/lib/labels";
 import { coverPresentation } from "@/lib/cover";
 import type { AnniversaryDraft, BillDraft } from "@/server";
@@ -59,6 +60,15 @@ export function AnniversaryForm({
       setBusy(false);
     }
   }
+
+  // 表单开着时，剪贴板里的截图直接当封面；没有图片的粘贴不拦，文字照常
+  useImagePaste(
+    (files) => {
+      const file = files[0];
+      if (file && canUpload && !busy) void onUpload(file);
+    },
+    canUpload && !busy,
+  );
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -306,7 +316,7 @@ export function AnniversaryForm({
         </div>
         <span>
           {canUpload
-            ? "点一张就用它。自己上传的图片和账单走同一套图床。照片来自 Unsplash。"
+            ? "点一张就用它，也可以直接粘贴截图。自己上传的图片和账单走同一套图床。照片来自 Unsplash。"
             : "图床还没配置，先从图库里选。配好 IMAGE_HOST 之后就能上传。"}
         </span>
       </div>

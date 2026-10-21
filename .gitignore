@@ -33,6 +33,8 @@ backups/
 # 数据库导出与导入备份，含全量真实数据
 *.sql.gz
 *.sql
+# Prisma 迁移是代码，不能跟着数据备份一起忽略
+!packages/db/prisma/migrations/**/*.sql
 nas-migrate.sql.gz
 backup-before-import-*.sql.gz
 

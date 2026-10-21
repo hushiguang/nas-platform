@@ -10,6 +10,7 @@
  * 日期时间一律按本地时区拼，服务端 parseDue 也按 +08:00 解析，两边口径一致。
  */
 import { useEffect, useRef, useState } from "react";
+import { useImagePaste } from "@nas/ui";
 import { LightboxImage } from "./lightbox";
 
 export interface ListOption {
@@ -97,6 +98,24 @@ export function TodoDialog({
     await action(form);
     setOpen(false);
   }
+
+  /** 选文件和粘贴截图共用一套：预览走 objectURL，提交靠 input.files 原样带走 */
+  function setSelectedFiles(files: File[]) {
+    const next = files.slice(0, 9);
+    previews.forEach((url) => URL.revokeObjectURL(url));
+    setPreviews(next.map((file) => URL.createObjectURL(file)));
+    if (fileRef.current) {
+      const transfer = new DataTransfer();
+      next.forEach((file) => transfer.items.add(file));
+      fileRef.current.files = transfer.files;
+    }
+  }
+
+  // 弹窗开着的时候，剪贴板里的截图直接当图片用；文字不受影响，照常粘贴
+  useImagePaste((files) => {
+    const picked = [...(fileRef.current?.files ?? [])];
+    setSelectedFiles([...picked, ...files]);
+  }, open);
 
   return (
     <>
@@ -199,7 +218,7 @@ export function TodoDialog({
               </div>
 
               <div className="field">
-                <span className="form-label">图片（可空，最多 9 张）</span>
+                <span className="form-label">图片（可空，最多 9 张；也能直接粘贴截图）</span>
                 <input
                   ref={fileRef}
                   className="input"
@@ -207,11 +226,7 @@ export function TodoDialog({
                   name="files"
                   accept="image/*"
                   multiple
-                  onChange={(e) => {
-                    previews.forEach((url) => URL.revokeObjectURL(url));
-                    const files = Array.from(e.target.files ?? []);
-                    setPreviews(files.slice(0, 9).map((file) => URL.createObjectURL(file)));
-                  }}
+                  onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
                 />
 
                 {(keepImages.length > 0 || previews.length > 0) && (

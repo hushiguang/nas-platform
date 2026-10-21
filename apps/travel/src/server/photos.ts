@@ -71,8 +71,13 @@ export function photoRoot(): string {
   return ROOT;
 }
 
-/** 展示地址：一律经过代理，避免把磁盘路径暴露到前端 */
+function isRemote(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+/** 展示地址：NAS 路径走相册代理，粘贴上传的图床地址走图床代理，都不直接暴露来源 */
 export function photoUrl(rel: string): string {
+  if (isRemote(rel)) return `/api/media/image?u=${encodeURIComponent(rel)}`;
   return `/api/media/photo?path=${encodeURIComponent(rel)}`;
 }
 
@@ -158,9 +163,12 @@ export async function readPhoto(rel: string): Promise<{ body: Buffer; contentTyp
   }
 }
 
-/** 校验一组引用路径是否合法（越狱直接拒绝）。保存行程时用 */
+/**
+ * 校验一组引用路径是否合法（越狱直接拒绝）。保存行程时用。
+ * 粘贴上传的截图是图床 http(s) 地址，不碰本地文件系统，直接放行。
+ */
 export function assertSafePaths(paths: string[]): void {
   for (const p of paths) {
-    if (p) resolveSafe(p);
+    if (p && !isRemote(p)) resolveSafe(p);
   }
 }

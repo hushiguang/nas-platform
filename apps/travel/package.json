@@ -12,6 +12,7 @@
     "@nas/auth": "*",
     "@nas/core": "*",
     "@nas/db": "*",
+    "@nas/media": "*",
     "@nas/notify": "*",
     "@nas/todo": "*",
     "@nas/ui": "*",

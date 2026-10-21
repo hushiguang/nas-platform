@@ -274,12 +274,17 @@ export async function sendDigest(
   opts?: { channels?: ("MAIL" | "WECOM")[]; skipWecom?: boolean },
 ) {
   const d = await collectDigest(userId);
-  const enabled = opts?.channels?.length
-    ? opts.channels
+  const explicit = opts?.channels?.length ? opts.channels : null;
+  const enabled: ("MAIL" | "WECOM")[] = explicit
+    ? [...explicit]
     : ((await prisma.notifyChannel.findMany({ where: { userId, enabled: true } })).map((c) => c.type) as (
         | "MAIL"
         | "WECOM"
       )[]);
+  // 群机器人是**全站**配置，不能跟着某个人的「启用企业微信」开关一起被掐掉 ——
+  // 那个开关的本意是「给这个人发应用消息」。配了 webhook 就说明群汇总要发，
+  // 否则所有人的渠道都关着时，每天早上的群消息会一声不响地消失。
+  if (!explicit && !enabled.includes("WECOM") && (await wecomWebhook())) enabled.push("WECOM");
   // 群机器人是「一份报告发一个群」，定时任务里只让第一个用户真正发企微，
   // 其余人跳过，避免同一份汇总在群里刷屏。
   const channels = enabled.filter((type) => !(type === "WECOM" && opts?.skipWecom));

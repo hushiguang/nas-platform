@@ -483,6 +483,8 @@ model WorkIssue {
   nodeId      Int?
   /// 挂在哪个阶段。六个阶段都可以
   phaseId     Int?
+  /// 问题截图。存图床返回的地址数组，允许只传图不写文字
+  images      Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

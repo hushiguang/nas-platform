@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useImagePaste } from "@nas/ui";
 import { ISSUE_KIND_OPTIONS, ISSUE_OPTIONS, NODE_OPTIONS } from "@/lib/labels";
 import type { IssueView, MemberView, NodeView, PersonOption, PhaseView } from "@/server";
 import {
@@ -225,6 +226,30 @@ function NodeForm({
   );
 }
 
+function proxyUrl(url: string): string {
+  return `/api/media/image?u=${encodeURIComponent(url)}`;
+}
+
+/** 逐张上传，遇到失败就停下，已传好的保留给用户继续用。 */
+async function uploadImages(files: File[]): Promise<{ urls: string[]; message?: string }> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const body = new FormData();
+    body.set("image", file);
+    try {
+      const res = await fetch("/api/media/upload", { method: "POST", body });
+      const json = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+      if (!res.ok || !json.url) return { urls, message: json.message || "上传失败" };
+      urls.push(json.url);
+    } catch {
+      return { urls, message: "上传失败，检查网络后重试" };
+    }
+  }
+  return { urls };
+}
+
+const IMAGE_LIMIT = 9;
+
 export function IssuePanel({
   projectId,
   issues,
@@ -239,7 +264,10 @@ export function IssuePanel({
   const [open, setOpen] = useState(false);
   const [nonce, setNonce] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [quickBusy, setQuickBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const quickRef = useRef<HTMLInputElement>(null);
 
   function openForm(issue: IssueView | null) {
     setError(null);
@@ -267,77 +295,196 @@ export function IssuePanel({
     }
   }
 
+  async function quickUpload(files: File[]) {
+    if (!files.length) return;
+    setError(null);
+    setQuickBusy(true);
+    try {
+      const { urls, message } = await uploadImages(files.slice(0, IMAGE_LIMIT));
+      if (message) {
+        setError(message);
+        if (!urls.length) return;
+      }
+      const form = new FormData();
+      form.set("projectId", String(projectId));
+      form.set("description", "");
+      form.set("images", JSON.stringify(urls));
+      const result = await saveIssueAction(form);
+      if (result?.message) {
+        setError(result.message);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setQuickBusy(false);
+      if (quickRef.current) quickRef.current.value = "";
+    }
+  }
+
+  /** 一键读取剪贴板里的截图，不用先打开记问题弹窗。 */
+  async function pasteFromClipboard() {
+    if (!navigator.clipboard?.read) {
+      setError("当前浏览器不支持直接读剪贴板，请在「记问题」弹窗里按 ⌘/Ctrl+V 粘贴");
+      return;
+    }
+    setError(null);
+    setQuickBusy(true);
+    try {
+      const items = await navigator.clipboard.read();
+      const files: File[] = [];
+      for (const item of items) {
+        for (const type of item.types) {
+          if (!type.startsWith("image/")) continue;
+          const blob = await item.getType(type);
+          const ext = type.split("/")[1] || "png";
+          files.push(new File([blob], `clipboard-${Date.now()}.${ext}`, { type }));
+        }
+      }
+      if (!files.length) {
+        setError("剪贴板里没有图片");
+        return;
+      }
+      await quickUpload(files);
+    } catch {
+      setError("读取剪贴板失败，请在「记问题」弹窗里直接粘贴");
+    } finally {
+      setQuickBusy(false);
+    }
+  }
+
   return (
     <div>
       <div className="work-issue-bar">
+        <input
+          ref={quickRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(event) => void quickUpload([...(event.currentTarget.files ?? [])])}
+        />
+        <button
+          type="button"
+          className="btn ghost sm"
+          disabled={quickBusy || busy}
+          onClick={() => void pasteFromClipboard()}
+        >
+          粘贴截图
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          disabled={quickBusy || busy}
+          onClick={() => quickRef.current?.click()}
+        >
+          {quickBusy ? "上传中…" : "只传图"}
+        </button>
         <button type="button" className="btn sm" onClick={() => openForm(null)}>
           记问题
         </button>
       </div>
       {!open && error ? <div className="notice" style={{ marginBottom: 10 }}>{error}</div> : null}
       {issues.length === 0 ? <p className="muted" style={{ fontSize: 13 }}>还没有卡住的问题。</p> : null}
-      <div className="work-list">
+
+      <div className="work-timeline">
         {issues.map((issue) => (
-          <div className="work-row" key={issue.id}>
-            <span className="todo-dot" style={{ background: issueColor(issue.status) }} />
-            <div className="work-row-main">
-              <div className="work-row-title">{issue.description}</div>
-              <div className="work-row-meta">
-                {issue.kindLabel} · {issue.statusLabel}
-                {issue.phaseLabel ? ` · ${issue.phaseLabel}` : ""}
-                {issue.handler ? ` · ${issue.handler}` : ""}
+          <article className="work-timeline-item" key={issue.id}>
+            <span className="work-timeline-dot" style={{ background: issueColor(issue.status) }} />
+            <div className="work-timeline-card">
+              <div className="work-timeline-main">
+                <div className="work-timeline-top">
+                  <time className="work-timeline-time" dateTime={issue.createdAt} title={issue.createdLabel}>
+                    {issue.createdLabel}
+                  </time>
+                  <span className={issue.status === "RESOLVED" ? "badge soft" : "badge"}>{issue.statusLabel}</span>
+                  <span className="badge soft">{issue.kindLabel}</span>
+                </div>
+                {issue.description ? <div className="work-timeline-title">{issue.description}</div> : null}
+                {issue.phaseLabel || issue.handler ? (
+                  <div className="work-timeline-meta">
+                    {[issue.phaseLabel, issue.handler].filter(Boolean).join(" · ")}
+                  </div>
+                ) : null}
+                {issue.impact ? <div className="work-timeline-meta">影响 {issue.impact}</div> : null}
+                {issue.solution ? <div className="work-timeline-meta">办法 {issue.solution}</div> : null}
+
+                {issue.images.length > 0 ? (
+                  <div className="work-timeline-images">
+                    {issue.images.map((url, index) => (
+                      <button
+                        key={`${issue.id}-${index}`}
+                        type="button"
+                        className="work-timeline-thumb"
+                        onClick={() => setLightbox(url)}
+                        aria-label={`查看第 ${index + 1} 张截图`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={proxyUrl(url)} alt={`问题截图 ${index + 1}`} loading="lazy" />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-              {issue.impact ? <div className="work-row-meta">影响 {issue.impact}</div> : null}
-              {issue.solution ? <div className="work-row-meta">办法 {issue.solution}</div> : null}
-            </div>
-            <div className="work-actions">
-              {issue.status === "OPEN" ? (
+
+              <div className="work-timeline-actions">
+                {issue.status === "OPEN" ? (
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    disabled={busy}
+                    onClick={() => void run(() => setIssueStatusAction(projectId, issue.id, "RESOLVING"))}
+                  >
+                    开始处理
+                  </button>
+                ) : null}
+                {issue.status !== "RESOLVED" ? (
+                  <button
+                    type="button"
+                    className="btn sm"
+                    disabled={busy}
+                    onClick={() => void run(() => setIssueStatusAction(projectId, issue.id, "RESOLVED"))}
+                  >
+                    已解决
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    disabled={busy}
+                    onClick={() => void run(() => setIssueStatusAction(projectId, issue.id, "OPEN"))}
+                  >
+                    重新打开
+                  </button>
+                )}
+                <button type="button" className="btn ghost sm" disabled={busy} onClick={() => openForm(issue)}>
+                  修改
+                </button>
                 <button
                   type="button"
                   className="btn ghost sm"
                   disabled={busy}
-                  onClick={() => void run(() => setIssueStatusAction(projectId, issue.id, "RESOLVING"))}
+                  onClick={() => {
+                    if (!window.confirm("删除这个问题？")) return;
+                    void run(() => removeIssueAction(projectId, issue.id));
+                  }}
                 >
-                  开始处理
+                  删除
                 </button>
-              ) : null}
-              {issue.status !== "RESOLVED" ? (
-                <button
-                  type="button"
-                  className="btn sm"
-                  disabled={busy}
-                  onClick={() => void run(() => setIssueStatusAction(projectId, issue.id, "RESOLVED"))}
-                >
-                  已解决
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn ghost sm"
-                  disabled={busy}
-                  onClick={() => void run(() => setIssueStatusAction(projectId, issue.id, "OPEN"))}
-                >
-                  重新打开
-                </button>
-              )}
-              <button type="button" className="btn ghost sm" disabled={busy} onClick={() => openForm(issue)}>
-                修改
-              </button>
-              <button
-                type="button"
-                className="btn ghost sm"
-                disabled={busy}
-                onClick={() => {
-                  if (!window.confirm("删除这个问题？")) return;
-                  void run(() => removeIssueAction(projectId, issue.id));
-                }}
-              >
-                删除
-              </button>
+              </div>
             </div>
-          </div>
+          </article>
         ))}
       </div>
+
+      {lightbox ? (
+        <div className="work-lightbox" role="dialog" aria-modal="true" onClick={() => setLightbox(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={proxyUrl(lightbox)} alt="问题截图" onClick={(event) => event.stopPropagation()} />
+          <button type="button" className="btn ghost sm" onClick={() => setLightbox(null)}>
+            关闭
+          </button>
+        </div>
+      ) : null}
 
       {open ? (
         <IssueDialog
@@ -430,14 +577,71 @@ function IssueForm({
 }) {
   const [status, setStatus] = useState(initial?.status ?? "OPEN");
   const [kind, setKind] = useState(initial?.kind ?? "BUG");
+  const [images, setImages] = useState<string[]>(initial?.images ?? []);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function addImages(files: File[]) {
+    if (!files.length || uploading) return;
+    const slots = IMAGE_LIMIT - images.length;
+    if (slots <= 0) {
+      setUploadError(`最多 ${IMAGE_LIMIT} 张图`);
+      return;
+    }
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const { urls, message } = await uploadImages(files.slice(0, slots));
+      if (message) setUploadError(message);
+      if (urls.length) setImages((rows) => [...rows, ...urls].slice(0, IMAGE_LIMIT));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  useImagePaste((files) => void addImages(files));
+
+  function onDragOver(event: DragEvent<HTMLDivElement>) {
+    if (![...event.dataTransfer.types].includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDragging(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDragging(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragging(false);
+    const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith("image/"));
+    if (!files.length) {
+      setUploadError("只能拖入图片文件");
+      return;
+    }
+    void addImages(files);
+  }
+
   return (
     <form
       className="form-stack"
+      onKeyDown={(event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.requestSubmit();
+        }
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         form.set("status", status);
         form.set("kind", kind);
+        form.set("images", JSON.stringify(images));
         onSubmit(form);
       }}
     >
@@ -445,6 +649,7 @@ function IssueForm({
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="images" value={JSON.stringify(images)} />
       <div className="choice-row">
         {ISSUE_KIND_OPTIONS.map((item) => (
           <button
@@ -459,8 +664,62 @@ function IssueForm({
       </div>
       <label className="form-label">
         问题
-        <textarea className="field" name="description" defaultValue={initial?.description ?? ""} maxLength={200} required placeholder="卡在哪里" />
+        <textarea
+          className="field"
+          name="description"
+          defaultValue={initial?.description ?? ""}
+          maxLength={200}
+          placeholder="不写文字也可以，传张图就行"
+        />
       </label>
+
+      <div className="form-label">
+        截图
+        <div
+          className={dragging ? "issue-images is-dragging" : "issue-images"}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
+          {images.map((url, index) => (
+            <span className="issue-image" key={`${url}-${index}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={proxyUrl(url)} alt={`截图 ${index + 1}`} />
+              <button
+                type="button"
+                className="issue-image-x"
+                aria-label="移除这张图"
+                onClick={() => setImages((rows) => rows.filter((_, at) => at !== index))}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {images.length < IMAGE_LIMIT ? (
+            <button
+              type="button"
+              className="issue-image-add"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? "上传中…" : "+ 图片"}
+            </button>
+          ) : null}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(event) => void addImages([...(event.currentTarget.files ?? [])])}
+        />
+        {uploadError ? <span className="notice">{uploadError}</span> : null}
+        <span className="muted" style={{ fontSize: 12 }}>
+          最多 {IMAGE_LIMIT} 张，可以只传图不写文字；支持粘贴截图（⌘/Ctrl+V）或拖入图片。
+        </span>
+      </div>
+
       <div className="form-row">
         <label className="form-label">
           影响
@@ -499,7 +758,7 @@ function IssueForm({
         ))}
       </div>
       <div className="work-actions">
-        <button className="btn sm" type="submit" disabled={busy}>
+        <button className="btn sm" type="submit" disabled={busy || uploading}>
           {busy ? "保存中" : initial ? "保存问题" : "记下"}
         </button>
         {onCancel ? (

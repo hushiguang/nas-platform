@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GALLERY, GRADIENTS } from "@nas/media/catalog";
 import { APP_COVERS } from "@nas/media/portal-covers";
+import { useImagePaste } from "@nas/ui";
 
 export interface PlatformInitial {
   id: number;
@@ -48,11 +49,34 @@ export function PlatformDialog({
   const [open, setOpen] = useState(false);
   // 首渲染必须确定性，否则 SSR 与客户端 hydration 对不上；新建的随机图等弹窗打开后再抽
   const [cover, setCover] = useState(initial?.cover ?? "gallery:cake");
+  const [busy, setBusy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const isEdit = Boolean(initial);
 
   useEffect(() => {
     if (open && !initial?.cover) setCover(randomCover());
   }, [open, initial?.cover]);
+
+  /** 弹窗开着时，剪贴板里的截图直接传图床并设为卡片背景 */
+  async function pasteUpload(files: File[]) {
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const body = new FormData();
+      body.set("image", files[0]);
+      const res = await fetch("/api/media/upload", { method: "POST", body });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+      if (!res.ok || !data.url) {
+        setUploadError(data.message || "上传失败");
+        return;
+      }
+      setCover(data.url);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useImagePaste((files) => void pasteUpload(files), open && !busy);
 
   async function submit(form: FormData) {
     form.set("cover", cover);
@@ -93,11 +117,13 @@ export function PlatformDialog({
 
               <div className="field">
                 <span className="form-label">
-                  卡片背景（纪念日同款图库）
+                  卡片背景（可直接粘贴截图，也可以选图库）
                   <button type="button" className="text-btn" onClick={() => setCover(randomCover())}>
                     🎲 随机一张
                   </button>
+                  {busy ? <span className="muted"> 上传中…</span> : null}
                 </span>
+                {uploadError ? <div className="notice">{uploadError}</div> : null}
                 <div className="cover-grid">
                   {initial && APP_COVERS.filter((c) => c.code === initial.code).map((c) => (
                     <button

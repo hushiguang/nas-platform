@@ -1,6 +1,7 @@
-import { dayDiff, type PlatformAccess, type SessionUser } from "@nas/core";
-import { prisma, type IssueKind, type IssueStatus, type NodeStatus, type Prisma, type ProjectStatus, type WorkPhaseKind, type WorkPriority } from "@nas/db";
-import { ISSUE_KIND_LABEL, ISSUE_LABEL, ISSUE_RANK, NODE_LABEL, PHASE_LABEL, PHASE_RANK, PRIORITY_LABEL, PRIORITY_RANK, PROJECT_LABEL } from "@/lib/labels";
+import { dayDiff, type PlatformAccess, type SessionUser, zonedDate, zonedTime } from "@nas/core";
+import { prisma, Prisma, type IssueKind, type IssueStatus, type NodeStatus, type ProjectStatus, type WorkPhaseKind, type WorkPriority } from "@nas/db";
+import { isAllowedImageUrl } from "@nas/media";
+import { ISSUE_KIND_LABEL, ISSUE_LABEL, NODE_LABEL, PHASE_LABEL, PHASE_RANK, PRIORITY_LABEL, PRIORITY_RANK, PROJECT_LABEL } from "@/lib/labels";
 import { canManage, visibleWhere } from "./access";
 import { dayLabel, isoDay, parseDay, rangeLabel, todayIso, utcDay, whenText } from "./dates";
 import { WorkError } from "./errors";
@@ -62,6 +63,12 @@ export interface IssueView {
   handler: string;
   phaseId: number | null;
   phaseLabel: string | null;
+  /** 图床返回的地址，展示时统一走 /api/media/image 代理 */
+  images: string[];
+  /** 创建时间，ISO 字符串，供排序 */
+  createdAt: string;
+  /** 时间轴上显示的创建时间，如 2026-10-20 16:30 */
+  createdLabel: string;
 }
 
 export interface PhaseMemberView {
@@ -209,6 +216,47 @@ function collectIds(rows: ProjectRow[]): number[] {
   return ids;
 }
 
+const ISSUE_IMAGE_LIMIT = 9;
+
+/** 库里存的是 JSON 数组，读出时过滤掉脏数据；老记录没有这个字段就是空数组。 */
+function issueImages(value: Prisma.JsonValue | null): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+}
+
+function issueTimeLabel(date: Date): string {
+  return `${zonedDate(date)} ${zonedTime(date)}`;
+}
+
+/** 纯图片记录没有文字，摘要用张数代替。 */
+function issueBrief(issue: { description: string; images: Prisma.JsonValue | null }): string {
+  const text = issue.description.replace(/\s+/g, " ").trim();
+  if (text) return text.slice(0, 24);
+  const count = issueImages(issue.images).length;
+  return count > 0 ? `图片记录（${count} 张）` : "问题";
+}
+
+function parseIssueImages(form: FormData): string[] {
+  const raw = String(form.get("images") ?? "");
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new WorkError("图片数据不对");
+  }
+  if (!Array.isArray(parsed)) throw new WorkError("图片数据不对");
+  const urls: string[] = [];
+  for (const item of parsed) {
+    if (typeof item !== "string" || !item.trim()) continue;
+    const [allowed, reason] = isAllowedImageUrl(item);
+    if (!allowed) throw new WorkError(reason ?? "图片地址不对");
+    if (!urls.includes(item)) urls.push(item);
+  }
+  if (urls.length > ISSUE_IMAGE_LIMIT) throw new WorkError(`一次最多 ${ISSUE_IMAGE_LIMIT} 张图`);
+  return urls;
+}
+
 async function nicknames(ids: number[]): Promise<Map<number, string>> {
   const unique = [...new Set(ids.filter((id) => id > 0))];
   if (unique.length === 0) return new Map();
@@ -239,8 +287,9 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
   });
   const nodeName = new Map(row.nodes.map((node) => [node.id, node.name]));
   const phaseName = new Map(row.phases.map((phase) => [phase.id, PHASE_LABEL[phase.kind]]));
+  // 时间轴按创建时间倒序：最近记的问题在最上面，状态只作为标签展示
   const issues: IssueView[] = [...row.issues]
-    .sort((a, b) => ISSUE_RANK[a.status] - ISSUE_RANK[b.status] || b.updatedAt.getTime() - a.updatedAt.getTime())
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id - a.id)
     .map((issue) => ({
       id: issue.id,
       description: issue.description,
@@ -257,6 +306,9 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
         : issue.nodeId
           ? (nodeName.get(issue.nodeId) ?? null)
           : null,
+      images: issueImages(issue.images),
+      createdAt: issue.createdAt.toISOString(),
+      createdLabel: issueTimeLabel(issue.createdAt),
     }));
   const doneNodes = nodes.filter((node) => node.status === "DONE").length;
   const todoNodes = nodes
@@ -740,7 +792,9 @@ export async function saveIssue(access: PlatformAccess, userId: number, form: Fo
   if (!projectId) throw new WorkError("项目不对");
   const project = await requireProject(access, userId, projectId);
   const description = clip(block(form, "description"), 200, "问题");
-  if (!description) throw new WorkError("先写清楚问题");
+  const hasImagesField = form.has("images");
+  const images = hasImagesField ? parseIssueImages(form) : null;
+  if (!description && !images?.length) throw new WorkError("写一句问题，或者至少传一张图");
   const impact = emptyToNull(clip(block(form, "impact"), 200, "影响"));
   const solution = emptyToNull(clip(block(form, "solution"), 500, "办法"));
   const status = issueStatus(text(form, "status") || "OPEN");
@@ -748,7 +802,18 @@ export async function saveIssue(access: PlatformAccess, userId: number, form: Fo
   const handler = emptyToNull(clip(text(form, "handler"), 40, "谁来处理"));
   const phaseId = await optionalPhase(projectId, text(form, "phaseId"));
   const id = parseId(text(form, "id"));
-  const data = { description, impact, solution, status, kind, handler, phaseId, ownerId: null, nodeId: null };
+  const data = {
+    description,
+    impact,
+    solution,
+    status,
+    kind,
+    handler,
+    phaseId,
+    ownerId: null,
+    nodeId: null,
+    ...(images ? { images: images.length ? images : Prisma.DbNull } : {}),
+  };
 
   if (id) {
     const issue = await prisma.workIssue.findFirst({ where: { id, projectId }, select: { id: true } });
@@ -757,7 +822,7 @@ export async function saveIssue(access: PlatformAccess, userId: number, form: Fo
   } else {
     await prisma.workIssue.create({ data: { ...data, projectId } });
   }
-  const brief = description.replace(/\s+/g, " ").slice(0, 24);
+  const brief = description ? description.replace(/\s+/g, " ").slice(0, 24) : `图片 ${images?.length ?? 0} 张`;
   return `${id ? "修改" : "记下"}问题「${project.name} / ${brief}」`;
 }
 
@@ -774,7 +839,7 @@ export async function setIssueStatus(
   if (!issue) throw new WorkError("找不到这个问题", 404);
   await prisma.workIssue.update({ where: { id: issueId }, data: { status } });
   const verb = status === "RESOLVED" ? "解决" : status === "RESOLVING" ? "开始处理" : "重新打开";
-  const brief = issue.description.replace(/\s+/g, " ").slice(0, 24);
+  const brief = issueBrief(issue);
   return `${verb}问题「${project.name} / ${brief}」`;
 }
 
@@ -788,7 +853,7 @@ export async function removeIssue(
   const issue = await prisma.workIssue.findFirst({ where: { id: issueId, projectId } });
   if (!issue) throw new WorkError("找不到这个问题", 404);
   await prisma.workIssue.delete({ where: { id: issueId } });
-  const brief = issue.description.replace(/\s+/g, " ").slice(0, 24);
+  const brief = issueBrief(issue);
   return `删除问题「${project.name} / ${brief}」`;
 }
 
