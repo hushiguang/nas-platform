@@ -9,6 +9,7 @@ import {
 } from "@/app/actions";
 import { ListDialog } from "@/components/list-dialog";
 import { ListDeleteButton } from "@/components/list-delete-button";
+import { ListShareDialog } from "@/components/list-share-dialog";
 
 /**
  * 清单管理：列表 + 操作按钮 + 弹窗。
@@ -77,6 +78,14 @@ export default async function ListsPage() {
                           {list.icon ? `${list.icon} ` : ""}
                           {list.name}
                         </Link>
+                        {list.shareEnabled && (
+                          <span
+                            className="badge soft list-share-badge"
+                            title={`分享链接已开启（${list.shareWritable ? "可勾选" : "只读"}）`}
+                          >
+                            已分享
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className="badge soft">{list.kind === "SHARED" ? "家庭共享" : "仅自己"}</span>
@@ -103,6 +112,20 @@ export default async function ListsPage() {
                                 kind: list.kind,
                                 memberIds: members.map((m) => m.userId),
                               }}
+                            />
+                            <ListShareDialog
+                              list={{
+                                id: list.id,
+                                name: list.name,
+                                shareEnabled: list.shareEnabled,
+                                shareToken: list.shareToken ?? "",
+                                shareWritable: list.shareWritable,
+                              }}
+                              trigger={
+                                <button type="button" className="todo-op">
+                                  {list.shareEnabled ? "分享设置" : "分享"}
+                                </button>
+                              }
                             />
                             <ListDeleteButton
                               action={deleteListAction}

@@ -180,17 +180,23 @@ model Todo {
  * 成员之间共享同一批待办（谁买了谁勾掉）。
  */
 model TodoList {
-  id        Int          @id @default(autoincrement())
-  name      String
+  id            Int          @id @default(autoincrement())
+  name          String
   // emoji 图标，纯展示
-  icon      String?
-  color     String?
-  kind      TodoListKind @default(PERSONAL)
-  ownerId   Int
-  sort      Int          @default(0)
-  archived  Boolean      @default(false)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  icon          String?
+  color         String?
+  kind          TodoListKind @default(PERSONAL)
+  ownerId       Int
+  sort          Int          @default(0)
+  archived      Boolean      @default(false)
+  /// 免登录分享链接的令牌（与账本的 shareToken 同一套思路）
+  shareToken    String?      @unique
+  /// 分享链接是否开着
+  shareEnabled  Boolean      @default(false)
+  /// 分享链接是否允许勾选/补条目（默认只读）
+  shareWritable Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   owner   User             @relation(fields: [ownerId], references: [id])
   members TodoListMember[]
@@ -713,8 +719,8 @@ model TravelStop {
   @@map("travel_stop")
 }
 
-/// 行程照片。nasPath 是相对 NAS_PHOTO_ROOT 的路径 —— 只引用飞牛相册里的图，
-/// 不把文件复制进本应用。展示统一走 /api/media/photo?path=... 代理。
+/// 行程照片。nasPath 平时是相对 NAS_PHOTO_ROOT 的路径，只引用飞牛相册里的图；
+/// 粘贴上传的截图会直接存图床 http(s) 地址。展示分别走相册代理和图床代理，不暴露来源。
 model TravelPhoto {
   id      Int       @id @default(autoincrement())
   tripId  Int

@@ -16,6 +16,7 @@ import {
   deleteTodo,
   ensureDefaultLists,
   removeListMember,
+  setListShare,
   setTodoStatus,
   snoozeTodo,
   updateList,
@@ -228,6 +229,27 @@ export async function deleteListAction(form: FormData) {
 }
 
 /**
+ * 清单分享开关。关掉只是让链接失效，token 留着 ——
+ * 和账本分享一致：关了再开不会让已经发出去的旧链接复活。
+ */
+export async function setListShareAction(form: FormData) {
+  const user = await requireUser();
+  const id = Number(form.get("id"));
+  if (!Number.isFinite(id)) return;
+  const writableRaw = text(form, "writable");
+  await setListShare(
+    id,
+    user.id,
+    {
+      enabled: text(form, "enabled") === "1",
+      ...(writableRaw ? { writable: writableRaw === "1" } : {}),
+    },
+    user.role === "ADMIN",
+  );
+  refresh();
+}
+
+/**
  * 清单编辑弹窗的一次性保存：基本字段 + 成员一起落。
  * 成员用差集同步 —— 勾上的加，没勾的移出（创建者自己不动）。
  */
@@ -272,8 +294,7 @@ export async function saveListAction(form: FormData) {
   refresh();
 }
 
-export async function addMemberAction(form: FormData) {
-  const user = await requireUser();
+export async function addMemberAction(form: FormData) {  const user = await requireUser();
   const listId = Number(form.get("listId"));
   const userId = Number(form.get("userId"));
   if (!Number.isFinite(listId) || !Number.isFinite(userId)) return;

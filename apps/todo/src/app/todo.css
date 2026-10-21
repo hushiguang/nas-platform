@@ -265,14 +265,22 @@
 }
 
 .todo-row.is-compact .todo-dot {
-  margin-top: 6px;
+  align-self: center;
+  margin-top: 0;
   width: 7px;
   height: 7px;
 }
 
+/* 勾选框撑满行高再居中：行是「标题 + 小字」两段，行整体 align-items: flex-start，
+   不 stretch 的话按钮会贴在行顶，看起来偏上 */
+.todo-row.is-compact .todo-check {
+  align-self: stretch;
+}
+
 .todo-row.is-compact .todo-box {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
 }
 
 .todo-main {
@@ -740,3 +748,316 @@ table.data .todo-ops {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ---------------------------------------------------------------- 清单分享 */
+/* 行内「分享设置」弹窗：链接一段单独占行，长 token 不撑破弹窗 */
+.share-dialog .share-tip {
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+/* 分享弹窗比默认弹窗宽一点：链接、状态、按钮排布更舒展。
+ * text-align 必须显式复位 —— 弹窗挂在「操作」列里，会继承单元格的右对齐。 */
+.share-dialog {
+  max-width: 720px;
+  text-align: left;
+}
+
+.share-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.share-link {
+  display: grid;
+  gap: 6px;
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.share-link-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.share-link-head .ghost {
+  padding: 2px 8px;
+}
+
+.share-link code {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.share-actions form {
+  margin: 0;
+  display: inline-flex;
+}
+
+/* 清单名后面的「已分享」小标记：提醒 owner 这个清单有免登录链接开着 */
+.list-share-badge {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.share-note {
+  font-size: 11.5px;
+  margin: 12px 0 0;
+}
+
+/* ---------------------------------------------------------------- 免登录分享页 */
+.share-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px calc(48px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.share-page > * {
+  min-width: 0;
+}
+
+.share-head h1 {
+  font-size: 24px;
+  margin: 4px 0 10px;
+}
+
+.share-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.share-stats {
+  display: flex;
+  gap: 26px;
+  margin-top: 16px;
+}
+
+.share-stat b {
+  display: block;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.share-stat span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.share-add {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.share-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-add-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-add-toggle {
+  flex: none;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.share-add-toggle.on {
+  color: var(--ink);
+  background: var(--soft);
+}
+
+.share-add-extra {
+  display: grid;
+  gap: 10px;
+}
+
+.share-add-extra textarea.input {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+}
+
+.share-add-images {
+  display: grid;
+  gap: 6px;
+}
+
+.share-add-hint {
+  font-size: 11.5px;
+}
+
+/* 提交中：整个表单压暗且不可点，配合同步闸门彻底挡住连点重复提交 */
+.share-add.is-busy {
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.share-add-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.share-add-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--coral);
+}
+
+/* 按钮里的小转圈 */
+.btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  animation: btn-spin 0.7s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 560px) {
+  .share-add-row {
+    flex-wrap: wrap;
+  }
+  .share-add-row .input {
+    flex: 1 1 100%;
+  }
+}
+
+.share-list .todo-list {
+  margin: 0;
+}
+
+/* 只读模式下的圆圈只是个状态标记，不要像可点的勾选框那样浮起 */
+.share-page span.todo-box {
+  cursor: default;
+}
+
+.share-page span.todo-box:hover {
+  border-color: var(--field-line);
+}
+
+/* 分享页的缩略图给大一点，方便直接看清；点开仍是全屏灯箱 */
+.share-page .todo-thumb {
+  width: 76px;
+  height: 76px;
+}
+
+/* 有图片的行会变高：优先级点和勾选框贴住第一行标题，
+ * 不跟着整行高度垂到图片旁边（只影响分享页，不改待办应用的行） */
+.share-page .todo-row.is-compact.has-media .todo-dot {
+  align-self: flex-start;
+  margin-top: 7px;
+}
+
+.share-page .todo-row.is-compact.has-media .todo-check {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+/* 备注全文：保留换行，太长的限高滚动，不把整页顶得太长 */
+.share-page .todo-note.is-full {
+  max-height: 240px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.share-empty {
+  font-size: 13px;
+  margin: 6px 2px;
+}
+
+/* 已完成折叠：summary 去掉默认三角，自己画一个 */
+.share-done summary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.share-done summary::-webkit-details-marker {
+  display: none;
+}
+
+.share-done summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.share-done[open] summary::before {
+  content: "▾";
+}
+
+.share-done summary + .todo-list {
+  margin-top: 12px;
+}
+
+.share-foot {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.share-missing {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.share-missing h1 {
+  margin: 2px 0;
+}
+
+.share-note-preview {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .share-page {
+    padding: 20px 12px calc(32px + env(safe-area-inset-bottom));
+  }
+}
+

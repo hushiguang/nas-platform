@@ -162,8 +162,8 @@ export type TravelTrip = $Result.DefaultSelection<Prisma.$TravelTripPayload>
 export type TravelStop = $Result.DefaultSelection<Prisma.$TravelStopPayload>
 /**
  * Model TravelPhoto
- * 行程照片。nasPath 是相对 NAS_PHOTO_ROOT 的路径 —— 只引用飞牛相册里的图，
- * 不把文件复制进本应用。展示统一走 /api/media/photo?path=... 代理。
+ * 行程照片。nasPath 平时是相对 NAS_PHOTO_ROOT 的路径，只引用飞牛相册里的图；
+ * 粘贴上传的截图会直接存图床 http(s) 地址。展示分别走相册代理和图床代理，不暴露来源。
  */
 export type TravelPhoto = $Result.DefaultSelection<Prisma.$TravelPhotoPayload>
 /**
@@ -10515,6 +10515,9 @@ export namespace Prisma {
     ownerId: number | null
     sort: number | null
     archived: boolean | null
+    shareToken: string | null
+    shareEnabled: boolean | null
+    shareWritable: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -10528,6 +10531,9 @@ export namespace Prisma {
     ownerId: number | null
     sort: number | null
     archived: boolean | null
+    shareToken: string | null
+    shareEnabled: boolean | null
+    shareWritable: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -10541,6 +10547,9 @@ export namespace Prisma {
     ownerId: number
     sort: number
     archived: number
+    shareToken: number
+    shareEnabled: number
+    shareWritable: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -10568,6 +10577,9 @@ export namespace Prisma {
     ownerId?: true
     sort?: true
     archived?: true
+    shareToken?: true
+    shareEnabled?: true
+    shareWritable?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -10581,6 +10593,9 @@ export namespace Prisma {
     ownerId?: true
     sort?: true
     archived?: true
+    shareToken?: true
+    shareEnabled?: true
+    shareWritable?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -10594,6 +10609,9 @@ export namespace Prisma {
     ownerId?: true
     sort?: true
     archived?: true
+    shareToken?: true
+    shareEnabled?: true
+    shareWritable?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -10694,6 +10712,9 @@ export namespace Prisma {
     ownerId: number
     sort: number
     archived: boolean
+    shareToken: string | null
+    shareEnabled: boolean
+    shareWritable: boolean
     createdAt: Date
     updatedAt: Date
     _count: TodoListCountAggregateOutputType | null
@@ -10726,6 +10747,9 @@ export namespace Prisma {
     ownerId?: boolean
     sort?: boolean
     archived?: boolean
+    shareToken?: boolean
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     owner?: boolean | UserDefaultArgs<ExtArgs>
@@ -10743,6 +10767,9 @@ export namespace Prisma {
     ownerId?: boolean
     sort?: boolean
     archived?: boolean
+    shareToken?: boolean
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     owner?: boolean | UserDefaultArgs<ExtArgs>
@@ -10757,6 +10784,9 @@ export namespace Prisma {
     ownerId?: boolean
     sort?: boolean
     archived?: boolean
+    shareToken?: boolean
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     owner?: boolean | UserDefaultArgs<ExtArgs>
@@ -10771,11 +10801,14 @@ export namespace Prisma {
     ownerId?: boolean
     sort?: boolean
     archived?: boolean
+    shareToken?: boolean
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type TodoListOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "icon" | "color" | "kind" | "ownerId" | "sort" | "archived" | "createdAt" | "updatedAt", ExtArgs["result"]["todoList"]>
+  export type TodoListOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "icon" | "color" | "kind" | "ownerId" | "sort" | "archived" | "shareToken" | "shareEnabled" | "shareWritable" | "createdAt" | "updatedAt", ExtArgs["result"]["todoList"]>
   export type TodoListInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     owner?: boolean | UserDefaultArgs<ExtArgs>
     members?: boolean | TodoList$membersArgs<ExtArgs>
@@ -10805,6 +10838,18 @@ export namespace Prisma {
       ownerId: number
       sort: number
       archived: boolean
+      /**
+       * 免登录分享链接的令牌（与账本的 shareToken 同一套思路）
+       */
+      shareToken: string | null
+      /**
+       * 分享链接是否开着
+       */
+      shareEnabled: boolean
+      /**
+       * 分享链接是否允许勾选/补条目（默认只读）
+       */
+      shareWritable: boolean
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["todoList"]>
@@ -11241,6 +11286,9 @@ export namespace Prisma {
     readonly ownerId: FieldRef<"TodoList", 'Int'>
     readonly sort: FieldRef<"TodoList", 'Int'>
     readonly archived: FieldRef<"TodoList", 'Boolean'>
+    readonly shareToken: FieldRef<"TodoList", 'String'>
+    readonly shareEnabled: FieldRef<"TodoList", 'Boolean'>
+    readonly shareWritable: FieldRef<"TodoList", 'Boolean'>
     readonly createdAt: FieldRef<"TodoList", 'DateTime'>
     readonly updatedAt: FieldRef<"TodoList", 'DateTime'>
   }
@@ -55868,6 +55916,9 @@ export namespace Prisma {
     ownerId: 'ownerId',
     sort: 'sort',
     archived: 'archived',
+    shareToken: 'shareToken',
+    shareEnabled: 'shareEnabled',
+    shareWritable: 'shareWritable',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -57340,6 +57391,9 @@ export namespace Prisma {
     ownerId?: IntFilter<"TodoList"> | number
     sort?: IntFilter<"TodoList"> | number
     archived?: BoolFilter<"TodoList"> | boolean
+    shareToken?: StringNullableFilter<"TodoList"> | string | null
+    shareEnabled?: BoolFilter<"TodoList"> | boolean
+    shareWritable?: BoolFilter<"TodoList"> | boolean
     createdAt?: DateTimeFilter<"TodoList"> | Date | string
     updatedAt?: DateTimeFilter<"TodoList"> | Date | string
     owner?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -57356,6 +57410,9 @@ export namespace Prisma {
     ownerId?: SortOrder
     sort?: SortOrder
     archived?: SortOrder
+    shareToken?: SortOrderInput | SortOrder
+    shareEnabled?: SortOrder
+    shareWritable?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     owner?: UserOrderByWithRelationInput
@@ -57365,6 +57422,7 @@ export namespace Prisma {
 
   export type TodoListWhereUniqueInput = Prisma.AtLeast<{
     id?: number
+    shareToken?: string
     AND?: TodoListWhereInput | TodoListWhereInput[]
     OR?: TodoListWhereInput[]
     NOT?: TodoListWhereInput | TodoListWhereInput[]
@@ -57375,12 +57433,14 @@ export namespace Prisma {
     ownerId?: IntFilter<"TodoList"> | number
     sort?: IntFilter<"TodoList"> | number
     archived?: BoolFilter<"TodoList"> | boolean
+    shareEnabled?: BoolFilter<"TodoList"> | boolean
+    shareWritable?: BoolFilter<"TodoList"> | boolean
     createdAt?: DateTimeFilter<"TodoList"> | Date | string
     updatedAt?: DateTimeFilter<"TodoList"> | Date | string
     owner?: XOR<UserScalarRelationFilter, UserWhereInput>
     members?: TodoListMemberListRelationFilter
     todos?: TodoListRelationFilter
-  }, "id">
+  }, "id" | "shareToken">
 
   export type TodoListOrderByWithAggregationInput = {
     id?: SortOrder
@@ -57391,6 +57451,9 @@ export namespace Prisma {
     ownerId?: SortOrder
     sort?: SortOrder
     archived?: SortOrder
+    shareToken?: SortOrderInput | SortOrder
+    shareEnabled?: SortOrder
+    shareWritable?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: TodoListCountOrderByAggregateInput
@@ -57412,6 +57475,9 @@ export namespace Prisma {
     ownerId?: IntWithAggregatesFilter<"TodoList"> | number
     sort?: IntWithAggregatesFilter<"TodoList"> | number
     archived?: BoolWithAggregatesFilter<"TodoList"> | boolean
+    shareToken?: StringNullableWithAggregatesFilter<"TodoList"> | string | null
+    shareEnabled?: BoolWithAggregatesFilter<"TodoList"> | boolean
+    shareWritable?: BoolWithAggregatesFilter<"TodoList"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"TodoList"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"TodoList"> | Date | string
   }
@@ -60730,6 +60796,9 @@ export namespace Prisma {
     kind?: $Enums.TodoListKind
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutTodoListsInput
@@ -60746,6 +60815,9 @@ export namespace Prisma {
     ownerId: number
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: TodoListMemberUncheckedCreateNestedManyWithoutListInput
@@ -60759,6 +60831,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutTodoListsNestedInput
@@ -60775,6 +60850,9 @@ export namespace Prisma {
     ownerId?: IntFieldUpdateOperationsInput | number
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: TodoListMemberUncheckedUpdateManyWithoutListNestedInput
@@ -60790,6 +60868,9 @@ export namespace Prisma {
     ownerId: number
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -60801,6 +60882,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -60814,6 +60898,9 @@ export namespace Prisma {
     ownerId?: IntFieldUpdateOperationsInput | number
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -64543,6 +64630,9 @@ export namespace Prisma {
     ownerId?: SortOrder
     sort?: SortOrder
     archived?: SortOrder
+    shareToken?: SortOrder
+    shareEnabled?: SortOrder
+    shareWritable?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -64562,6 +64652,9 @@ export namespace Prisma {
     ownerId?: SortOrder
     sort?: SortOrder
     archived?: SortOrder
+    shareToken?: SortOrder
+    shareEnabled?: SortOrder
+    shareWritable?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -64575,6 +64668,9 @@ export namespace Prisma {
     ownerId?: SortOrder
     sort?: SortOrder
     archived?: SortOrder
+    shareToken?: SortOrder
+    shareEnabled?: SortOrder
+    shareWritable?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -69481,6 +69577,9 @@ export namespace Prisma {
     kind?: $Enums.TodoListKind
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: TodoListMemberCreateNestedManyWithoutListInput
@@ -69495,6 +69594,9 @@ export namespace Prisma {
     kind?: $Enums.TodoListKind
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: TodoListMemberUncheckedCreateNestedManyWithoutListInput
@@ -69689,6 +69791,9 @@ export namespace Prisma {
     ownerId?: IntFilter<"TodoList"> | number
     sort?: IntFilter<"TodoList"> | number
     archived?: BoolFilter<"TodoList"> | boolean
+    shareToken?: StringNullableFilter<"TodoList"> | string | null
+    shareEnabled?: BoolFilter<"TodoList"> | boolean
+    shareWritable?: BoolFilter<"TodoList"> | boolean
     createdAt?: DateTimeFilter<"TodoList"> | Date | string
     updatedAt?: DateTimeFilter<"TodoList"> | Date | string
   }
@@ -70017,6 +70122,9 @@ export namespace Prisma {
     kind?: $Enums.TodoListKind
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutTodoListsInput
@@ -70032,6 +70140,9 @@ export namespace Prisma {
     ownerId: number
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: TodoListMemberUncheckedCreateNestedManyWithoutListInput
@@ -70145,6 +70256,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutTodoListsNestedInput
@@ -70160,6 +70274,9 @@ export namespace Prisma {
     ownerId?: IntFieldUpdateOperationsInput | number
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: TodoListMemberUncheckedUpdateManyWithoutListNestedInput
@@ -70380,6 +70497,9 @@ export namespace Prisma {
     kind?: $Enums.TodoListKind
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutTodoListsInput
@@ -70395,6 +70515,9 @@ export namespace Prisma {
     ownerId: number
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     todos?: TodoUncheckedCreateNestedManyWithoutListInput
@@ -70463,6 +70586,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutTodoListsNestedInput
@@ -70478,6 +70604,9 @@ export namespace Prisma {
     ownerId?: IntFieldUpdateOperationsInput | number
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     todos?: TodoUncheckedUpdateManyWithoutListNestedInput
@@ -72852,6 +72981,9 @@ export namespace Prisma {
     kind?: $Enums.TodoListKind
     sort?: number
     archived?: boolean
+    shareToken?: string | null
+    shareEnabled?: boolean
+    shareWritable?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -72968,6 +73100,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: TodoListMemberUpdateManyWithoutListNestedInput
@@ -72982,6 +73117,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: TodoListMemberUncheckedUpdateManyWithoutListNestedInput
@@ -72996,6 +73134,9 @@ export namespace Prisma {
     kind?: EnumTodoListKindFieldUpdateOperationsInput | $Enums.TodoListKind
     sort?: IntFieldUpdateOperationsInput | number
     archived?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: NullableStringFieldUpdateOperationsInput | string | null
+    shareEnabled?: BoolFieldUpdateOperationsInput | boolean
+    shareWritable?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

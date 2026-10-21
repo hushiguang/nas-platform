@@ -19,6 +19,14 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "*": ["cash-platform/**", "backups/**", "docs/**", "docker/**"],
   },
+  // 待办新建 / 分享页补条目都把图片塞进 Server Action 的 FormData，
+  // 默认 1MB 上限连一张手机照片都放不下，会直接 413 ——
+  // 表现就是「点添加一直转圈 / 没反应」，所以显式放宽。
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "30mb",
+    },
+  },
   // 共享包直接以 TS 源码被消费，交给 Next 编译，省掉每个包的构建产物
   transpilePackages: ["@nas/core", "@nas/db", "@nas/auth", "@nas/media", "@nas/notify", "@nas/todo", "@nas/ui"],
   // Prisma 不进打包，按原生 node_modules 引入（standalone 会追踪复制）

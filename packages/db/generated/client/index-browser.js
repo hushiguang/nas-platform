@@ -183,6 +183,9 @@ exports.Prisma.TodoListScalarFieldEnum = {
   ownerId: 'ownerId',
   sort: 'sort',
   archived: 'archived',
+  shareToken: 'shareToken',
+  shareEnabled: 'shareEnabled',
+  shareWritable: 'shareWritable',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

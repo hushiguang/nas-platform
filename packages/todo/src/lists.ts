@@ -8,6 +8,7 @@
  *
  * 可见性收敛在这里，别处不要再自己拼 where 条件。
  */
+import { randomBytes } from "node:crypto";
 import { prisma } from "@nas/db";
 import type { Prisma, TodoList, TodoListKind, TodoListRole } from "@nas/db";
 
@@ -177,7 +178,9 @@ export async function updateList(
       ...(data.icon !== undefined ? { icon: data.icon || null } : {}),
       ...(data.color !== undefined ? { color: data.color || null } : {}),
       ...(data.kind !== undefined ? { kind: data.kind } : {}),
-      ...(data.archived !== undefined ? { archived: data.archived } : {}),
+      ...(data.archived !== undefined
+        ? { archived: data.archived, ...(data.archived ? { shareEnabled: false } : {}) }
+        : {}),
       ...(data.sort !== undefined ? { sort: data.sort } : {}),
     },
   });
@@ -268,6 +271,48 @@ export async function removeListMember(
   }
   if (list.ownerId === userId) throw new Error("创建者不能移出自己");
   await prisma.todoListMember.deleteMany({ where: { listId, userId } });
+}
+
+/**
+ * 分享令牌：9 字节随机，base64url（够短、可直接进 URL）。
+ * 与账单的账本分享用同一套生成方式。
+ */
+export function newShareToken(): string {
+  return randomBytes(9).toString("base64url");
+}
+
+/** 分享开关：开就生成 token（已有则复用），关只把 shareEnabled 置 false，token 留着 ——
+ *  这样「关了再开」不会让已经发出去的旧链接突然复活。 */
+export async function setListShare(
+  listId: number,
+  actorId: number,
+  data: { enabled?: boolean; writable?: boolean },
+  isAdmin = false,
+): Promise<TodoList> {
+  const list = await prisma.todoList.findUnique({
+    where: { id: listId },
+    select: { ownerId: true, shareToken: true, shareWritable: true },
+  });
+  if (!list) throw new Error("清单不存在");
+  if (list.ownerId !== actorId && !isAdmin) throw new Error("只有创建者能设置分享");
+
+  const enabled = data.enabled ?? true;
+  const token = enabled ? list.shareToken || newShareToken() : list.shareToken;
+  const writable = data.writable === undefined ? list.shareWritable : !!data.writable;
+
+  return prisma.todoList.update({
+    where: { id: listId },
+    data: { shareEnabled: enabled, shareToken: token, shareWritable: writable },
+  });
+}
+
+/** 免登录链接只能命中「开着分享」的清单 */
+export async function listByShareToken(token: string): Promise<TodoList | null> {
+  const key = String(token || "").trim();
+  if (!key) return null;
+  return prisma.todoList.findFirst({
+    where: { shareToken: key, shareEnabled: true, archived: false },
+  });
 }
 
 /**

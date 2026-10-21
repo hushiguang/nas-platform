@@ -51,6 +51,9 @@ export function TodoRow({
   const hasDue = Boolean(todo.dueTime);
   // 长备注默认收起，点"备注"展开全文 —— 行高保持一两行，不再被大段文字撑爆
   const [noteOpen, setNoteOpen] = useState(false);
+  // 图片同样默认收起，点「📷 n」展开缩略图（再点缩略图看大图）。
+  // 以前图片跟着备注一起展开，没写备注的条目就永远看不到图。
+  const [imagesOpen, setImagesOpen] = useState(false);
   const notePreview =
     todo.description && todo.description.length > 42
       ? `${todo.description.slice(0, 42)}…`
@@ -124,7 +127,11 @@ export function TodoRow({
           {todo.priority !== "MEDIUM" && <span>{PRIORITY_LABEL[todo.priority]}</span>}
           {todo.snoozeUntil && <span>已延到 {zonedDate(todo.snoozeUntil)}</span>}
           {showOwner && <span>{showOwner}</span>}
-          {todo.imageList.length > 0 && <span>📷 {todo.imageList.length}</span>}
+          {todo.imageList.length > 0 && (
+            <button type="button" className="todo-op" onClick={() => setImagesOpen((v) => !v)}>
+              {imagesOpen ? "收起图片" : `📷 ${todo.imageList.length}`}
+            </button>
+          )}
           {todo.description && (
             <button type="button" className="todo-op" onClick={() => setNoteOpen((v) => !v)}>
               {noteOpen ? "收起备注" : `备注：${notePreview}`}
@@ -134,7 +141,7 @@ export function TodoRow({
         {todo.description && noteOpen && (
           <div className="todo-note is-full">{todo.description}</div>
         )}
-        {noteOpen && todo.imageList.length > 0 && (
+        {imagesOpen && todo.imageList.length > 0 && (
           <div className="todo-thumbs">
             {todo.imageList.map((address) => (
               <LightboxImage key={address} src={imageSrc(address)} />
