@@ -503,7 +503,7 @@ export default async function BoardPage({
               ✕ 清除阶段筛选
             </Link>
           ) : (
-            <span className="muted" style={{ fontSize: 12 }}>悬停条块查看阶段日期与人员名单</span>
+            <span className="muted" style={{ fontSize: 12 }}>点按条块查看阶段日期与人员名单</span>
           )}
         </div>
       ) : (
@@ -520,14 +520,14 @@ export default async function BoardPage({
             时间冲突
           </span>
           <span className="muted" style={{ marginLeft: "auto" }}>
-            条块按阶段拆开，悬停查看所属项目与日期
+            条块按阶段拆开，点按查看所属项目与日期
           </span>
         </div>
       )}
 
       <div className="gantt-scroll">
         {anchorLeft !== null ? <ScrollToDate percent={anchorLeft} /> : null}
-        <div style={{ minWidth: 200 + minTrack }}>
+        <div style={{ minWidth: `calc(var(--gantt-label-w, 200px) + ${minTrack}px)` }}>
           <div className="gantt-head">
             <div className="gantt-label muted" style={{ position: "sticky", left: 0, background: "var(--paper)", zIndex: 3 }}>
               {view === "project" ? `项目 · ${placed.length}` : `人员 · ${placed.length}`}
@@ -619,7 +619,7 @@ export default async function BoardPage({
                     <div
                       style={{
                         position: "sticky",
-                        left: 208,
+                        left: "calc(var(--gantt-label-w, 200px) + 8px)",
                         width: "max-content",
                         padding: "12px 0 0 8px",
                         fontSize: 11,

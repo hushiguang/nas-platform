@@ -330,6 +330,7 @@ export default async function TodosPage({
                     </div>
                   )}
                 </div>
+                <div className="todo-actions">
                 {overdue && <span className="badge" style={{ background: "var(--wash-coral)", color: "var(--coral)" }}>逾期</span>}
                 {cancelled && <span className="badge soft">已取消</span>}
                 {t.source === "ANNIVERSARY" ? (
@@ -366,6 +367,7 @@ export default async function TodosPage({
                   <PortalCancelButton action={cancelOne} id={t.id} title={t.title} />
                 )}
                 <PortalDeleteButton action={removeOne} id={t.id} title={t.title} />
+                </div>
               </li>
             );
           })}

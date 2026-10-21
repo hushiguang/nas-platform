@@ -820,6 +820,17 @@ a.stat:hover,
   flex: 1;
   min-width: 0;
 }
+.todo-actions {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.todo-actions form {
+  margin: 0;
+  display: inline-flex;
+}
 .todo-title {
   font-size: 14px;
   font-weight: 500;
@@ -1097,12 +1108,29 @@ table.data td:last-child {
 .topbar-nav {
   display: flex;
   gap: 4px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 .topbar-nav::-webkit-scrollbar {
   display: none;
+}
+/* 顶栏里的导航项必须保持一个整体，否则窄屏会把中文挤成一字一行 */
+.topbar-nav .nav-item {
+  flex: none;
+  white-space: nowrap;
+}
+.topbar > .brand {
+  flex: none;
+  white-space: nowrap;
+}
+.topbar > form {
+  flex: none;
+}
+.topbar .ghost {
+  white-space: nowrap;
 }
 
 /* 移动端底部标签栏：手机上一只手就能切页面 */
@@ -1382,10 +1410,15 @@ table.data td:last-child {
   pointer-events: none;
 }
 .anniv-note-wrap:hover .anniv-note-pop,
-.anniv-note-wrap:focus-within .anniv-note-pop {
+.anniv-note-wrap:focus-within .anniv-note-pop,
+.anniv-note-wrap.active .anniv-note-pop {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+.anniv-card:has(.anniv-note-wrap.active) {
+  overflow: visible;
+  z-index: 4;
 }
 .anniv-bill {
   position: relative;
@@ -2536,7 +2569,7 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   h1 { font-size: 24px; }
   .card { padding: 12px 14px; border-radius: 16px; }
   .page-head { align-items: stretch; flex-direction: column; }
-  .page-head .btn, .card-head .btn { width: 100%; min-height: 42px; }
+  .page-head > .btn, .card-head > .btn { width: 100%; min-height: 42px; }
   .row-actions { width: 100%; }
   .row-actions > * { flex: 1 1 auto; }
   /* 工作台阶段行：窄屏上下排 */
@@ -2553,10 +2586,33 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   .modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; max-height: min(88dvh, calc(100dvh - var(--safe-top) - 8px)); padding-bottom: calc(16px + var(--safe-bottom)); }
   .modal .form-stack > .form-row, .modal .form-stack .dlg-row-uneven { grid-template-columns: 1fr; }
   .todo-row { flex-wrap: wrap; }
+  /* 门户待办行：正文占满首行，操作和账单单独一行，避免正文被挤成一字一行 */
+  .todo-row > .todo-main { flex: 1 1 calc(100% - 26px); }
+  .todo-row > .todo-actions { flex: 1 1 100%; justify-content: flex-end; }
+  .todo-row > .todo-actions .todo-bills { flex: 1 1 100%; }
+  /* H5 没有 hover：账单浮层直接展开在行下方，触摸即可点 */
+  .line-pop {
+    position: static;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 4px 0 0;
+  }
+  .line-pop::before { display: none; }
+  .app-lines li.has-pop { flex-wrap: wrap; }
+  .app-lines li.has-pop .line-pop { width: 100%; }
+  .todo-bills { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .todo-bills .line-pop { left: auto; right: auto; width: 100%; }
   .log-view { max-height: 52vh; }
-  .table-scroll { margin: 0 -14px; padding: 0 14px; }
-  table.data { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table.data thead, table.data tbody, table.data tfoot { min-width: 560px; }
+  .table-scroll { margin: 0 -14px; padding: 0 14px; -webkit-overflow-scrolling: touch; }
+  /* 表格保持 table 布局，由外层 .table-scroll 横向滚动；
+     不要改成 display:block，否则列宽会被压扁成一字一行。 */
+  table.data { display: table; min-width: 600px; }
+  table.data.wide { min-width: 820px; }
+  table.data thead, table.data tbody, table.data tfoot { min-width: 0; }
+  table.data th, table.data td { padding: 8px 10px; }
   .text-btn { min-height: 32px; padding: 5px 10px; }
 }
 @media (max-width: 420px) {
@@ -2585,11 +2641,29 @@ a.work-side-row:hover { color: var(--coral); background: var(--hover); }
 }
 
 /* 甘特图 */
-.gantt-scroll { overflow: auto; max-height: max(320px, calc(100vh - 330px)); border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
+.gantt-scroll { --gantt-label-w: 200px; overflow: auto; max-height: max(320px, calc(100vh - 330px)); border: 1px solid var(--line); border-radius: 16px; background: var(--paper); -webkit-overflow-scrolling: touch; }
 .gantt-head { display: flex; position: sticky; top: 0; background: var(--paper); z-index: 2; border-bottom: 1px solid var(--line); }
 .gantt-row { display: flex; border-bottom: 1px solid var(--line); }
 .gantt-row:last-child { border-bottom: none; }
-.gantt-label { flex-shrink: 0; width: 200px; padding: 10px 12px; font-size: 12.5px; border-right: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gantt-label { flex-shrink: 0; width: var(--gantt-label-w); padding: 10px 12px; font-size: 12.5px; border-right: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 窄屏给时间轴让出空间：左侧名称列收窄到 124px，其余靠横向滚动 */
+@media (max-width: 720px) {
+  .gantt-scroll { --gantt-label-w: 124px; }
+  .gantt-label { padding: 8px 9px; font-size: 11.5px; }
+  /* 名称最多两行，副标题一行省略，避免手机上一行占掉半屏 */
+  .gantt-label > a > div,
+  .gantt-label > div:not(.muted) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .gantt-label > div.muted {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+  }
+}
 .gantt-track { position: relative; flex: 1; }
 .gantt-day { border-left: 1px solid var(--line); }
 .gantt-day.weekend { background: var(--hover); }

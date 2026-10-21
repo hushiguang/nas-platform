@@ -59,7 +59,7 @@ export default async function AdminPlatformsPage({
             <span className="muted" style={{ fontSize: 13 }}>{platforms.length} 个</span>
           </div>
           <div className="table-scroll">
-            <table className="data">
+            <table className="data wide">
               <thead>
                 <tr>
                   <th>应用</th>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 export interface BarTip {
@@ -55,22 +55,53 @@ export function GanttBar({
   tip,
 }: GanttBarProps) {
   const [pos, setPos] = useState<TipPos | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const touchStart = useRef<TipPos | null>(null);
 
   const follow = useCallback((event: React.MouseEvent) => {
     setPos({ x: event.clientX, y: event.clientY });
+  }, []);
+
+  // 触摸屏没有 hover：点一下条块就把提示钉在手指位置，点空白处或滚动再收起
+  const startTouch = useCallback((event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") return;
+    touchStart.current = { x: event.clientX, y: event.clientY };
+  }, []);
+
+  const toggleByTouch = useCallback((event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") return;
+    const start = touchStart.current;
+    touchStart.current = null;
+    // 横向拖动时间轴时不要误弹提示
+    if (start && Math.abs(event.clientX - start.x) + Math.abs(event.clientY - start.y) > 8) return;
+    const rect = barRef.current?.getBoundingClientRect();
+    setPos({ x: event.clientX || rect?.left || 0, y: event.clientY || rect?.top || 0 });
+  }, []);
+
+  // 键盘/读屏也能拿到同样的信息
+  const showFromBar = useCallback(() => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (rect) setPos({ x: rect.left + rect.width / 2, y: rect.top + rect.height });
   }, []);
 
   // 滚动时立刻收起，避免提示框停在原地和条块脱节
   useEffect(() => {
     if (!pos) return;
     const hide = () => setPos(null);
+    const hideOutside = (event: PointerEvent) => {
+      if (!barRef.current?.contains(event.target as Node)) setPos(null);
+    };
     window.addEventListener("scroll", hide, true);
     window.addEventListener("resize", hide);
+    document.addEventListener("pointerdown", hideOutside);
     return () => {
       window.removeEventListener("scroll", hide, true);
       window.removeEventListener("resize", hide);
+      document.removeEventListener("pointerdown", hideOutside);
     };
   }, [pos]);
+
+  const tipText = [tip.heading, tip.meta, ...(tip.lines ?? []), tip.warn].filter(Boolean).join(" / ");
 
   let tipStyle: React.CSSProperties | undefined;
   if (pos) {
@@ -84,10 +115,19 @@ export function GanttBar({
   return (
     <>
       <div
+        ref={barRef}
         className="gantt-bar"
+        role="button"
+        tabIndex={0}
+        title={tipText}
+        aria-label={tipText}
         onMouseEnter={follow}
         onMouseMove={follow}
         onMouseLeave={() => setPos(null)}
+        onPointerDown={startTouch}
+        onPointerUp={toggleByTouch}
+        onFocus={showFromBar}
+        onBlur={() => setPos(null)}
         style={{
           left: `${left}%`,
           width: `${width}%`,

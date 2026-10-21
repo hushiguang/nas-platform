@@ -147,18 +147,25 @@
 /* ---------------------------------------------------------------- 主页：单列 + 分类横栏 */
 .todo-home {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-content: start;
   padding-bottom: 110px;
   max-width: 880px;
   width: 100%;
   margin: 0 auto;
+  min-width: 0;
+}
+
+.todo-home > * {
+  min-width: 0;
 }
 
 .todo-bar {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .todo-cats.is-row {
@@ -434,14 +441,35 @@ a.todo-op:hover {
 @media (max-width: 900px) {
   .quick-add {
     left: 50%;
-    bottom: calc(12px + env(safe-area-inset-bottom));
+    /* 底部标签栏 (≈79px) + 安全区，留 8px 缝，避免快速添加条压住导航 */
+    bottom: calc(88px + env(safe-area-inset-bottom));
     width: calc(100vw - 28px);
+  }
+  .todo-home {
+    padding-bottom: 190px;
   }
   .quick-add-hint {
     display: none;
   }
   .todo-ops .todo-snooze {
     display: none;
+  }
+  /* 手机上操作放第二行，标题和到期时间才有足够宽度 */
+  .todo-line {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .todo-line .todo-title {
+    flex: 1 1 auto;
+  }
+  .todo-line .todo-ops {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+  .todo-due {
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
