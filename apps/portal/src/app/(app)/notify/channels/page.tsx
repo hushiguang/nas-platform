@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@nas/db";
 import {
+  digestTimes,
   mailConfig,
   MAIL_SETTING_KEYS,
   QQ_MAIL_HOST,
@@ -10,8 +11,11 @@ import {
   WECOM_SETTING_KEYS,
 } from "@nas/notify";
 import { requireUser } from "@/auth";
+import { DigestTimesForm } from "../digest-times-form";
 import {
+  resetDigestTimes,
   saveAndTestMail,
+  saveDigestTimes,
   saveMailSettings,
   saveWecomAppSettings,
   saveWecomWebhook,
@@ -37,7 +41,7 @@ export default async function NotifyChannelsPage({
   }
   const { error, ok } = await searchParams;
 
-  const [users, wecom, mail, stored] = await Promise.all([
+  const [users, wecom, mail, stored, times] = await Promise.all([
     prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { id: "asc" },
@@ -47,6 +51,8 @@ export default async function NotifyChannelsPage({
     wecomConfig(),
     mailConfig(),
     storedSettings(),
+    // 每日汇总的发送时点：页面配置 > DIGEST_TIMES 环境变量 > 默认 08:10 / 16:00
+    digestTimes(true),
   ]);
   const webhook = stored[WECOM_SETTING_KEYS.webhook] || process.env.WECOM_WEBHOOK || "";
 
@@ -82,6 +88,18 @@ export default async function NotifyChannelsPage({
 
       {error && <div className="notice" style={{ marginBottom: 14 }}>{error}</div>}
       {ok && <div className="notice ok" style={{ marginBottom: 14 }}>{ok}</div>}
+
+      <section className="card" style={{ marginBottom: 14 }}>
+        <div className="card-head">
+          <h2>每日汇总发送时间</h2>
+          <span className="badge soft">当前 {times.join(" / ")}</span>
+        </div>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          每日汇总（待办 / 项目 / 纪念日 / 账单，邮件 + 企微群）在这些时点各推一次。
+          可以加多个时间点；改完约 15 秒内生效，不用重启 worker。
+        </p>
+        <DigestTimesForm times={times} action={saveDigestTimes} reset={resetDigestTimes} />
+      </section>
 
       <section className="card" style={{ marginBottom: 14 }}>
         <div className="card-head">

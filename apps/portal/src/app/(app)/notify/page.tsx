@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { NotifyChannelType, NotifyStatus } from "@nas/db";
 import { prisma } from "@nas/db";
 import { zonedDate, zonedTime } from "@nas/core";
+import { digestTimes } from "@nas/notify";
 import { requireUser } from "@/auth";
 import { testSendDigest } from "./digest-actions";
 
@@ -40,6 +41,7 @@ export default async function NotifyPage({
 
   const { status = "all", notice } = await searchParams;
   const current = FILTERS.some((item) => item.key === status) ? status : "all";
+  const times = await digestTimes();
   const users = await prisma.user.findMany({
     where: { status: "ACTIVE" },
     orderBy: { id: "asc" },
@@ -96,7 +98,9 @@ export default async function NotifyPage({
           <button type="submit" className="btn primary">试发送</button>
         </form>
         <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          发送时点：每天 <b>09:00</b> 和 <b>16:00</b>（worker 的 digest 任务）。
+          发送时点：每天 <b>{times.join(" 、 ")}</b> 各一次（可在
+          <Link href="/notify/channels" className="site-link"> 通知渠道 </Link>
+          页调整）。
           内容口径：邮件按 <b>纪念日 / 待办 / 工作台</b> 三块各带一张表 —— 纪念日（近30天，含倒计时）·
           待办（延期+近7天+进行中，不含工作台自动收的项目待办，避免和风险预报重复）·
           工作台（项目当前阶段、风险预报、待修问题）。

@@ -4,9 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { recordAudit } from "@nas/core";
 import {
+  DIGEST_SETTING_KEYS,
+  digestTimes,
   invalidateSettingsCache,
   isQqMail,
   MAIL_SETTING_KEYS,
+  parseDigestTimes,
   QQ_MAIL_HOST,
   QQ_MAIL_PORT,
   saveSettings,
@@ -209,4 +212,57 @@ export async function saveWecomWebhook(formData: FormData) {
     actorName: admin.nickname,
   });
   redirect(`${BACK}?${result.ok ? "ok" : "error"}=${encodeURIComponent(result.message)}`);
+}
+
+const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * 保存每日汇总的发送时点（HH:mm 列表）。
+ * 写成 setting 后 worker 的每分钟 tick 会在 15 秒内读到，不用重启容器。
+ */
+export async function saveDigestTimes(formData: FormData) {
+  const admin = await requireAdmin();
+
+  const items = formData
+    .getAll("digestTime")
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const bad = items.filter((item) => !HM_RE.test(item));
+  if (bad.length > 0) {
+    redirect(`${BACK}?error=${encodeURIComponent(`时间格式不对：${bad.join("、")}，请用 24 小时制 HH:mm`)}`);
+  }
+  // 重复的时点只留一份，按时间排好
+  const times = parseDigestTimes(items.join(","));
+  if (times.length === 0) {
+    redirect(`${BACK}?error=${encodeURIComponent("至少保留一个发送时间，例如 08:10")}`);
+  }
+
+  await saveSettings({ [DIGEST_SETTING_KEYS.times]: times.join(",") });
+  invalidateSettingsCache();
+  await recordAudit({
+    app: "portal",
+    action: "update",
+    summary: `保存每日汇总发送时间：${times.join(" / ")}`,
+    target: "notify",
+    actorId: admin.id,
+    actorName: admin.nickname,
+  });
+  redirect(`${BACK}?ok=${encodeURIComponent(`每日汇总发送时间已改为 ${times.join("、")}，worker 15 秒内生效`)}`);
+}
+
+/** 把时点恢复成默认的 08:10 / 16:00（删掉页面配置，回退默认值） */
+export async function resetDigestTimes() {
+  const admin = await requireAdmin();
+  await saveSettings({ [DIGEST_SETTING_KEYS.times]: "" });
+  invalidateSettingsCache();
+  await recordAudit({
+    app: "portal",
+    action: "update",
+    summary: "重置每日汇总发送时间（恢复默认）",
+    target: "notify",
+    actorId: admin.id,
+    actorName: admin.nickname,
+  });
+  const times = await digestTimes(true);
+  redirect(`${BACK}?ok=${encodeURIComponent(`已恢复默认发送时间：${times.join("、")}`)}`);
 }

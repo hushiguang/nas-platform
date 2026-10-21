@@ -192,9 +192,13 @@ export { sendWecomWebhook, testWecomWebhook, webhookKey } from "./providers/webh
 export {
   WECOM_SETTING_KEYS,
   MAIL_SETTING_KEYS,
+  DIGEST_SETTING_KEYS,
   QQ_MAIL_HOST,
   QQ_MAIL_PORT,
+  DEFAULT_DIGEST_TIMES,
   isQqMail,
+  parseDigestTimes,
+  digestTimes,
   storedSettings,
   saveSettings,
   invalidateSettingsCache,

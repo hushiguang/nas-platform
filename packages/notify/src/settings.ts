@@ -30,7 +30,21 @@ export const MAIL_SETTING_KEYS = {
   from: "notify.mail.from",
 } as const;
 
-const SETTING_KEYS = [...Object.values(WECOM_SETTING_KEYS), ...Object.values(MAIL_SETTING_KEYS)];
+/**
+ * 每日汇总的发送时点。页面配一份（逗号分隔的 HH:mm），worker 每分钟核对一次 ——
+ * 改完不用重启 worker。lastRun 是 worker 自己写的「这个时点已经发过」的标记，
+ * 防止进程重启后同一分钟再发一遍。
+ */
+export const DIGEST_SETTING_KEYS = {
+  times: "notify.digest.times",
+  lastRun: "notify.digest.lastRun",
+} as const;
+
+const SETTING_KEYS = [
+  ...Object.values(WECOM_SETTING_KEYS),
+  ...Object.values(MAIL_SETTING_KEYS),
+  ...Object.values(DIGEST_SETTING_KEYS),
+];
 
 /** 应用消息与群机器人二选一，webhook 优先（它没有 IP 白名单的坑） */
 export async function wecomWebhook(bypassCache = false): Promise<string> {
@@ -78,6 +92,32 @@ export async function saveSettings(entries: Record<string, string>): Promise<voi
 /** 测试连接、故障排查时用：忽略缓存，立刻反映最新配置 */
 export function invalidateSettingsCache(): void {
   cache = null;
+}
+
+/** 没配过任何时点时的兜底：早上 8:10 和下午 4:00 各发一次汇总 */
+export const DEFAULT_DIGEST_TIMES = ["08:10", "16:00"];
+
+const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** 解析逗号分隔的时点串，丢非法值、去重、按时间升序 */
+export function parseDigestTimes(raw: string | undefined | null): string[] {
+  const list = trim(raw)
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => HM_RE.test(item));
+  return [...new Set(list)].sort();
+}
+
+/**
+ * 每日汇总的发送时点：页面配置 > DIGEST_TIMES 环境变量 > 默认 08:10 / 16:00。
+ * 走 15 秒短缓存，页面改完 worker 下一个 tick 就能拿到。
+ */
+export async function digestTimes(bypassCache = false): Promise<string[]> {
+  const stored = await cachedSettings(bypassCache);
+  const fromDb = parseDigestTimes(stored[DIGEST_SETTING_KEYS.times]);
+  if (fromDb.length) return fromDb;
+  const fromEnv = parseDigestTimes(process.env.DIGEST_TIMES);
+  return fromEnv.length ? fromEnv : DEFAULT_DIGEST_TIMES;
 }
 
 function trim(value: string | undefined | null): string {
