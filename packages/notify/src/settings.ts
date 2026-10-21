@@ -1,5 +1,5 @@
 /**
- * 通知渠道的全局参数（企业微信应用三件套）。
+ * 通知渠道的全局参数（企业微信应用三件套 + 邮件 SMTP）。
  *
  * 优先级：门户界面存到 setting 表的值 > 环境变量。环境变量是部署兜底，
  * 保留它是为了容器里不依赖数据库也能发（也兼容迁移前的配置）。
@@ -17,26 +17,42 @@ export const WECOM_SETTING_KEYS = {
   webhook: "notify.wecom.webhook",
 } as const;
 
+/**
+ * 邮件（SMTP）配置。QQ 邮箱用「邮箱账号 + 授权码」即可，不需要开启独立密码。
+ * host/port/secure 留空时按发信邮箱域名自动套 QQ 的预设（smtp.qq.com:465）。
+ */
+export const MAIL_SETTING_KEYS = {
+  host: "notify.mail.host",
+  port: "notify.mail.port",
+  secure: "notify.mail.secure",
+  user: "notify.mail.user",
+  pass: "notify.mail.pass",
+  from: "notify.mail.from",
+} as const;
+
+const SETTING_KEYS = [...Object.values(WECOM_SETTING_KEYS), ...Object.values(MAIL_SETTING_KEYS)];
+
 /** 应用消息与群机器人二选一，webhook 优先（它没有 IP 白名单的坑） */
 export async function wecomWebhook(bypassCache = false): Promise<string> {
-  let stored: Record<string, string> = {};
-  if (bypassCache || !cache || cache.expiresAt <= Date.now()) {
-    stored = await storedSettings();
-    cache = { value: stored, expiresAt: Date.now() + CACHE_TTL_MS };
-  } else {
-    stored = cache.value;
-  }
+  const stored = await cachedSettings(bypassCache);
   return trim(stored[WECOM_SETTING_KEYS.webhook]) || trim(process.env.WECOM_WEBHOOK);
 }
 
 const CACHE_TTL_MS = 15_000;
 let cache: { value: Record<string, string>; expiresAt: number } | null = null;
 
+async function cachedSettings(bypassCache = false): Promise<Record<string, string>> {
+  if (bypassCache || !cache || cache.expiresAt <= Date.now()) {
+    cache = { value: await storedSettings(), expiresAt: Date.now() + CACHE_TTL_MS };
+  }
+  return cache.value;
+}
+
 /** 库里已保存的设置（没有就空对象）。不读环境变量，给界面展示用 */
 export async function storedSettings(): Promise<Record<string, string>> {
   try {
     const rows = await prisma.setting.findMany({
-      where: { key: { in: Object.values(WECOM_SETTING_KEYS) } },
+      where: { key: { in: SETTING_KEYS } },
     });
     return Object.fromEntries(rows.map((r) => [r.key, r.value]));
   } catch (err) {
@@ -83,13 +99,7 @@ export interface WecomConfig {
 }
 
 export async function wecomConfig(bypassCache = false): Promise<WecomConfig> {
-  let stored: Record<string, string> = {};
-  if (bypassCache || !cache || cache.expiresAt <= Date.now()) {
-    stored = await storedSettings();
-    cache = { value: stored, expiresAt: Date.now() + CACHE_TTL_MS };
-  } else {
-    stored = cache.value;
-  }
+  const stored = await cachedSettings(bypassCache);
 
   const dbCorpId = trim(stored[WECOM_SETTING_KEYS.corpId]);
   const dbSecret = trim(stored[WECOM_SETTING_KEYS.corpSecret]);
@@ -108,5 +118,82 @@ export async function wecomConfig(bypassCache = false): Promise<WecomConfig> {
     agentId,
     fromDb: { corpId: !!dbCorpId, corpSecret: !!dbSecret, agentId: hasAgentId },
     ok: !!corpId && !!corpSecret && Number.isFinite(agentId) && agentId > 0,
+  };
+}
+
+/** QQ 邮箱（含 foxmail）的默认 SMTP 参数，授权码方式登录 */
+export const QQ_MAIL_HOST = "smtp.qq.com";
+export const QQ_MAIL_PORT = 465;
+const QQ_DOMAINS = ["qq.com", "foxmail.com", "vip.qq.com"];
+
+export function isQqMail(user: string): boolean {
+  const domain = user.split("@")[1]?.toLowerCase() ?? "";
+  return QQ_DOMAINS.includes(domain);
+}
+
+/**
+ * 邮件（SMTP）配置：界面配的优先，缺项回退环境变量。
+ *
+ * QQ 邮箱只需要填「邮箱账号 + 授权码」，服务器按域名自动套预设；
+ * 发件人也必须和登录账号一致（QQ 的硬性要求），所以 QQ 场景下只用账号
+ * 自动拼 `from`，避免用户填错导致 501 发件人不一致。
+ */
+export interface MailConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  /** 识别出 QQ 邮箱（自动套了 smtp.qq.com 预设） */
+  qq: boolean;
+  fromDb: { host: boolean; port: boolean; secure: boolean; user: boolean; pass: boolean; from: boolean };
+  /** host / user / pass 齐全 */
+  ok: boolean;
+}
+
+export async function mailConfig(bypassCache = false): Promise<MailConfig> {
+  const stored = await cachedSettings(bypassCache);
+
+  const dbHost = trim(stored[MAIL_SETTING_KEYS.host]);
+  const dbPort = Number(trim(stored[MAIL_SETTING_KEYS.port]));
+  const hasDbPort = Number.isInteger(dbPort) && dbPort > 0 && dbPort <= 65535;
+  const dbSecure = trim(stored[MAIL_SETTING_KEYS.secure]);
+  const dbUser = trim(stored[MAIL_SETTING_KEYS.user]);
+  const dbPass = trim(stored[MAIL_SETTING_KEYS.pass]);
+  const dbFrom = trim(stored[MAIL_SETTING_KEYS.from]);
+
+  const user = dbUser || trim(process.env.SMTP_USER);
+  const pass = dbPass || trim(process.env.SMTP_PASS);
+  const qq = isQqMail(user);
+
+  const host = dbHost || trim(process.env.SMTP_HOST) || (qq ? QQ_MAIL_HOST : "");
+  const port = hasDbPort
+    ? dbPort
+    : Number(trim(process.env.SMTP_PORT)) || (qq ? QQ_MAIL_PORT : 465);
+  const envSecure = trim(process.env.SMTP_SECURE).toLowerCase();
+  const secure = dbSecure ? dbSecure === "true" : envSecure ? envSecure === "true" : port === 465;
+
+  const rawFrom = dbFrom || trim(process.env.MAIL_FROM);
+  // QQ 只允许用登录账号自己发信；from 里带了显示名但地址不对时也强制改成账号
+  const from = qq ? (rawFrom.includes(user) ? rawFrom : user) : rawFrom || user;
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    from,
+    qq,
+    fromDb: {
+      host: !!dbHost,
+      port: hasDbPort,
+      secure: !!dbSecure,
+      user: !!dbUser,
+      pass: !!dbPass,
+      from: !!dbFrom,
+    },
+    ok: !!host && !!user && !!pass,
   };
 }

@@ -2585,7 +2585,7 @@ a.work-side-row:hover { color: var(--coral); background: var(--hover); }
 }
 
 /* 甘特图 */
-.gantt-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
+.gantt-scroll { overflow: auto; max-height: max(320px, calc(100vh - 330px)); border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
 .gantt-head { display: flex; position: sticky; top: 0; background: var(--paper); z-index: 2; border-bottom: 1px solid var(--line); }
 .gantt-row { display: flex; border-bottom: 1px solid var(--line); }
 .gantt-row:last-child { border-bottom: none; }
@@ -2593,7 +2593,9 @@ a.work-side-row:hover { color: var(--coral); background: var(--hover); }
 .gantt-track { position: relative; flex: 1; }
 .gantt-day { border-left: 1px solid var(--line); }
 .gantt-day.weekend { background: var(--hover); }
-.gantt-bar { position: absolute; top: 8px; height: 22px; border-radius: 7px; font-size: 10.5px; line-height: 22px; padding: 0 6px; overflow: hidden; white-space: nowrap; }
+.gantt-bar { position: absolute; display: flex; align-items: center; gap: 5px; border-radius: 7px; font-size: 10.5px; padding: 0 7px; overflow: hidden; white-space: nowrap; cursor: default; transition: box-shadow 0.12s ease, filter 0.12s ease; }
+.gantt-bar:hover { z-index: 5; box-shadow: 0 3px 12px rgba(18, 26, 42, 0.18); filter: brightness(0.985); }
+.gantt-bar-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gantt-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--coral); z-index: 1; }
 
 /* 汇总/简报双栏：左主右次，窄屏自动单列 */

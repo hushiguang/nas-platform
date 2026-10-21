@@ -1,8 +1,23 @@
 import Link from "next/link";
 import { prisma } from "@nas/db";
-import { storedSettings, wecomConfig, WECOM_SETTING_KEYS } from "@nas/notify";
+import {
+  mailConfig,
+  MAIL_SETTING_KEYS,
+  QQ_MAIL_HOST,
+  QQ_MAIL_PORT,
+  storedSettings,
+  wecomConfig,
+  WECOM_SETTING_KEYS,
+} from "@nas/notify";
 import { requireUser } from "@/auth";
-import { saveWecomAppSettings, saveWecomWebhook, testWecomSettings } from "../settings-actions";
+import {
+  saveAndTestMail,
+  saveMailSettings,
+  saveWecomAppSettings,
+  saveWecomWebhook,
+  testMailSettings,
+  testWecomSettings,
+} from "../settings-actions";
 
 /**
  * 通知渠道配置（仅管理员）。
@@ -22,7 +37,7 @@ export default async function NotifyChannelsPage({
   }
   const { error, ok } = await searchParams;
 
-  const [users, wecom] = await Promise.all([
+  const [users, wecom, mail, stored] = await Promise.all([
     prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { id: "asc" },
@@ -30,8 +45,7 @@ export default async function NotifyChannelsPage({
     }),
     // 界面配置的优先，取不到才用环境变量。fromDb 用来在页面上标注来源
     wecomConfig(),
-  ]);
-  const [stored] = await Promise.all([
+    mailConfig(),
     storedSettings(),
   ]);
   const webhook = stored[WECOM_SETTING_KEYS.webhook] || process.env.WECOM_WEBHOOK || "";
@@ -159,6 +173,118 @@ export default async function NotifyChannelsPage({
             </button>
             <span className="muted" style={{ fontSize: 12 }}>
               三项都留空则改回环境变量；「测试连接」只换 access_token，不会真发消息。
+            </span>
+          </div>
+        </form>
+      </section>
+
+      <section className="card" style={{ marginBottom: 14 }}>
+        <div className="card-head">
+          <h2>邮件 · QQ 邮箱（授权码）</h2>
+          {mail.ok ? <span className="badge">已配置</span> : <span className="badge soft">未配置，邮件会失败</span>}
+        </div>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          QQ 邮箱用「邮箱账号 + 授权码」发信：登录 QQ 邮箱 → 设置 → 账号 → 开启「POP3/SMTP 服务」→
+          生成<b>授权码</b>，把授权码填到下面（不是 QQ 密码）。服务器默认 <b>{QQ_MAIL_HOST}:{QQ_MAIL_PORT}</b>（SSL），
+          一般不用改；发件人会强制用同一个账号（QQ 的要求），所以「发件人」留空即可。
+          <br />
+          每日汇总、待办提醒都会走这里发信；每个用户的收件邮箱在页面下方「接收人」里配置。
+        </p>
+
+        <form action={saveMailSettings} style={{ display: "grid", gap: 12, maxWidth: 640 }}>
+          <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+            <span style={{ width: 96 }}>发信邮箱</span>
+            <input
+              name="mailUser"
+              defaultValue={mail.user}
+              placeholder="yourname@qq.com"
+              autoComplete="off"
+              className="field"
+              style={{ flex: 1 }}
+            />
+            {envTag(mail.fromDb.user, !!process.env.SMTP_USER)}
+          </label>
+          <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+            <span style={{ width: 96 }}>授权码</span>
+            <input
+              name="mailPass"
+              defaultValue={mail.pass}
+              placeholder="16 位授权码（不是 QQ 密码）"
+              autoComplete="off"
+              className="field"
+              style={{ flex: 1 }}
+            />
+            {envTag(mail.fromDb.pass, !!process.env.SMTP_PASS)}
+          </label>
+          <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+            <span style={{ width: 96 }}>发件人</span>
+            <input
+              name="mailFrom"
+              defaultValue={stored[MAIL_SETTING_KEYS.from] || process.env.MAIL_FROM || ""}
+              placeholder="留空 = 与发信邮箱一致"
+              autoComplete="off"
+              className="field"
+              style={{ flex: 1 }}
+            />
+            {envTag(mail.fromDb.from, !!process.env.MAIL_FROM)}
+          </label>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+              <span style={{ width: 96 }}>服务器</span>
+              <input
+                name="mailHost"
+                defaultValue={stored[MAIL_SETTING_KEYS.host] ?? ""}
+                placeholder={mail.qq ? QQ_MAIL_HOST : "smtp.qq.com"}
+                autoComplete="off"
+                className="field"
+                style={{ width: 200 }}
+              />
+            </label>
+            <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+              <span>端口</span>
+              <input
+                name="mailPort"
+                defaultValue={stored[MAIL_SETTING_KEYS.port] ?? ""}
+                placeholder={mail.qq ? String(QQ_MAIL_PORT) : "465"}
+                inputMode="numeric"
+                className="field"
+                style={{ width: 90 }}
+              />
+            </label>
+            <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+              <span>加密</span>
+              <select
+                name="mailSecure"
+                defaultValue={stored[MAIL_SETTING_KEYS.secure] ?? "true"}
+                style={{ minWidth: 130 }}
+              >
+                <option value="true">SSL（465）</option>
+                <option value="false">STARTTLS（587）</option>
+              </select>
+            </label>
+          </div>
+          <label className="muted" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+            <span style={{ width: 96 }}>测试收件人</span>
+            <input
+              name="mailTestTo"
+              placeholder="留空 = 发到上面的发信邮箱"
+              autoComplete="off"
+              className="field"
+              style={{ flex: 1 }}
+            />
+          </label>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button type="submit" className="btn">
+              保存并校验
+            </button>
+            <button type="submit" formAction={saveAndTestMail} className="btn primary">
+              保存并发送测试邮件
+            </button>
+            <button type="submit" formAction={testMailSettings} className="btn ghost">
+              测试当前配置
+            </button>
+            <span className="muted" style={{ fontSize: 12 }}>
+              全部留空 = 清空，改用环境变量 SMTP_*
             </span>
           </div>
         </form>

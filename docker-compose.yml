@@ -53,6 +53,15 @@ x-app-env: &app-env
   TRAVEL_INTERNAL_URL: ${TRAVEL_INTERNAL_URL:-http://nas-platform-travel:3000}
   SERVICE_TOKEN: ${SERVICE_TOKEN}
   CRON_SECRET: ${CRON_SECRET}
+  # 邮件（SMTP）。QQ 邮箱只需 SMTP_USER=邮箱账号、SMTP_PASS=授权码，
+  # 其余留空会自动套 smtp.qq.com:465；也可在门户「通知渠道」页配置（优先于这里）
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_SECURE: ${SMTP_SECURE:-true}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  MAIL_FROM: ${MAIL_FROM:-}
+  SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-true}
   # 图床。账单上传和纪念日背景共用，不配则只能用内置图库
   IMAGE_HOST_URL: ${IMAGE_HOST_URL:-}
   IMAGE_HOST_TOKEN: ${IMAGE_HOST_TOKEN:-}
@@ -270,12 +279,7 @@ services:
       WECOM_AGENT_ID: ${WECOM_AGENT_ID:-}
       # 群机器人 webhook：配了就用它发，不需要应用三件套，也不受可信 IP / 可信域名限制
       WECOM_WEBHOOK: ${WECOM_WEBHOOK:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-465}
-      SMTP_SECURE: ${SMTP_SECURE:-true}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      MAIL_FROM: ${MAIL_FROM:-}
+      # SMTP 走上面的 *app-env，门户测试发信与 worker 定时任务共用一份配置
     depends_on:
       postgres: { condition: service_healthy }
       migrator: { condition: service_completed_successfully }

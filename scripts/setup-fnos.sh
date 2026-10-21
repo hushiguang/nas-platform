@@ -172,6 +172,8 @@ WECOM_CORP_ID=
 WECOM_CORP_SECRET=
 WECOM_AGENT_ID=
 WECOM_WEBHOOK=
+# 邮件：QQ 邮箱只填 SMTP_USER（邮箱账号）+ SMTP_PASS（授权码），
+# 服务器留空自动用 smtp.qq.com:465。也可稍后在门户「通知渠道」页配置。
 SMTP_HOST=
 SMTP_PORT=465
 SMTP_SECURE=true

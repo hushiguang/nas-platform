@@ -97,11 +97,13 @@ export default async function NotifyPage({
         </form>
         <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
           发送时点：每天 <b>09:00</b> 和 <b>16:00</b>（worker 的 digest 任务）。
-          内容口径：项目（进行中/有延期/风险预报/待修问题）· 待办（延期+近7天+进行中）· 纪念日（近30天，含还剩多少天）。
+          内容口径：邮件按 <b>纪念日 / 待办 / 工作台</b> 三块各带一张表 —— 纪念日（近30天，含倒计时）·
+          待办（延期+近7天+进行中，不含工作台自动收的项目待办，避免和风险预报重复）·
+          工作台（项目当前阶段、风险预报、待修问题）。
         </p>
         <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
           配了群机器人时企微只发一条（发进群，不按人重复）；邮件仍按人各发一份。发送失败会留在发送记录里，
-          由 notify-retry 每 10 分钟退避重发（1min → 5min → 25min）。
+          由 notify-retry 每 10 分钟退避重发（1min → 5min → 25min，最多 3 次）；超过后标记为失败，不再自动重发。
         </p>
         <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
           另有一路 <b>每 10 分钟</b> 的「待办提醒」，发的是待办应用里各人自己设的提醒时点（默认提前 3 天 09:00）。

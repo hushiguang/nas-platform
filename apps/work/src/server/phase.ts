@@ -246,6 +246,14 @@ export async function removePhaseMember(
   };
 }
 
+/** 某人在某个项目里的单个阶段占用（真正排到的时间段，不再跨阶段合并） */
+export interface PersonPhaseSegment {
+  kind: string;
+  label: string;
+  from: string;
+  to: string;
+}
+
 export interface PersonProjectSpan {
   projectId: number;
   projectName: string;
@@ -255,6 +263,8 @@ export interface PersonProjectSpan {
   to: string;
   release: string;
   conflictWith: string[];
+  /** 按阶段拆开的真实占用区间，日历看板按它画条块 */
+  segments: PersonPhaseSegment[];
 }
 
 export interface PersonSummary {
@@ -296,7 +306,18 @@ export async function listPersonSummary(access: PlatformAccess, user: SessionUse
   const grouped = new Map<string, PersonSummary>();
   const roleSets = new Map<string, Set<string>>();
   for (const project of projects) {
-    const byPerson = new Map<string, { name: string; external: boolean; phases: string[]; from: string; to: string; release: string }>();
+    const byPerson = new Map<
+      string,
+      {
+        name: string;
+        external: boolean;
+        phases: string[];
+        from: string;
+        to: string;
+        release: string;
+        segments: Map<string, PersonPhaseSegment>;
+      }
+    >();
     for (const phase of project.phases) {
       if (!phase.enabled) continue;
       for (const member of phase.members) {
@@ -317,12 +338,27 @@ export async function listPersonSummary(access: PlatformAccess, user: SessionUse
           from: "",
           to: "",
           release: "",
+          segments: new Map<string, PersonPhaseSegment>(),
         };
         current.phases.push(PHASE_LABEL[phase.kind]);
         if (from && (!current.from || from < current.from)) current.from = from;
         if (to && (!current.to || to > current.to)) current.to = to;
         const release = isoDay(member.endDate);
         if (release && (!current.release || release > current.release)) current.release = release;
+        if (from && to) {
+          const existing = current.segments.get(phase.kind);
+          if (existing) {
+            if (from < existing.from) existing.from = from;
+            if (to > existing.to) existing.to = to;
+          } else {
+            current.segments.set(phase.kind, {
+              kind: phase.kind,
+              label: PHASE_LABEL[phase.kind],
+              from,
+              to,
+            });
+          }
+        }
         byPerson.set(key, current);
       }
     }
@@ -345,6 +381,9 @@ export async function listPersonSummary(access: PlatformAccess, user: SessionUse
         to: item.to,
         release: item.release ? dayLabel(item.release) : "未定",
         conflictWith: [],
+        segments: [...item.segments.values()].sort(
+          (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to),
+        ),
       });
       grouped.set(key, person);
     }

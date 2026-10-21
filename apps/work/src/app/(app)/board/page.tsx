@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireAppAccess } from "@/auth";
 import { listProjects, listPersonSummary } from "@/server";
+import { GanttBar, type BarTip } from "./gantt-bar";
+import { ScrollToDate } from "./scroll-to";
 
 export const dynamic = "force-dynamic";
 
@@ -10,16 +12,36 @@ const PHASE_BG: Record<string, string> = {
   SIT测试阶段: "#e6dcfa",
   UAT阶段: "#fdeacc",
   准备上线: "#d7f0e4",
-  已上线: "#d9f2e3",
 };
-// 筛选 chips：按 kind 匹配（label 是全称如“UAT阶段”，简称精确匹配对不上）
+
+/** 人员视图按项目上色：同一个项目永远同一个颜色，方便一眼看出哪几段是同一个项目 */
+const PROJECT_COLORS = [
+  { bg: "#dbeafe", fg: "#1d3a72", line: "#a9c6f5" },
+  { bg: "#dcfce7", fg: "#15563a", line: "#a5e8bb" },
+  { bg: "#fef3c7", fg: "#7a430e", line: "#f3d489" },
+  { bg: "#fae8ff", fg: "#701a75", line: "#eab6f5" },
+  { bg: "#e0f2fe", fg: "#0c4a6e", line: "#a5dcf5" },
+  { bg: "#e0e7ff", fg: "#312e81", line: "#b9c2f7" },
+  { bg: "#ede9fe", fg: "#4c1d95", line: "#c9bdf7" },
+  { bg: "#d1fae5", fg: "#065f46", line: "#98e9c7" },
+  { bg: "#ffedd5", fg: "#7c2d12", line: "#fbcb9c" },
+  { bg: "#e2e8f0", fg: "#1e293b", line: "#c3cdda" },
+  { bg: "#fef9c3", fg: "#713f12", line: "#f2e18a" },
+  { bg: "#cffafe", fg: "#155e75", line: "#9fe3ef" },
+];
+
+function projectColor(projectId: number) {
+  if (!Number.isFinite(projectId)) return PROJECT_COLORS[9];
+  return PROJECT_COLORS[Math.abs(projectId) % PROJECT_COLORS.length];
+}
+
+// 筛选 chips：按 kind 匹配（label 是全称如“UAT阶段”，简称精确匹配对不上）。已上线不参与日历
 const PHASE_FILTERS = [
   { kind: "BUSINESS", short: "商务" },
   { kind: "DEV", short: "研发" },
   { kind: "SIT", short: "SIT" },
   { kind: "UAT", short: "UAT" },
   { kind: "PRELAUNCH", short: "上线准备" },
-  { kind: "LIVE", short: "已上线" },
 ] as const;
 
 function toDay(s: string): string {
@@ -50,14 +72,18 @@ function qs(params: Record<string, string | undefined>): string {
 
 interface Bar {
   key: string;
+  projectId: number;
   kind?: string;
   label: string;
-  title: string;
+  note?: string;
   from: string;
   to: string;
   bg: string;
-  members?: string[];
+  fg: string;
+  line?: string;
+  minWidth?: number;
   conflict?: boolean;
+  tip: BarTip;
 }
 
 interface Row {
@@ -65,6 +91,14 @@ interface Row {
   name: string;
   sub: string;
   bars: Bar[];
+}
+
+interface PlacedBar extends Bar {
+  left: number;
+  width: number;
+  lane: number;
+  fromIdx: number;
+  toIdx: number;
 }
 
 export default async function BoardPage({
@@ -76,8 +110,7 @@ export default async function BoardPage({
   const sp = await searchParams;
   const view = sp.view === "person" ? "person" : "project";
   const mode = sp.mode === "week" ? "week" : "month";
-  const PHASES = ["商务", "研发", "SIT", "UAT", "上线准备", "已上线"];
-  const activePhase = view === "project" && sp.phase ? sp.phase : undefined;
+  const activePhase = view === "project" && sp.phase && sp.phase !== "已上线" ? sp.phase : undefined;
   const today = new Date().toISOString().slice(0, 10);
   const anchor = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? (sp.date as string) : today;
 
@@ -88,29 +121,51 @@ export default async function BoardPage({
       .filter((i) => i.phase !== "LIVE")
       .map((item) => {
         const bars: Bar[] = item.phases
-          .filter((p) => p.enabled && p.startDate && p.endDate)
+          // 已上线属于收尾状态，日历上不再占格
+          .filter((p) => p.enabled && p.startDate && p.endDate && p.kind !== "LIVE")
           .map((p) => {
             const names = (p.members ?? []).map((m) => m.name).filter(Boolean);
-            const who = names.length > 0 ? `｜${names.slice(0, 4).join("、")}${names.length > 4 ? `等${names.length}人` : ""}` : "｜未排人";
+            const short = names.length > 0
+              ? `${names.slice(0, 3).join("、")}${names.length > 3 ? `等${names.length}人` : ""}`
+              : "未排人";
             return {
               key: String(p.id),
+              projectId: item.id,
               kind: p.kind,
               label: p.label,
-              title: `${item.name} · ${p.label} ${p.startDate}～${p.endDate}${who}`,
+              note: short,
               from: toDay(p.startDate),
               to: toDay(p.endDate),
               bg: PHASE_BG[p.label] ?? "#dbe7fb",
-              members: names,
+              fg: "#33415c",
+              line: "rgba(51,65,92,0.12)",
+              minWidth: 26,
+              tip: {
+                heading: item.name,
+                meta: `${p.label} · ${toDay(p.startDate)} ～ ${toDay(p.endDate)}${p.days ? `（${p.days} 天）` : ""}`,
+                lines: [
+                  names.length > 0 ? `人员：${names.join("、")}` : "人员：暂未排人",
+                  `进度：实际 ${p.progress}%${p.expected != null ? ` · 预期 ${p.expected}%` : ""}`,
+                ],
+              },
             };
           });
         if (item.launchDate) {
           bars.push({
             key: "launch",
+            projectId: item.id,
             label: "上线",
-            title: `${item.name} · 计划上线 ${item.launchDate}`,
             from: toDay(item.launchDate),
             to: toDay(item.launchDate),
             bg: "#ffd9d9",
+            fg: "#8c2b2b",
+            line: "rgba(163,61,61,0.24)",
+            minWidth: 34,
+            tip: {
+              heading: item.name,
+              meta: `计划上线 ${toDay(item.launchDate)}`,
+              lines: [`负责人：${item.ownerName}`],
+            },
           });
         }
         const devTotal = new Set(
@@ -124,25 +179,101 @@ export default async function BoardPage({
       });
   } else {
     const people = await listPersonSummary(access, user);
-    rows = people.map((person) => {
-      const isDev = person.roles.some((r) => /研发|开发|前端|后端/.test(r));
-      const isQa = person.roles.some((r) => /测试/.test(r));
-      return {
-        key: person.key,
-        name: `${person.conflict ? "⚠ " : ""}${person.name}`,
-        sub: [person.roles.join(" / ") || (person.external ? "外部" : ""), person.conflict ? "时间冲突" : ""].filter(Boolean).join(" · "),
-        bars: person.projects
-          .filter((p) => p.from && p.to)
-          .map((p) => ({
-            key: String(p.projectId),
-            label: p.projectName,
-            title: `${person.name} · ${p.projectName} ${p.from}～${p.to}${p.phases ? `（${p.phases}）` : ""}`,
-            from: p.from,
-            to: p.to,
-            bg: p.conflictWith.length > 0 ? "#ffd9d9" : isQa && !isDev ? "#e6dcfa" : isDev ? "#d7ecff" : "#dbe7fb",
-            conflict: p.conflictWith.length > 0,
-          })),
+    rows = people.flatMap((person) => {
+      // 冲突按每个阶段真实占用的区间算，不再用「各阶段合并成一大段」的粗区间；已上线不参与
+      const rangesOf = (projectId: number) => {
+        const project = person.projects.find((p) => p.projectId === projectId);
+        if (!project) return [];
+        const segments = project.segments.filter((s) => s.kind !== "LIVE");
+        if (segments.length > 0) return segments.map((s) => ({ from: s.from, to: s.to }));
+        if (project.segments.length > 0) return [];
+        return project.from && project.to ? [{ from: project.from, to: project.to }] : [];
       };
+      const clashNames = (projectId: number, from: string, to: string) => {
+        const names = new Set<string>();
+        for (const other of person.projects) {
+          if (other.projectId === projectId) continue;
+          if (rangesOf(other.projectId).some((r) => r.from && r.to && from <= r.to && r.from <= to)) {
+            names.add(other.projectName);
+          }
+        }
+        return [...names];
+      };
+
+      const bars = person.projects
+        .filter((p) => p.from && p.to)
+        .flatMap((p) => {
+          const color = projectColor(p.projectId);
+          const base = {
+            projectId: p.projectId,
+            bg: color.bg,
+            fg: color.fg,
+            line: color.line,
+            minWidth: 26,
+          };
+          const segments = p.segments.filter((s) => s.kind !== "LIVE");
+          const phaseText = p.phases
+            .split("、")
+            .filter((name) => name && name !== "已上线")
+            .join("、");
+          if (p.segments.length > 0 && segments.length === 0) return [];
+          if (segments.length === 0) {
+            const clash = clashNames(p.projectId, p.from, p.to);
+            return [
+              {
+                key: `${p.projectId}`,
+                ...base,
+                label: p.projectName,
+                note: phaseText || undefined,
+                from: p.from,
+                to: p.to,
+                conflict: clash.length > 0,
+                tip: {
+                  heading: p.projectName,
+                  meta: `${p.from} ～ ${p.to}${phaseText ? ` · ${phaseText}` : ""}`,
+                  lines: [`预计释放：${p.release}`],
+                  warn: clash.length > 0 ? `⚠ 与「${clash.join("」「")}」时间冲突` : undefined,
+                },
+              },
+            ];
+          }
+          // 每个阶段单独成条，画的就是真正排的时间段
+          return segments.map((s) => {
+            const clash = clashNames(p.projectId, s.from, s.to);
+            return {
+              key: `${p.projectId}:${s.kind}`,
+              ...base,
+              label: s.label,
+              note: p.projectName,
+              from: s.from,
+              to: s.to,
+              conflict: clash.length > 0,
+              tip: {
+                heading: p.projectName,
+                meta: `${s.label} · ${s.from} ～ ${s.to}`,
+                lines: [`该项目占用 ${p.from} ～ ${p.to}`, `预计释放：${p.release}`],
+                warn: clash.length > 0 ? `⚠ 与「${clash.join("」「")}」时间冲突` : undefined,
+              },
+            };
+          });
+        });
+
+      const conflict = bars.some((b) => b.conflict);
+      // 排过的阶段全是「已上线」的人，日历上没东西可画，直接不占一行
+      const hasSchedule = person.projects.some(
+        (p) => p.segments.some((s) => s.kind !== "LIVE") || (p.segments.length === 0 && p.from && p.to),
+      );
+      if (bars.length === 0 && hasSchedule) return [];
+      return [
+        {
+          key: person.key,
+          name: `${conflict ? "⚠ " : ""}${person.name}`,
+          sub: [person.roles.join(" / ") || (person.external ? "外部" : ""), conflict ? "时间冲突" : ""]
+            .filter(Boolean)
+            .join(" · "),
+          bars,
+        },
+      ];
     });
   }
 
@@ -169,12 +300,30 @@ export default async function BoardPage({
       const monthAfter = new Date(Date.UTC(ly, lm, 1));
       end = addDays(monthAfter.toISOString().slice(0, 10), -1);
     }
+    // 往前也铺到最早的排期，避免「有排期但在别的月份」的行整行空着看不到；最多回看 12 个月，防止异常日期把时间轴拉爆
+    let earliest = "";
+    for (const row of rows) {
+      for (const b of row.bars) {
+        if (b.from && (!earliest || b.from < earliest)) earliest = b.from;
+      }
+    }
+    if (earliest && earliest < start) {
+      const floor = new Date(`${start}T00:00:00Z`);
+      floor.setUTCMonth(floor.getUTCMonth() - 12);
+      const floorMonth = `${floor.toISOString().slice(0, 7)}-01`;
+      start = earliest >= floorMonth ? `${earliest.slice(0, 7)}-01` : floorMonth;
+    }
   }
   const nDays = diffDays(end, start) + 1;
   const days: string[] = Array.from({ length: nDays }, (_, i) => addDays(start, i));
   const step = mode === "week" ? 7 : 31;
-  const prev = addDays(start, -step);
-  const next = addDays(start, step);
+  const shiftMonth = (iso: string, n: number) => {
+    const [y, m] = iso.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 10);
+  };
+  // 翻页按锚点走，而不是按时间轴左边缘，否则时间轴往前铺开后〈 〉会没反应
+  const prev = mode === "week" ? addDays(anchor, -step) : shiftMonth(anchor, -1);
+  const next = mode === "week" ? addDays(anchor, step) : shiftMonth(anchor, 1);
 
   const filteredRows =
     view === "project" && activePhase
@@ -184,24 +333,82 @@ export default async function BoardPage({
             : row.bars.some((b) => b.kind === activePhase),
         )
       : rows;
-  const placed = filteredRows.map((row) => ({
-    ...row,
-    bars: row.bars
+
+  const placed = filteredRows.map((row) => {
+    const bars: PlacedBar[] = row.bars
       .map((b) => {
         const from = b.from < start ? start : b.from;
         const to = b.to > end ? end : b.to;
         if (from > to) return null;
-        const left = (diffDays(from, start) / nDays) * 100;
-        const width = ((diffDays(to, from) + 1) / nDays) * 100;
-        return { ...b, left, width };
+        const fromIdx = diffDays(from, start);
+        const toIdx = diffDays(to, start);
+        return {
+          ...b,
+          fromIdx,
+          toIdx,
+          left: (fromIdx / nDays) * 100,
+          width: ((toIdx - fromIdx + 1) / nDays) * 100,
+          lane: 0,
+        };
       })
-      .filter((b) => b !== null),
-  }));
+      .filter((b): b is PlacedBar => b !== null)
+      .sort((a, b) => a.fromIdx - b.fromIdx || a.toIdx - b.toIdx);
+
+    // 同一行里时间不重叠的条块共用一条泳道，重叠的往下叠，冲突就一眼看得出来
+    const laneEnds: number[] = [];
+    for (const bar of bars) {
+      let lane = laneEnds.findIndex((laneEnd) => laneEnd < bar.fromIdx);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(bar.toIdx);
+      } else {
+        laneEnds[lane] = bar.toIdx;
+      }
+      bar.lane = lane;
+    }
+    return { ...row, bars, lanes: Math.max(1, laneEnds.length), hasBars: row.bars.length > 0 };
+  });
+
+  // 两个视图统一成同一种条块尺寸，和人员安排保持一致
+  const barHeight = 17;
+  const barGap = 4;
+  const lanePad = 7;
+  const rowHeightOf = (lanes: number) => Math.max(40, lanePad * 2 + lanes * barHeight + (lanes - 1) * barGap);
+
   const showToday = today >= start && today <= end;
   const todayLeft = ((diffDays(today, start) + 0.5) / nDays) * 100;
-  const dayWidth = nDays > 200 ? 26 : nDays > 90 ? 30 : nDays > 45 ? 38 : 48;
+  // 月视图一进来（或翻月之后）就把滚动位置对到锚点：锚点在当月就对到今天
+  const anchorLeft = (() => {
+    if (mode !== "month") return null;
+    if (anchor.slice(0, 7) === today.slice(0, 7) && showToday) return todayLeft;
+    const value = (diffDays(`${anchor.slice(0, 7)}-01`, start) / nDays) * 100;
+    return value >= 0 && value <= 100 ? value : null;
+  })();
+  const dayWidth = nDays > 200 ? 38 : nDays > 90 ? 44 : nDays > 45 ? 50 : 60;
   const minTrack = nDays * dayWidth;
   const dayFont = nDays > 90 ? 9.5 : 11;
+
+  const monthBands: { key: string; label: string; days: number }[] = [];
+  for (const d of days) {
+    const key = d.slice(0, 7);
+    const last = monthBands[monthBands.length - 1];
+    if (last && last.key === key) last.days += 1;
+    else {
+      const [y, m] = key.split("-").map(Number);
+      monthBands.push({ key, label: m === 1 || monthBands.length === 0 ? `${y}年${m}月` : `${m}月`, days: 1 });
+    }
+  }
+
+  const legendProjects =
+    view === "person"
+      ? (() => {
+          const seen = new Map<number, string>();
+          for (const row of placed) {
+            for (const b of row.bars) if (!seen.has(b.projectId)) seen.set(b.projectId, b.tip.heading);
+          }
+          return [...seen.entries()].map(([id, name]) => ({ id, name, color: projectColor(id) }));
+        })()
+      : [];
 
   const tab = (active: boolean) => ({
     textDecoration: "none" as const,
@@ -262,7 +469,7 @@ export default async function BoardPage({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           {[...PHASE_FILTERS, { kind: "LAUNCH", short: "上线" } as const].map(({ kind, short: k }) => {
             const active = activePhase === kind;
-            const bg = kind === "LAUNCH" ? "#ffd9d9" : (PHASE_BG[{ BUSINESS: "商务阶段", DEV: "研发节点", SIT: "SIT测试阶段", UAT: "UAT阶段", PRELAUNCH: "准备上线", LIVE: "已上线" }[kind as string] ?? ""] ?? "#dbe7fb");
+            const bg = kind === "LAUNCH" ? "#ffd9d9" : (PHASE_BG[{ BUSINESS: "商务阶段", DEV: "研发节点", SIT: "SIT测试阶段", UAT: "UAT阶段", PRELAUNCH: "准备上线" }[kind as string] ?? ""] ?? "#dbe7fb");
             return (
               <Link
                 key={k}
@@ -296,111 +503,157 @@ export default async function BoardPage({
               ✕ 清除阶段筛选
             </Link>
           ) : (
-            <span className="muted" style={{ fontSize: 12 }}>悬停条块查看完整名单</span>
+            <span className="muted" style={{ fontSize: 12 }}>悬停条块查看阶段日期与人员名单</span>
           )}
         </div>
       ) : (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12 }} className="muted">
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 20, height: 11, borderRadius: 4, background: "#d7ecff" }} />研发</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 20, height: 11, borderRadius: 4, background: "#e6dcfa" }} />测试</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 20, height: 11, borderRadius: 4, background: "#ffd9d9", border: "1px solid var(--coral)" }} />时间冲突</span>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 11.5 }}>
+          <span className="muted">同项目同色：</span>
+          {legendProjects.map((p) => (
+            <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 14, height: 10, borderRadius: 3, background: p.color.bg, border: `1px solid ${p.color.line}` }} />
+              <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+            </span>
+          ))}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
+            <span style={{ width: 14, height: 10, borderRadius: 3, background: "#f4f6fa", border: "1.5px solid var(--coral)" }} />
+            时间冲突
+          </span>
+          <span className="muted" style={{ marginLeft: "auto" }}>
+            条块按阶段拆开，悬停查看所属项目与日期
+          </span>
         </div>
       )}
 
       <div className="gantt-scroll">
+        {anchorLeft !== null ? <ScrollToDate percent={anchorLeft} /> : null}
         <div style={{ minWidth: 200 + minTrack }}>
           <div className="gantt-head">
             <div className="gantt-label muted" style={{ position: "sticky", left: 0, background: "var(--paper)", zIndex: 3 }}>
               {view === "project" ? `项目 · ${placed.length}` : `人员 · ${placed.length}`}
             </div>
-            <div className="gantt-track" style={{ display: "flex" }}>
-              {days.map((d) => {
-                const dt = new Date(`${d}T00:00:00Z`);
-                const dow = dt.getUTCDay();
-                const weekend = dow === 0 || dow === 6;
-                const week = ["日", "一", "二", "三", "四", "五", "六"][dow];
-                return (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", borderBottom: "1px solid var(--line)" }}>
+                {monthBands.map((m) => (
                   <div
-                    key={d}
-                    className={`gantt-day${weekend ? " weekend" : ""}`}
+                    key={m.key}
                     style={{
-                      flex: "1 0 0",
-                      padding: nDays > 90 ? "8px 2px" : "8px 4px",
-                      fontSize: dayFont,
+                      width: `${(m.days / nDays) * 100}%`,
+                      padding: "5px 8px",
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      borderLeft: "1px solid var(--line)",
                       whiteSpace: "nowrap",
-                      textAlign: "center",
-                      color: d === today ? "var(--coral)" : undefined,
-                      fontWeight: d === today ? 700 : undefined,
+                      overflow: "hidden",
                     }}
                   >
-                    {Number(d.slice(8))}{week}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {placed.map((row) => (
-            <div className="gantt-row" key={row.key}>
-              <div className="gantt-label" style={{ position: "sticky", left: 0, background: "var(--paper)", zIndex: 3, whiteSpace: "normal", overflow: "visible" }} title={row.name}>
-                {view === "project" ? (
-                  <Link href={`/p/${row.key}`} style={{ textDecoration: "none", color: "inherit" }}>
-                    <div style={{ whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4, fontWeight: 600, cursor: "pointer" }}>
-                      {row.name}
-                    </div>
-                  </Link>
-                ) : (
-                  <div style={{ whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4, fontWeight: 600 }}>
-                    {row.name}
-                  </div>
-                )}
-                {row.sub ? (
-                  <div className="muted" style={{ fontSize: 11, whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4 }}>
-                    {row.sub}
-                  </div>
-                ) : null}
-              </div>
-              <div className="gantt-track" style={{ minHeight: 38 }}>
-                {showToday ? <div className="gantt-today" style={{ left: `${todayLeft}%` }} /> : null}
-                {row.bars.length === 0 ? (
-                  <span className="muted" style={{ fontSize: 11, position: "absolute", top: 10, left: 8 }}>
-                    未排期
-                  </span>
-                ) : null}
-                {row.bars.map((b) => (
-                  <div
-                    key={b.key}
-                    className="gantt-bar"
-                    title={b.title}
-                    style={{
-                      left: `${b.left}%`,
-                      width: `${b.width}%`,
-                      background: b.bg,
-                      color: "#33415c",
-                      border: b.conflict
-                        ? "1px solid var(--coral)"
-                        : activePhase && (activePhase === "LAUNCH" ? b.key !== "launch" : b.kind !== activePhase)
-                          ? "1px dashed rgba(0,0,0,0.15)"
-                          : undefined,
-                      opacity: activePhase && (activePhase === "LAUNCH" ? b.key !== "launch" : b.kind !== activePhase) ? 0.45 : 1,
-                      display: "flex",
-                      gap: 6,
-                      alignItems: "center",
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, flex: "none", fontSize: 10.5 }}>{b.label}</span>
-                    {b.members && b.members.length > 0 ? (
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10, opacity: 0.85 }}>
-                        {b.members.slice(0, 3).join("、")}
-                        {b.members.length > 3 ? `等${b.members.length}人` : ""}
-                      </span>
-                    ) : b.members ? (
-                      <span style={{ fontSize: 10, opacity: 0.7 }}>未排人</span>
-                    ) : null}
+                    {m.label}
                   </div>
                 ))}
               </div>
+              <div className="gantt-track" style={{ display: "flex" }}>
+                {days.map((d) => {
+                  const dt = new Date(`${d}T00:00:00Z`);
+                  const dow = dt.getUTCDay();
+                  const weekend = dow === 0 || dow === 6;
+                  const week = ["日", "一", "二", "三", "四", "五", "六"][dow];
+                  return (
+                    <div
+                      key={d}
+                      className={`gantt-day${weekend ? " weekend" : ""}`}
+                      style={{
+                        flex: "1 0 0",
+                        padding: nDays > 90 ? "8px 2px" : "8px 4px",
+                        fontSize: dayFont,
+                        whiteSpace: "nowrap",
+                        textAlign: "center",
+                        color: d === today ? "var(--coral)" : undefined,
+                        fontWeight: d === today ? 700 : undefined,
+                      }}
+                    >
+                      {Number(d.slice(8))}
+                      {week}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          ))}
+          </div>
+          {placed.map((row) => {
+            const rowHeight = rowHeightOf(row.lanes);
+            return (
+              <div className="gantt-row" key={row.key}>
+                <div
+                  className="gantt-label"
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    background: "var(--paper)",
+                    zIndex: 3,
+                    whiteSpace: "normal",
+                    overflow: "visible",
+                  }}
+                  title={row.name}
+                >
+                  {view === "project" ? (
+                    <Link href={`/p/${row.key}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <div style={{ whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4, fontWeight: 600, cursor: "pointer" }}>
+                        {row.name}
+                      </div>
+                    </Link>
+                  ) : (
+                    <div style={{ whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4, fontWeight: 600 }}>
+                      {row.name}
+                    </div>
+                  )}
+                  {row.sub ? (
+                    <div className="muted" style={{ fontSize: 11, whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4 }}>
+                      {row.sub}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="gantt-track" style={{ minHeight: rowHeight }}>
+                  {showToday ? <div className="gantt-today" style={{ left: `${todayLeft}%` }} /> : null}
+                  {row.bars.length === 0 ? (
+                    <div
+                      style={{
+                        position: "sticky",
+                        left: 208,
+                        width: "max-content",
+                        padding: "12px 0 0 8px",
+                        fontSize: 11,
+                      }}
+                    >
+                      <span className="muted">{row.hasBars ? "本时段无排期" : "未排期"}</span>
+                    </div>
+                  ) : null}
+                  {row.bars.map((b) => {
+                    const dim = activePhase && (activePhase === "LAUNCH" ? b.key !== "launch" : b.kind !== activePhase);
+                    return (
+                      <GanttBar
+                        key={b.key}
+                        left={b.left}
+                        width={b.width}
+                        top={lanePad + b.lane * (barHeight + barGap)}
+                        height={barHeight}
+                        bg={b.bg}
+                        fg={b.fg}
+                        line={b.line}
+                        minWidth={b.minWidth}
+                        label={b.label}
+                        note={b.note}
+                        fontSize={10}
+                        conflict={b.conflict}
+                        dim={Boolean(dim)}
+                        tip={b.tip}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

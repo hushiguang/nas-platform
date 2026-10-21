@@ -3,7 +3,19 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { recordAudit } from "@nas/core";
-import { invalidateSettingsCache, saveSettings, testWecomConnection, testWecomWebhook, WECOM_SETTING_KEYS } from "@nas/notify";
+import {
+  invalidateSettingsCache,
+  isQqMail,
+  MAIL_SETTING_KEYS,
+  QQ_MAIL_HOST,
+  QQ_MAIL_PORT,
+  saveSettings,
+  sendTestMail,
+  testMailConnection,
+  testWecomConnection,
+  testWecomWebhook,
+  WECOM_SETTING_KEYS,
+} from "@nas/notify";
 import { requireUser } from "@/auth";
 
 const BACK = "/notify/channels";
@@ -77,6 +89,106 @@ export async function testWecomSettings() {
     actorId: admin.id,
     actorName: admin.nickname,
   });
+  redirect(`${BACK}?${result.ok ? "ok" : "error"}=${encodeURIComponent(result.message)}`);
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * 保存邮件（SMTP）配置。QQ 邮箱只需邮箱账号 + 授权码，服务器留空时
+ * 保存后由 mailConfig 自动套 smtp.qq.com:465。全部留空 = 清空、回退环境变量。
+ */
+async function persistMailSettings(formData: FormData) {
+  const admin = await requireAdmin();
+
+  const user = str(formData, "mailUser");
+  const pass = str(formData, "mailPass");
+  const rawFrom = str(formData, "mailFrom");
+  const rawHost = str(formData, "mailHost");
+  const rawPort = str(formData, "mailPort");
+  const rawSecure = str(formData, "mailSecure");
+
+  if (!user && !pass && !rawFrom && !rawHost && !rawPort) {
+    await saveSettings({
+      [MAIL_SETTING_KEYS.user]: "",
+      [MAIL_SETTING_KEYS.pass]: "",
+      [MAIL_SETTING_KEYS.from]: "",
+      [MAIL_SETTING_KEYS.host]: "",
+      [MAIL_SETTING_KEYS.port]: "",
+      [MAIL_SETTING_KEYS.secure]: "",
+    });
+    invalidateSettingsCache();
+    await recordAudit({
+      app: "portal",
+      action: "update",
+      summary: "清空邮件配置（改回环境变量）",
+      target: "notify",
+      actorId: admin.id,
+      actorName: admin.nickname,
+    });
+    return { testTo: "", cleared: true };
+  }
+
+  if (!user || !EMAIL_RE.test(user)) {
+    redirect(`${BACK}?error=${encodeURIComponent("请填写正确的发信邮箱，例如 yourname@qq.com")}`);
+  }
+  if (!pass) {
+    redirect(`${BACK}?error=${encodeURIComponent("请填写邮箱授权码（QQ 邮箱在「设置 → 账号 → SMTP 服务」生成，不是 QQ 密码）")}`);
+  }
+  if (rawFrom && !EMAIL_RE.test(rawFrom.replace(/^.*<|>.*$/g, "").trim())) {
+    redirect(`${BACK}?error=${encodeURIComponent("发件人格式不对，留空即可（默认与发信邮箱一致）")}`);
+  }
+  if (rawPort && !/^\d+$/.test(rawPort)) {
+    redirect(`${BACK}?error=${encodeURIComponent("端口只能是数字")}`);
+  }
+  if (rawPort && (Number(rawPort) < 1 || Number(rawPort) > 65535)) {
+    redirect(`${BACK}?error=${encodeURIComponent("端口超出范围（1-65535）")}`);
+  }
+
+  const qq = isQqMail(user);
+  await saveSettings({
+    [MAIL_SETTING_KEYS.user]: user,
+    [MAIL_SETTING_KEYS.pass]: pass,
+    // QQ 只能用自己的账号发信，不留自定义 from，避免 501
+    [MAIL_SETTING_KEYS.from]: qq ? "" : rawFrom,
+    [MAIL_SETTING_KEYS.host]: rawHost || (qq ? QQ_MAIL_HOST : ""),
+    [MAIL_SETTING_KEYS.port]: rawPort || (qq ? String(QQ_MAIL_PORT) : ""),
+    [MAIL_SETTING_KEYS.secure]: rawSecure === "false" ? "false" : "true",
+  });
+  invalidateSettingsCache();
+
+  await recordAudit({
+    app: "portal",
+    action: "update",
+    summary: `保存邮件配置（${user}）`,
+    target: "notify",
+    actorId: admin.id,
+    actorName: admin.nickname,
+  });
+  return { testTo: str(formData, "mailTestTo"), cleared: false };
+}
+
+/** 保存邮件配置并做一次 SMTP 登录校验（不发信） */
+export async function saveMailSettings(formData: FormData) {
+  const saved = await persistMailSettings(formData);
+  if (saved.cleared) redirect(`${BACK}?ok=${encodeURIComponent("已清空邮件配置，改用环境变量")}`);
+  const result = await testMailConnection();
+  redirect(`${BACK}?${result.ok ? "ok" : "error"}=${encodeURIComponent(result.message)}`);
+}
+
+/** 保存邮件配置并往指定地址发一封测试邮件 */
+export async function saveAndTestMail(formData: FormData) {
+  const saved = await persistMailSettings(formData);
+  if (saved.cleared) redirect(`${BACK}?ok=${encodeURIComponent("已清空邮件配置，改用环境变量")}`);
+  const result = await sendTestMail(saved.testTo);
+  redirect(`${BACK}?${result.ok ? "ok" : "error"}=${encodeURIComponent(result.message)}`);
+}
+
+/** 只测试当前已保存的邮件配置（不发信），改环境变量后也能用 */
+export async function testMailSettings() {
+  await requireAdmin();
+  invalidateSettingsCache();
+  const result = await testMailConnection();
   redirect(`${BACK}?${result.ok ? "ok" : "error"}=${encodeURIComponent(result.message)}`);
 }
 

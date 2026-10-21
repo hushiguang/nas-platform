@@ -35,10 +35,10 @@ function cfgString(config: Prisma.JsonValue | null, key: string): string | undef
 }
 
 /**
- * 入队：为该用户每个可用渠道建一条 NotifyLog。
+ * 入队：为该用户每个可用渠道建一条 NotifyLog，返回新建记录的 id。
  * dedupeKey 唯一约束保证幂等——重复调用（如定时任务重复扫描）不会重复发。
  */
-export async function enqueueNotify(input: SendNotifyInput): Promise<number> {
+export async function enqueueNotify(input: SendNotifyInput): Promise<number[]> {
   const channels = await prisma.notifyChannel.findMany({
     where: {
       userId: input.userId,
@@ -46,11 +46,11 @@ export async function enqueueNotify(input: SendNotifyInput): Promise<number> {
       ...(input.channels?.length ? { type: { in: input.channels } } : {}),
     },
   });
-  let queued = 0;
+  const queued: number[] = [];
   for (const channel of channels) {
     const dedupeKey = input.dedupeKey ? `${input.dedupeKey}:${channel.type}` : null;
     try {
-      await prisma.notifyLog.create({
+      const log = await prisma.notifyLog.create({
         data: {
           userId: input.userId,
           todoId: input.todoId ?? null,
@@ -60,7 +60,7 @@ export async function enqueueNotify(input: SendNotifyInput): Promise<number> {
           dedupeKey,
         },
       });
-      queued += 1;
+      queued.push(log.id);
     } catch (err) {
       // 唯一键冲突＝已经入队/发过，忽略；其余错误交给上层
       if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2002") throw err;
@@ -72,6 +72,10 @@ export async function enqueueNotify(input: SendNotifyInput): Promise<number> {
 async function dispatch(logId: number): Promise<boolean> {
   const log = await prisma.notifyLog.findUnique({ where: { id: logId } });
   if (!log || log.status === "SENT") return true;
+  // FAILED 是终态：重试超过上限或渠道已删的记录不再自动重发。
+  // 否则「已判死」的记录会被每 10 分钟的 notify-retry 一直捞起重试，
+  // 旧日报会在任意整十分突然补发出去。
+  if (log.status === "FAILED") return false;
 
   try {
     const [user, channel] = await Promise.all([
@@ -114,6 +118,7 @@ async function dispatch(logId: number): Promise<boolean> {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const retryCount = log.retryCount + 1;
+    // 超过上限置 FAILED 终态（nextRetryAt 留空）：flush 只扫 PENDING，不会再被捞起重试
     const dead = retryCount > MAX_RETRY;
     await prisma.notifyLog.update({
       where: { id: log.id },
@@ -132,7 +137,9 @@ async function dispatch(logId: number): Promise<boolean> {
 }
 
 /**
- * 发送所有到期待发记录：待发送 + 失败但已到重试时间的。
+ * 发送所有到期待发记录：只发 PENDING 且已到重试时间的。
+ * FAILED 是终态（重试超过 3 次 / 渠道已删），留在「发送记录」里供排查，不再自动重发 ——
+ * 否则失败记录会被每 10 分钟的 notify-retry 无限捞起，旧消息可能在任意时间点补发。
  * 定时任务（每 10 分钟）与入队后的立即发送共用。
  */
 export async function flushNotifyLogs(
@@ -141,7 +148,7 @@ export async function flushNotifyLogs(
 ): Promise<{ sent: number; failed: number }> {
   const due = await prisma.notifyLog.findMany({
     where: {
-      status: { in: ["PENDING", "FAILED"] },
+      status: "PENDING",
       OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }],
       ...(userId ? { userId } : {}),
     },
@@ -157,11 +164,21 @@ export async function flushNotifyLogs(
   return { sent, failed };
 }
 
+/** 按 id 立即发送（入队后同步发用，避免连带刷出别的积压记录） */
+export async function dispatchLogs(ids: number[]): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+  for (const id of ids) {
+    if (await dispatch(id)) sent += 1;
+    else failed += 1;
+  }
+  return { sent, failed };
+}
+
 /** 入队并立即尝试发送（同步调用方等待结果） */
 export async function sendNotify(input: SendNotifyInput) {
-  const queued = await enqueueNotify(input);
-  const flushed = await flushNotifyLogs(Math.max(queued, 1));
-  return { queued, ...flushed };
+  const ids = await enqueueNotify(input);
+  return { queued: ids.length, ...(await dispatchLogs(ids)) };
 }
 
 /** 待办完成/取消后撤销未发出的提醒 */
@@ -170,14 +187,19 @@ export async function cancelTodoNotify(todoId: number) {
 }
 
 export { wecomConfigured, testWecomConnection } from "./providers/wecom";
-export { mailConfigured } from "./providers/mail";
+export { mailConfigured, testMailConnection, sendTestMail } from "./providers/mail";
 export { sendWecomWebhook, testWecomWebhook, webhookKey } from "./providers/webhook";
 export {
   WECOM_SETTING_KEYS,
+  MAIL_SETTING_KEYS,
+  QQ_MAIL_HOST,
+  QQ_MAIL_PORT,
+  isQqMail,
   storedSettings,
   saveSettings,
   invalidateSettingsCache,
   wecomConfig,
   wecomWebhook,
+  mailConfig,
 } from "./settings";
 export { collectDigest, buildDigestExcel, sendDigest } from "./digest";

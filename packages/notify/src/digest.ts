@@ -30,6 +30,13 @@ export interface DigestRow {
   href?: string;
   /** 纪念日专用：距离下一次还有多少天（0 = 就是今天） */
   days?: number;
+  /** 工作台行专用：项目名（表格里单独占一格，链接也挂在这格上） */
+  project?: string;
+  /** 工作台行专用：项目当前阶段（商务/研发/SIT/UAT/准备上线/已上线） */
+  phase?: string;
+  /** 工作台行专用：未关闭问题总数 / 其中的缺陷数 */
+  issues?: number;
+  bugs?: number;
 }
 
 /** 下一次周年日期（公历按月日推算，农历近似按公历处理） */
@@ -49,6 +56,9 @@ const PHASE_LABEL: Record<string, string> = {
   LIVE: "已上线",
 };
 
+/** 阶段推进顺序。报告里的项目表按它倒序排（上线 → 准备上线 → UAT → SIT → 研发 → 商务） */
+const PHASE_ORDER = ["BUSINESS", "DEV", "SIT", "UAT", "PRELAUNCH", "LIVE"];
+
 export async function collectDigest(userId: number) {
   const now = new Date();
   const in7 = new Date(now.getTime() + 7 * 86400_000);
@@ -61,11 +71,14 @@ export async function collectDigest(userId: number) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("用户不存在");
 
-  // 待办：进行中 + 全部延期 + 近7天到期
+  // 待办：进行中 + 全部延期 + 近7天到期。
+  // 工作台自己收的项目待办不进来 —— 它们就是风险预报 / 待修问题的副本，
+  // 报告里已经有那两张表，再列一遍等于同一件事发两次。
   const todos = await prisma.todo.findMany({
     where: {
       ownerId: userId,
       status: { in: ["PENDING", "IN_PROGRESS", "OVERDUE"] },
+      source: { not: "WORK" },
       OR: [{ status: { in: ["OVERDUE", "IN_PROGRESS"] } }, { dueTime: { lte: in7 } }, { dueTime: null }],
     },
     orderBy: [{ dueTime: "asc" }, { id: "asc" }],
@@ -88,17 +101,20 @@ export async function collectDigest(userId: number) {
 
   for (const p of prows) {
     const href = workBase ? `${workBase}/p/${p.id}` : undefined;
-    const delayed = p.issues.filter((i) => i.status === "OPEN").length;
+    const phaseText = PHASE_LABEL[p.phase] ?? p.phase;
     if (p.phases.some((phase) => phase.enabled && phase.endDate && fmt(phase.endDate) < today)) {
       delayedProjects += 1;
     }
     projectRows.push({
       kind: "项目",
-      title: `${p.name}（未处理问题${delayed}）`,
+      title: p.name,
       due: p.launchDate ? fmt(new Date(p.launchDate)) : p.endDate ? fmt(new Date(p.endDate)) : "—",
       owner: "",
       status: p.status === "RUNNING" ? "进行中" : p.status === "PAUSED" ? "暂停" : "筹备中",
       href,
+      project: p.name,
+      phase: phaseText,
+      issues: p.issues.length,
     });
 
     // 风险预报：只看当前阶段的结束日，已上线和没排期的都不算
@@ -115,6 +131,8 @@ export async function collectDigest(userId: number) {
             owner: "",
             status: days < 0 ? "已延期" : days === 0 ? "今天" : "临近",
             href,
+            project: p.name,
+            phase: phaseText,
           });
         }
       }
@@ -129,9 +147,18 @@ export async function collectDigest(userId: number) {
         owner: "",
         status: `${p.issues.filter((i) => i.status === "OPEN").length} 个未处理`,
         href,
+        project: p.name,
+        issues: p.issues.length,
+        bugs: bugCount,
       });
     }
   }
+  // 项目表按当前阶段倒序：上线最上面，准备上线 → UAT → SIT → 研发 → 商务依次往下。
+  // 同阶段维持查询顺序（id 升序），避免每次报告里同一阶段的顺序乱跳。
+  const phaseRank = new Map(PHASE_ORDER.map((key, i) => [PHASE_LABEL[key] ?? key, i]));
+  projectRows.sort(
+    (a, b) => (phaseRank.get(b.phase ?? "") ?? -1) - (phaseRank.get(a.phase ?? "") ?? -1),
+  );
   riskRows.sort((a, b) => (a.due < b.due ? -1 : 1));
 
   // 纪念日：近30天内到来的（按月日推算下一次）
@@ -224,48 +251,109 @@ function wecomMarkdown(d: Awaited<ReturnType<typeof collectDigest>>): string {
   return L.join("\n");
 }
 
+/**
+ * 邮件正文按应用分三块：纪念日 / 待办 / 工作台。
+ * 每块先给一行汇总，再跟自己的表 —— 原来所有类型塞进一张大表，
+ * 状态列口径还不一样（项目是进行中/暂停，阶段是逾期/临近），看着容易串。
+ */
 function mailHtml(d: Awaited<ReturnType<typeof collectDigest>>): string {
   const cell = (text: string) =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  /** 纪念日在「时间」列补上还剩多少天，纯 HTML 通道没有 font 高亮就用粗体 */
-  const dueOf = (r: DigestRow) =>
-    r.kind === "纪念日" && r.days != null
-      ? `${r.due} · <b>还有 ${r.days} 天</b>`
-      : cell(r.due);
-  const row = (r: DigestRow) =>
-    `<tr><td>${cell(r.kind)}</td><td>${
-      r.href ? `<a href="${r.href}">${cell(r.title)}</a>` : cell(r.title)
-    }</td><td>${dueOf(r)}</td><td>${cell(r.status)}</td></tr>`;
-  const all = [...d.projects.rows, ...d.projects.risks, ...d.projects.issues, ...d.todos, ...d.anniversaries];
+  const anchor = (row: { project?: string; title: string; href?: string }) => {
+    const text = cell(row.project ?? row.title);
+    return row.href ? `<a href="${row.href}">${text}</a>` : text;
+  };
+  const table = (headers: string[], rows: string[][]) =>
+    rows.length === 0
+      ? `<p>无</p>`
+      : `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%">
+<thead><tr>${headers.map((h) => `<th align="left">${h}</th>`).join("")}</tr></thead>
+<tbody>${rows.map((cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>
+</table>`;
+
+  const anniversaryRows = d.anniversaries.map((a) => [
+    anchor(a),
+    cell(a.due),
+    a.days != null ? `<b>${a.days <= 0 ? "就是今天" : `还有 ${a.days} 天`}</b>` : "—",
+  ]);
+  const todoRows = d.todos.map((t) => [anchor(t), cell(t.due), cell(t.status)]);
+  const projectRows = d.projects.rows.map((p) => [
+    anchor(p),
+    cell(p.phase ?? "—"),
+    cell(p.due),
+    p.issues ? `${p.issues} 个` : "—",
+  ]);
+  const riskRows = d.projects.risks.map((r) => [
+    anchor(r),
+    cell(r.phase ?? "—"),
+    cell(r.due),
+    cell(r.status),
+  ]);
+  const issueRows = d.projects.issues.map((r) => [
+    anchor(r),
+    `${r.issues ?? 0} 个${r.bugs ? `（缺陷 ${r.bugs}）` : ""}`,
+    cell(r.due),
+    cell(r.status),
+  ]);
+
+  const overdue = d.todos.filter((t) => t.status === "延期").length;
+  const doing = d.todos.filter((t) => t.status === "进行中").length;
+  const pending = d.todos.length - overdue - doing;
+
   return `<h2>每日汇总 ${fmt(d.now)}</h2>
-<p>项目：进行中 ${d.projects.running} · 有延期 ${d.projects.delayed} · 风险预报 ${d.projects.risks.length} · 含待修问题 ${d.projects.issues.length}</p>
-<p>待办共 ${d.todos.length}（延期+近7天+进行中），纪念日近30天 ${d.anniversaries.length}。明细见附件 Excel。</p>
-<table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>类型</th><th>标题</th><th>时间</th><th>状态</th></tr></thead><tbody>
-${all.slice(0, 200).map(row).join("")}
-</tbody></table>`;
+<h3>纪念日：近 30 天 ${d.anniversaries.length} 个</h3>
+${table(["纪念日", "日期", "倒计时"], anniversaryRows)}
+<h3>待办：${d.todos.length} 条（延期 ${overdue} · 进行中 ${doing} · 待办 ${pending}）</h3>
+${table(["待办", "截止", "状态"], todoRows)}
+<h3>工作台：项目 ${d.projects.rows.length} 个（进行中 ${d.projects.running} · 有延期 ${d.projects.delayed}）· 风险预报 ${d.projects.risks.length} · 待修问题 ${d.projects.issues.length}</h3>
+<p><b>项目（当前阶段）</b></p>
+${table(["项目", "当前阶段", "计划上线 / 结束", "待修问题"], projectRows)}
+<p><b>风险预报（阶段已逾期 / 7 天内结束）</b></p>
+${table(["项目", "当前阶段", "阶段结束", "状态"], riskRows)}
+<p><b>待修问题</b></p>
+${table(["项目", "待修问题", "最近更新", "状态"], issueRows)}
+<p>明细见附件 Excel。</p>`;
+}
+
+/**
+ * exceljs 是 CJS 包：tsx / Next 下 `import("exceljs")` 拿到的是带 default 的包装，
+ * 直接解构 `{ Workbook }` 会得到 undefined，attachments 就静默退化成 CSV。
+ * 两种形态都认一下，拿不到才让上层走 CSV 兜底。
+ */
+async function workbookCtor(): Promise<typeof import("exceljs").Workbook> {
+  const mod = (await import("exceljs")) as unknown as {
+    Workbook?: typeof import("exceljs").Workbook;
+    default?: { Workbook?: typeof import("exceljs").Workbook };
+  };
+  const ctor = mod.Workbook ?? mod.default?.Workbook;
+  if (!ctor) throw new Error("exceljs 不可用：Workbook 缺失");
+  return ctor;
 }
 
 export async function buildDigestExcel(d: Awaited<ReturnType<typeof collectDigest>>): Promise<{ filename: string; content: Buffer; contentType: string }> {
   const all = [...d.projects.rows, ...d.projects.risks, ...d.projects.issues, ...d.todos, ...d.anniversaries];
+  /** 项目行的「状态」换成当前阶段，和邮件里「项目（当前阶段）」那张表口径一致 */
+  const statusOf = (r: DigestRow) => (r.kind === "项目" && r.phase ? r.phase : r.status);
   try {
-    const { Workbook } = await import("exceljs");
-    const wb = new Workbook();
+    const wb = new (await workbookCtor())();
     const ws = wb.addWorksheet("汇总");
     ws.columns = [
       { header: "类型", key: "kind", width: 12 },
       { header: "标题", key: "title", width: 46 },
       { header: "时间", key: "due", width: 16 },
-      { header: "状态", key: "status", width: 16 },
+      { header: "状态 / 阶段", key: "status", width: 16 },
     ];
     for (const r of all) {
-      if (r.kind === "纪念日" && r.days != null) r.due = `${r.due} · 还有 ${r.days} 天`;
-      ws.addRow(r);
+      const due = r.kind === "纪念日" && r.days != null ? `${r.due} · 还有 ${r.days} 天` : r.due;
+      ws.addRow({ ...r, due, status: statusOf(r) });
     }
     const buf = Buffer.from(await wb.xlsx.writeBuffer());
     return { filename: `digest-${fmt(d.now)}.xlsx`, content: buf, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
   } catch {
-    const csv = `类型,标题,时间,状态\n${all.map((r) => [r.kind, `"${r.title.replace(/"/g, '""')}"`, r.due, r.status].join(",")).join("\n")}`;
-    return { filename: `digest-${fmt(d.now)}.csv`, content: Buffer.from("﻿" + csv), contentType: "text/csv" };
+    const csv = `类型,标题,时间,状态/阶段\n${all
+      .map((r) => [r.kind, `"${r.title.replace(/"/g, '""')}"`, r.due, statusOf(r)].join(","))
+      .join("\n")}`;
+    return { filename: `digest-${fmt(d.now)}.csv`, content: Buffer.from("\ufeff" + csv), contentType: "text/csv" };
   }
 }
 
