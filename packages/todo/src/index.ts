@@ -87,10 +87,15 @@ function normalizeRules(rules: Prisma.JsonValue | null): RemindRule[] {
 /**
  * 提醒派发：按 remindRules（提前 N 天 + 时点）计算应触发的提醒并投递到通知网关。
  * 幂等键 todo:{id}:{offsetDays}:{触发日期} —— 同一条提醒同一天只投一次。
+ *
+ * 只发用户自己记的待办（source = MANUAL）。工作台 / 纪念日 / 账单自动收上来的
+ * 待办本身就是每日汇总里的那些行（风险预报、待修问题、纪念日、待办清单），
+ * 再按条单推一次等于同一件事发两遍 —— 一天能刷出十几条，所以这里直接跳过。
  */
 export async function dispatchTodoReminders(now = new Date()): Promise<number> {
   const todos = await prisma.todo.findMany({
     where: {
+      source: "MANUAL",
       status: { in: ["PENDING", "IN_PROGRESS", "OVERDUE"] },
       remindRules: { not: Prisma.DbNull },
       OR: [{ snoozeUntil: null }, { snoozeUntil: { lte: now } }],
@@ -130,4 +135,21 @@ export async function dispatchTodoReminders(now = new Date()): Promise<number> {
     }
   }
   return sent;
+}
+
+/**
+ * 清掉还排在队列里的「自动待办」提醒（PENDING）。
+ *
+ * 停掉这类单条推送后，之前已经入队、还没发出去的那批会被 notify-retry
+ * 一条条补发出去 —— 部署后仍会看到旧提醒冒出来。这里在派发任务里顺手清一次，
+ * 只动自动来源（工作台 / 纪念日 / 账单等）的待办提醒，每日汇总没有 todoId，不受影响。
+ */
+export async function purgeAutoTodoReminders(): Promise<number> {
+  const purged = await prisma.notifyLog.deleteMany({
+    where: {
+      status: "PENDING",
+      todo: { is: { source: { not: "MANUAL" } } },
+    },
+  });
+  return purged.count;
 }

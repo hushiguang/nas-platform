@@ -106,7 +106,8 @@ export default async function NotifyPage({
           由 notify-retry 每 10 分钟退避重发（1min → 5min → 25min，最多 3 次）；超过后标记为失败，不再自动重发。
         </p>
         <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-          另有一路 <b>每 10 分钟</b> 的「待办提醒」，发的是待办应用里各人自己设的提醒时点（默认提前 3 天 09:00）。
+          另有一路 <b>每 10 分钟</b> 的「待办提醒」，只发待办应用里 <b>各人自己记的待办</b>（默认提前 3 天 09:00）；
+          工作台 / 纪念日 / 账单自动收上来的待办不再单条推送，只在每日汇总里出现。
           发不出去时依次检查：接收人是否开启渠道并填了企微 userid / 邮箱（<Link href="/notify/channels" className="site-link">通知渠道</Link>）→
           企业微信应用「可信 IP」是否包含本机出口 IP → SMTP 是否可达。
         </p>

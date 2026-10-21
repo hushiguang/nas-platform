@@ -9,7 +9,7 @@
 import { callInternal, internalAppBaseUrl, zonedDate } from "@nas/core";
 import { prisma } from "@nas/db";
 import { flushNotifyLogs, wecomWebhook } from "@nas/notify";
-import { dispatchTodoReminders, scanOverdueTodos } from "@nas/todo";
+import { dispatchTodoReminders, purgeAutoTodoReminders, scanOverdueTodos } from "@nas/todo";
 
 /**
  * 报告前置：把要进报告的待办收全（纪念日临近、账单跟进、工作台风险预报 /
@@ -98,9 +98,12 @@ export const JOBS: Record<string, () => Promise<void>> = {
   // 报告本身走 notifyLog（失败会进 notify-retry 退避重发）。
   digest: pushSummary,
 
-  // 用户自己设的待办提醒：按 remindRules 的时点投递（高频跑，保证时点准确）。
+  // 用户自己记的待办提醒：按 remindRules 的时点投递（高频跑，保证时点准确）。
   // 不跑它，待办应用里勾的「提前 3 天 09:00 提醒」就不会发。
+  // 工作台 / 纪念日 / 账单自动收的待办不在这里单推，它们只在每日汇总里出现。
   "dispatch-reminders": async () => {
+    const purged = await purgeAutoTodoReminders();
+    if (purged) console.log(`[job] dispatch-reminders purged ${purged} 条自动待办提醒`);
     const sent = await dispatchTodoReminders();
     if (sent) console.log(`[job] dispatch-reminders queued ${sent}`);
   },
