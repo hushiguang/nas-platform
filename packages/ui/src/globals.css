@@ -807,7 +807,8 @@ a.stat:hover,
   border-color: var(--coral);
   background: var(--wash-coral);
 }
-.todo-row.done {
+/* 完成的行整行压暗，但编辑弹窗是它的子节点，不能跟着变透明 */
+.todo-row.done > :not(.modal-backdrop) {
   opacity: 0.55;
 }
 .todo-dot {

@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useImagePaste } from "@nas/ui";
 import { LightboxImage } from "./lightbox";
+import { useScrollLock } from "./use-scroll-lock";
 
 export interface ListOption {
   id: number;
@@ -92,10 +93,14 @@ export function TodoDialog({
   };
   const showImage = imageUrl ?? imageSrc;
   const [error, setError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [keepImages, setKeepImages] = useState<string[]>(initial?.images ?? []);
   const fileRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initial);
+
+  // 弹窗开着时背景列表不许滑（手机上手势很容易把下面的列表拖走）
+  useScrollLock(open);
 
   // 关掉弹窗时释放 objectURL，否则连续开几次会攒一堆内存
   useEffect(() => {
@@ -121,6 +126,14 @@ export function TodoDialog({
   // 每次打开都从干净状态开始：上一轮的错误提示不该带到下一次
   useEffect(() => {
     if (open) setError(null);
+  }, [open]);
+
+  // 打开时自动聚焦标题（桌面）。H5 上聚焦会直接弹起输入法遮住半屏，
+  // 触摸设备就不抢焦点了，等用户自己点输入框。
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) return;
+    titleRef.current?.focus();
   }, [open]);
 
   // Esc 关闭弹窗：写在 window 上而不是弹窗节点上，输入框里按 Esc 也能收起来
@@ -174,8 +187,8 @@ export function TodoDialog({
       )}
 
       {open && (
-        <div className="modal-backdrop" onClick={() => setOpen(false)}>
-          <div className="modal card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop todo-modal-backdrop" onClick={() => setOpen(false)}>
+          <div className="modal card todo-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="card-head">
               <b>{isEdit ? "编辑待办" : "记一件事"}</b>
               <button type="button" className="ghost" onClick={() => setOpen(false)}>
@@ -192,11 +205,11 @@ export function TodoDialog({
               <label className="field">
                 <span className="form-label">要做什么</span>
                 <input
+                  ref={titleRef}
                   className="input"
                   name="title"
                   defaultValue={initial?.title ?? ""}
                   placeholder="买牛奶 / 交水电费 / 给车做保养"
-                  autoFocus
                   required
                 />
               </label>

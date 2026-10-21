@@ -355,7 +355,10 @@
 }
 
 .todo-op {
-  display: inline-flex;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   align-items: center;
   border: 1px solid var(--line);
   background: transparent;
@@ -834,6 +837,12 @@ table.data .todo-ops {
 }
 
 /* ---------------------------------------------------------------- 免登录分享页 */
+/* 弹窗/抽屉打开时压住页面滚动，避免手势把背景列表拖着走 */
+html.is-scroll-locked,
+html.is-scroll-locked body {
+  overscroll-behavior: none;
+}
+
 .share-page {
   max-width: 720px;
   margin: 0 auto;
@@ -846,6 +855,18 @@ table.data .todo-ops {
 
 .share-page > * {
   min-width: 0;
+}
+
+/* 悬浮「添加」和底部抽屉只在 H5 出现；桌面端表单直接排在页面里 */
+.share-fab,
+.share-sheet-backdrop,
+.share-sheet-head {
+  display: none;
+}
+
+/* 桌面端抽屉容器不参与布局，表单照常作为 share-page 的网格项 */
+.share-sheet {
+  display: contents;
 }
 
 .share-head h1 {
@@ -881,49 +902,39 @@ table.data .todo-ops {
 .share-add {
   display: grid;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
-.share-add-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.share-add-row .input {
-  flex: 1;
-  min-width: 0;
-}
-
-.share-add-toggle {
-  flex: none;
-  white-space: nowrap;
-  font-size: 12.5px;
-}
-
-.share-add-toggle.on {
-  color: var(--ink);
-  background: var(--soft);
-}
-
-.share-add-extra {
+/* 标题 / 备注 / 图片三个字段直接摊开，不再折叠 */
+.share-field {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
-.share-add-extra textarea.input {
+.share-field textarea.input {
   width: 100%;
   resize: vertical;
   min-height: 56px;
 }
 
-.share-add-images {
-  display: grid;
-  gap: 6px;
-}
-
 .share-add-hint {
   font-size: 11.5px;
+}
+
+.share-add-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.share-add-actions .btn {
+  min-height: 40px;
+  padding: 9px 24px;
+}
+
+/* 桌面端是内嵌表单，没有「取消」这回事；H5 弹窗里才出现 */
+.share-add-cancel {
+  display: none;
 }
 
 /* 提交中：整个表单压暗且不可点，配合同步闸门彻底挡住连点重复提交 */
@@ -970,17 +981,17 @@ table.data .todo-ops {
   }
 }
 
-@media (max-width: 560px) {
-  .share-add-row {
-    flex-wrap: wrap;
-  }
-  .share-add-row .input {
-    flex: 1 1 100%;
-  }
-}
-
 .share-list .todo-list {
   margin: 0;
+}
+
+/* 备注胶囊可能很长：行内换行显示，限制宽度，别把整页撑出横向滚动 */
+.share-page .todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
 }
 
 /* 只读模式下的圆圈只是个状态标记，不要像可点的勾选框那样浮起 */
@@ -1077,8 +1088,164 @@ table.data .todo-ops {
 }
 
 @media (max-width: 900px) {
+  /* 分享页：内边距收小，底部给悬浮按钮留出空间，避免盖住最后一条 */
   .share-page {
-    padding: 20px 12px calc(32px + env(safe-area-inset-bottom));
+    gap: 12px;
+    padding: calc(14px + env(safe-area-inset-top)) 12px calc(104px + env(safe-area-inset-bottom));
+  }
+  .share-page .card {
+    padding: 13px 14px;
+  }
+  .share-head h1 {
+    font-size: 20px;
+  }
+  .share-stats {
+    gap: 18px;
+    margin-top: 12px;
+  }
+  .share-stat b {
+    font-size: 19px;
+  }
+
+  /* 右下角悬浮「添加」：跟账单的「记一笔」一样，圆按钮直接怼在手边 */
+  .share-fab {
+    display: grid;
+    position: fixed;
+    right: 16px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    z-index: 38;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 0;
+    place-items: center;
+    background: var(--coral);
+    color: #fff;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 10px 26px rgba(255, 77, 106, 0.42);
+    animation: share-fab-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  }
+  .share-fab:active {
+    transform: scale(0.92);
+  }
+  .share-fab-plus {
+    display: block;
+    margin-top: -2px;
+  }
+
+  /* 表单平时收起，点悬浮按钮弹出一张卡片（对齐账单「记一笔」的弹窗） */
+  .share-sheet {
+    display: none;
+  }
+  .share-sheet.is-open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+  }
+  .share-sheet-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    background: rgba(12, 8, 20, 0.66);
+    backdrop-filter: blur(6px) saturate(0.85);
+  }
+  .share-sheet .share-add {
+    position: relative;
+    width: 100%;
+    max-height: min(92dvh, calc(100dvh - 20px));
+    overflow-y: auto;
+    border-radius: 18px;
+    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    gap: 12px;
+    animation: share-sheet-up 0.18s ease-out;
+  }
+  .share-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 16px;
+  }
+  /* 输入字号 16px：iOS 上小于 16px 聚焦时会把整页放大 */
+  .share-sheet .share-add .input {
+    font-size: 16px;
+  }
+  .share-add-cancel {
+    display: inline-flex;
+  }
+  .share-add-actions {
+    position: sticky;
+    bottom: 0;
+    margin: 0 -2px;
+    padding: 10px 2px 0;
+    background: var(--paper);
+  }
+  .share-add-actions > .btn {
+    flex: 1;
+    min-height: 46px;
+  }
+
+  /* 编辑弹窗：和账单 H5 一样，深色磨砂遮罩 + 近全宽的大圆角卡片 */
+  .todo-modal-backdrop {
+    align-items: center;
+    padding: calc(10px + env(safe-area-inset-top)) 10px 10px;
+    background: rgba(12, 8, 20, 0.66);
+    backdrop-filter: blur(6px) saturate(0.85);
+  }
+  .todo-modal {
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+    max-height: min(92dvh, calc(100dvh - 20px));
+    overflow-y: auto;
+    border-radius: 18px;
+    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .todo-modal .form-stack > .form-row {
+    grid-template-columns: 1fr;
+  }
+  /* 保存/取消这一行仍然是并排两个大按钮 */
+  .todo-modal .form-stack > .form-row:has(button) {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .todo-modal .form-stack > .form-row:has(button) > button {
+    min-height: 46px;
+  }
+  .todo-modal .input {
+    font-size: 16px;
+  }
+  .todo-modal .card-head .ghost {
+    min-height: 40px;
+  }
+}
+
+@keyframes share-fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes share-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
