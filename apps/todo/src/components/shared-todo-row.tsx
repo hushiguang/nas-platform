@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { zonedDate, zonedTime } from "@nas/core";
+import { dayDiff, zonedDate, zonedTime } from "@nas/core";
 import type { TodoView } from "@nas/todo";
 import { guestToggleTodoAction, guestUpdateTodoAction } from "@/app/share/actions";
 import { LightboxImage } from "./lightbox";
@@ -41,7 +41,8 @@ export function SharedTodoRow({
   list: ListOption;
 }) {
   const done = todo.status === "DONE";
-  const overdue = todo.status === "OVERDUE";
+  // 逾期按到期日现算（同待办应用），不依赖可能还停在 OVERDUE 的状态
+  const overdue = !done && (todo.dueTime ? dayDiff(zonedDate(todo.dueTime), zonedDate(new Date())) < 0 : false);
   // 长备注默认收起，点「备注」展开全文，行高不被大段文字撑爆
   const [noteOpen, setNoteOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -60,14 +60,14 @@ async function todoSummary(
   // 「待办管理」页是聚合视图（allSources = true），各平台收上来的照常出现。
   const sourceFilter: { source?: "MANUAL" } = allSources ? {} : { source: "MANUAL" };
   const now = new Date();
-  const { end } = zonedDayRange(now);
+  const { start, end } = zonedDayRange(now);
   const today = zonedDate(now);
   // 不加 as const：Prisma 的 in 过滤器要的是可写数组，readonly 元组过不了类型
   const openStatus = { in: ["PENDING", "IN_PROGRESS", "OVERDUE"] as TodoStatus[] };
 
   const [open, overdue, dueSoon, upcoming] = await Promise.all([
     prisma.todo.count({ where: { ...scope, ...sourceFilter, status: "PENDING" } }),
-    prisma.todo.count({ where: { ...scope, ...sourceFilter, status: "OVERDUE" } }),
+    prisma.todo.count({ where: { ...scope, ...sourceFilter, status: openStatus, dueTime: { lt: start } } }),
     prisma.todo.count({
       where: { ...scope, ...sourceFilter, status: { in: ["PENDING", "IN_PROGRESS"] }, dueTime: { lte: end } },
     }),

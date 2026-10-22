@@ -62,8 +62,20 @@ export async function snoozeTodo(todoId: number, ownerId: number, until: Date) {
   return updated;
 }
 
-/** 逾期扫描：到期未完成的置为 OVERDUE（幂等，重复执行无副作用） */
+/**
+ * 逾期扫描：到期未完成的置为 OVERDUE（幂等，重复执行无副作用）。
+ *
+ * 同时反向修正：到期日被清空（改成「无期限」）或改到未来的，状态从 OVERDUE 退回 PENDING。
+ * 以前只往上标、不往回退，清掉日期后行上会一直挂着「逾期」。
+ */
 export async function scanOverdueTodos(now = new Date()) {
+  await prisma.todo.updateMany({
+    where: {
+      status: "OVERDUE",
+      OR: [{ dueTime: null }, { dueTime: { gte: now } }],
+    },
+    data: { status: "PENDING" },
+  });
   return prisma.todo.updateMany({
     where: {
       status: { in: ["PENDING", "IN_PROGRESS"] },

@@ -6,7 +6,7 @@
  */
 import { revalidatePath } from "next/cache";
 import { prisma } from "@nas/db";
-import { recordAudit } from "@nas/core";
+import { recordAudit, zonedDate, zonedTime } from "@nas/core";
 import { flushNotifyLogs, sendNotify } from "@nas/notify";
 import {
   addListMember,
@@ -15,6 +15,7 @@ import {
   deleteList,
   deleteTodo,
   ensureDefaultLists,
+  getTodo,
   removeListMember,
   setListShare,
   setTodoStatus,
@@ -134,6 +135,18 @@ export async function snoozeTodoAction(form: FormData) {
   else if (preset === "tomorrow") {
     until.setDate(until.getDate() + 1);
     until.setHours(9, 0, 0, 0);
+    // 按钮承诺的是「截止日期延到明天」：只挪提醒时点的话，到期日还停在昨天，
+    // 列表里会继续挂着「逾期」。只对已经过去的到期日生效，未来的日期不动。
+    const current = await getTodo(id);
+    if (current?.dueTime && current.dueTime.getTime() < Date.now()) {
+      const time = zonedTime(current.dueTime);
+      const next = new Date(`${zonedDate(until)}T${time}:00+08:00`);
+      try {
+        await updateTodo(id, user.id, { dueTime: next }, user.role === "ADMIN");
+      } catch {
+        // 共享清单里别人记的条目可能挪不动到期日，提醒照旧
+      }
+    }
   } else if (preset === "week") until.setDate(until.getDate() + 7);
   else return;
 

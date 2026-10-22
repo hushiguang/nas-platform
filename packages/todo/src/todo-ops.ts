@@ -109,7 +109,11 @@ export async function todoStats(query: TodoQuery): Promise<TodoStats> {
   const { start, end } = zonedDayRange(new Date());
   const [open, overdue, today, done] = await Promise.all([
     prisma.todo.count({ where: { ...visibility, ...source, status: { in: ["PENDING", "IN_PROGRESS", "OVERDUE"] } } }),
-    prisma.todo.count({ where: { ...visibility, ...source, status: "OVERDUE" } }),
+    // 逾期按到期日算（今天之前的都算，今天到点的不算），和列表分组口径一致；
+    // 顺带不受 status 里残留的旧 OVERDUE 影响。
+    prisma.todo.count({
+      where: { ...visibility, ...source, status: { in: ["PENDING", "IN_PROGRESS", "OVERDUE"] }, dueTime: { lt: start } },
+    }),
     prisma.todo.count({
       where: { ...visibility, ...source, status: { in: ["PENDING", "IN_PROGRESS"] }, dueTime: { gte: start, lte: end } },
     }),
@@ -137,17 +141,32 @@ export async function updateTodo(
   }
 
   const remindChanged = data.remindRules !== undefined || data.dueTime !== undefined;
+  const previous = remindChanged
+    ? await prisma.todo.findUnique({
+        where: { id: todoId },
+        select: { remindRules: true, dueTime: true, status: true },
+      })
+    : null;
+
+  // 到期时间变了就顺手把逾期状态摆正：清空或改到未来 = 不再逾期，改到过去 = 直接标逾期。
+  // 不这么做的话，清掉「哪天」之后状态还停在 OVERDUE，行上会一直挂着「逾期」，
+  // 只能等下一次扫描（每天一次）才消失。
+  let status = data.status;
+  if (data.dueTime !== undefined && status === undefined && previous) {
+    const current = previous.status;
+    if (current === "PENDING" || current === "IN_PROGRESS" || current === "OVERDUE") {
+      const past = data.dueTime !== null && data.dueTime.getTime() < Date.now();
+      status = past ? "OVERDUE" : current === "OVERDUE" ? "PENDING" : current;
+    }
+  }
+
   // 界面只提交「提前 N 天 + 时点」，引擎写回的 lastFired 按 offsetDays 继承下来，
   // 否则改个标题就会把当天已发过的提醒再补一遍。到期日改了则不继承：新日期该重新提醒。
   let remindRules = data.remindRules;
-  if (remindRules && remindRules.length > 0) {
-    const previous = await prisma.todo.findUnique({
-      where: { id: todoId },
-      select: { remindRules: true, dueTime: true },
-    });
+  if (remindRules && remindRules.length > 0 && previous) {
     const dueChanged =
-      data.dueTime !== undefined && (data.dueTime?.getTime() ?? 0) !== (previous?.dueTime?.getTime() ?? 0);
-    if (!dueChanged && Array.isArray(previous?.remindRules)) {
+      data.dueTime !== undefined && (data.dueTime?.getTime() ?? 0) !== (previous.dueTime?.getTime() ?? 0);
+    if (!dueChanged && Array.isArray(previous.remindRules)) {
       const firedAt = new Map<number, string>();
       for (const raw of previous.remindRules) {
         if (typeof raw !== "object" || raw === null) continue;
@@ -172,8 +191,8 @@ export async function updateTodo(
       ...(remindRules !== undefined
         ? { remindRules: (remindRules ?? undefined) as Prisma.InputJsonValue | undefined }
         : {}),
-      ...(data.status !== undefined
-        ? { status: data.status, completedAt: data.status === "DONE" ? new Date() : null }
+      ...(status !== undefined
+        ? { status, completedAt: status === "DONE" ? new Date() : null }
         : {}),
       ...(data.listId !== undefined ? { listId: data.listId } : {}),
       ...(data.images !== undefined ? { images: data.images as Prisma.InputJsonValue } : {}),

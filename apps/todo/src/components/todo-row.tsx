@@ -51,9 +51,11 @@ export function TodoRow({
   focus?: boolean;
 }) {
   const done = todo.status === "DONE";
-  const overdue = todo.status === "OVERDUE";
   const due = dueLabel(todo.dueTime, today);
   const hasDue = Boolean(todo.dueTime);
+  // 逾期按到期日现算，不信 status：到期日清空后状态可能还停在 OVERDUE，
+  // 那样「无期限」的行会莫名其妙挂着红字「逾期」。
+  const overdue = !done && (todo.dueTime ? dayDiff(zonedDate(todo.dueTime), today) < 0 : false);
   // 长备注默认收起，点"备注"展开全文 —— 行高保持一两行，不再被大段文字撑爆
   const [noteOpen, setNoteOpen] = useState(false);
   // 图片同样默认收起，点「📷 n」展开缩略图（再点缩略图看大图）。

@@ -244,7 +244,12 @@ export default async function TodosPage({
               <ul className="todo-list" style={{ marginTop: 0 }}>
                 {group.items.map((t) => {
             const view = toView(t);
-            const overdue = t.status === "OVERDUE";
+            // 逾期按到期日现算，不信 status：到期日清空后状态可能还停在 OVERDUE
+            const overdue =
+              t.status !== "DONE" &&
+              t.status !== "CANCELLED" &&
+              Boolean(t.dueTime) &&
+              dayDiff(zonedDate(t.dueTime as Date), today) < 0;
             const cancelled = t.status === "CANCELLED";
             const mine = t.ownerId === user.id;
             const anniversaryId = t.source === "ANNIVERSARY" ? Number(t.sourceBizId?.replace("anniversary:", "")) : NaN;

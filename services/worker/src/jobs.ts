@@ -141,6 +141,11 @@ export const JOBS: Record<string, () => Promise<void>> = {
   // 同一个人这一轮到点的提醒会合成一条消息，不会一条待办一个推送。
   // 工作台 / 纪念日 / 账单自动收的待办不在这里单推，它们只在每日汇总里出现。
   "dispatch-reminders": async () => {
+    // 顺手扫一遍逾期（幂等）：既让刚到期的待办及时变成「逾期」，也把
+    // 到期日清空/改到未来的旧状态修正回来。放在这里是因为它每 10 分钟跑一次，
+    // 比每天一次的汇总扫描及时得多。
+    const overdue = await scanOverdueTodos();
+    if (overdue.count) console.log(`[job] scan-overdue 新增逾期 ${overdue.count} 条`);
     const purged = await purgeAutoTodoReminders();
     if (purged) console.log(`[job] dispatch-reminders purged ${purged} 条自动待办提醒`);
     const sent = await dispatchTodoReminders();
