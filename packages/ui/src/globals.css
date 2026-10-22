@@ -2631,6 +2631,53 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 a.work-side-row:hover { color: var(--coral); background: var(--hover); }
 .work-side-row.active { background: var(--wash-coral); color: var(--coral-dark); font-weight: 700; }
 .work-side-row b { margin-left: auto; font-size: 13px; }
+
+/* 项目关键字搜索：和优先级 chips 同排，窄屏自动换行 */
+.work-filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.work-filter-hit { font-size: 12.5px; }
+.work-search { position: relative; display: flex; align-items: center; flex: 0 1 280px; min-width: 200px; }
+.work-search input {
+  width: 100%;
+  padding: 7px 32px 7px 32px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  background: var(--field);
+  font-size: 13px;
+  outline: none;
+  color: inherit;
+}
+.work-search input:focus { border-color: var(--coral); }
+.work-search input::placeholder { color: var(--muted); }
+.work-search input::-webkit-search-cancel-button { display: none; }
+.work-search-icon {
+  position: absolute;
+  left: 11px;
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.work-search-clear {
+  position: absolute;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.work-search-clear:hover { color: var(--coral); }
+@media (max-width: 720px) {
+  .work-search { flex: 1 1 100%; }
+}
+
 /* 窄屏：侧栏不再直接消失，而是收成顶部横向筛选条，保证可点击 */
 @media (max-width: 1100px) {
   .work-layout { flex-direction: column; }

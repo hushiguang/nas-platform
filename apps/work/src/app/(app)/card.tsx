@@ -2,7 +2,10 @@ import Link from "next/link";
 import type { ProjectView } from "@/server";
 import { PRI_DOT, PRI_TOP } from "./pri-style";
 
-export function ProjectCard({ item }: { item: ProjectView }) {
+/** 卡片只需要项目概览，节点 / 问题 / 草稿不进列表的序列化数据 */
+export type ProjectCardItem = Omit<ProjectView, "nodes" | "issues" | "draft">;
+
+export function ProjectCard({ item }: { item: ProjectCardItem }) {
   const crew = [
     ...new Set(
       item.phases.flatMap((phase) => phase.members.map((member) => member.name)).filter((name) => name !== item.ownerName),

@@ -2,9 +2,9 @@ import Link from "next/link";
 import { requireAppAccess } from "@/auth";
 import { platformOf } from "@/lib/platform";
 import { listProjects } from "@/server";
-import { ProjectCard } from "./card";
 import { ImportButton } from "./import-button";
-import { PRI_DOT, PRI_ORDER } from "./pri-style";
+import { ProjectFilter } from "./project-filter";
+import { PRI_ORDER } from "./pri-style";
 import { WorkStatsSide } from "./stats-side";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +17,15 @@ export default async function HomePage({
   const { user, access } = await requireAppAccess();
   const { pri, src, plat } = await searchParams;
   const all = await listProjects(access, user.id);
-  const items = all.filter(
-    (item) =>
-      (!pri || item.priority === pri) &&
-      (!src || (item.code || "未分组") === src) &&
-      (!plat || platformOf(item.name) === plat),
-  );
-  const live = items.filter((item) => item.phase === "LIVE");
-  const active = items.filter((item) => item.phase !== "LIVE");
+  const items = all
+    .filter(
+      (item) =>
+        (!pri || item.priority === pri) &&
+        (!src || (item.code || "未分组") === src) &&
+        (!plat || platformOf(item.name) === plat),
+    )
+    // 列表在前端做关键字过滤，节点 / 问题明细不必发给浏览器
+    .map(({ nodes, issues, draft, ...card }) => card);
 
   const priStats = PRI_ORDER.map((key) => ({
     key,
@@ -75,56 +76,25 @@ export default async function HomePage({
 
       <div className="work-layout">
         <div className="work-main">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            <Link
-              href="/"
-              className={`badge${!pri ? "" : " soft"}`}
-              style={!pri ? undefined : { textDecoration: "none" }}
-            >
-              全部 {all.length}
-            </Link>
-            {priStats.map((p) => (
-              <Link
-                key={p.key}
-                href={pri === p.key ? "/" : `/?pri=${p.key}`}
-                className={`badge${pri === p.key ? "" : " soft"}`}
-                style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: PRI_DOT[p.key] }} />
-                {p.label} {p.count}
-              </Link>
-            ))}
-          </div>
-
-          {items.length === 0 ? (
-            <div className="card" style={{ textAlign: "center", padding: 48 }}>
-              <div style={{ fontFamily: "Source Serif 4, serif", fontSize: 22 }}>没有符合的项目</div>
-              <p className="muted" style={{ fontSize: 13 }}>
-                <Link href="/">清除筛选</Link> 看全部项目。
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="work-grid work-grid-row">
-                {active.map((item) => (
-                  <ProjectCard key={item.id} item={item} />
-                ))}
-              </div>
-              {live.length > 0 ? (
-                <section className="section">
-                  <h2 className="section-title">已上线 · {live.length}</h2>
-                  <div className="work-grid work-grid-row">
-                    {live.map((item) => (
-                      <ProjectCard key={item.id} item={item} />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </>
-          )}
+          <ProjectFilter
+            items={items}
+            total={all.length}
+            pris={priStats}
+            pri={pri}
+            src={src}
+            plat={plat}
+          />
         </div>
 
-        <WorkStatsSide basePath="/" pris={priStats} sources={srcStats} platforms={platformStats} activePri={pri} activeSource={src} activePlatform={plat} />
+        <WorkStatsSide
+          basePath="/"
+          pris={priStats}
+          sources={srcStats}
+          platforms={platformStats}
+          activePri={pri}
+          activeSource={src}
+          activePlatform={plat}
+        />
       </div>
     </div>
   );
