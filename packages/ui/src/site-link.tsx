@@ -1,53 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
-
-function leavesThisSite(href: string): boolean {
-  try {
-    return new URL(href, window.location.href).origin !== window.location.origin;
-  } catch {
-    return false;
-  }
-}
-
-function openAway(event: MouseEvent<HTMLAnchorElement>, href: string) {
-  if (event.defaultPrevented || event.button !== 0) return;
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  if (!leavesThisSite(href)) return;
-  event.preventDefault();
-  window.open(new URL(href, window.location.href).href, "_blank", "noopener,noreferrer");
-}
+import type { ReactNode } from "react";
 
 /**
- * 站内路径还在当前页打开。跳到别的域名（或别的端口上的另一个应用）时开新页面。
+ * 站内路径和「本平台的其他应用」都在当前标签页里跳。
+ *
+ * 各应用是分开部署的（不同端口/域名），以前按 origin 判断、跨域就开新标签页，
+ * 结果门户点进账单一类操作会攒一堆标签页。现在默认整页跳转，
+ * 只有明确标成外部独立服务的链接（`newTab`）才新开标签页。
  */
 export function SiteLink({
   href,
   className,
   children,
+  newTab = false,
 }: {
   href: string;
   className?: string;
   children: ReactNode;
+  /** 外部独立服务：新标签页打开，不打断当前应用 */
+  newTab?: boolean;
 }) {
-  const [away, setAway] = useState(false);
-  useEffect(() => {
-    setAway(leavesThisSite(href));
-  }, [href]);
-
-  const blank = away ? { target: "_blank" as const, rel: "noreferrer" } : {};
-
   if (href.startsWith("/") && !href.startsWith("//")) {
     return (
-      <Link href={href} className={className} onClick={(event) => openAway(event, href)}>
+      <Link href={href} className={className}>
         {children}
       </Link>
     );
   }
 
+  const blank = newTab ? { target: "_blank" as const, rel: "noreferrer" } : {};
   return (
-    <a href={href} className={className} {...blank} onClick={(event) => openAway(event, href)}>
+    <a href={href} className={className} {...blank}>
       {children}
     </a>
   );

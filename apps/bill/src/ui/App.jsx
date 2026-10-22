@@ -677,14 +677,9 @@ function BookSwitch({ books, currentBookId, onChange }) {
 
 function PortalLink({ href, className, children }) {
   if (!href) return null;
-  let away = true;
-  try {
-    away = new URL(href, window.location.href).origin !== window.location.origin;
-  } catch {
-    away = true;
-  }
+  // 门户和应用之间来回跳都在当前标签页完成（门户里标了「外部」的独立服务除外）
   return (
-    <a className={className} href={href} {...(away ? { target: '_blank', rel: 'noreferrer' } : {})}>
+    <a className={className} href={href}>
       {children}
     </a>
   );

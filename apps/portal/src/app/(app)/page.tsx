@@ -136,7 +136,8 @@ function AppCard({
   const nameNode = disabled ? (
     <div className="app-name">{platform.name}</div>
   ) : (
-    <SiteLink href={href} className="app-name app-hit">
+    // 外部独立服务（如第三方工具）仍然新开标签页；内部模块共用当前标签页
+    <SiteLink href={href} className="app-name app-hit" newTab={platform.isExternal}>
       {platform.name}
     </SiteLink>
   );
