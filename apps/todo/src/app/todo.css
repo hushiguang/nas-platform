@@ -54,46 +54,7 @@
   cursor: pointer;
 }
 
-/* ---------------------------------------------------------------- 勾选框 */
-.todo-check {
-  display: flex;
-  align-items: center;
-  margin: 0;
-}
-
-.todo-box {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  border-radius: 50%;
-  border: 1.5px solid var(--field-line);
-  background: var(--chip);
-  color: #fff;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.todo-box:hover {
-  border-color: var(--mint);
-}
-
-.todo-box.on {
-  background: var(--mint);
-  border-color: var(--mint);
-}
-
-/* 完成的行整体淡化，标题划线 */
-.todo-row.done .todo-title {
-  text-decoration: line-through;
-  color: var(--muted);
-}
-
-/* 备注(.todo-note) 与图片缩略图(.todo-thumbs / .todo-thumb) 的样式在
+/* 勾选框、紧凑行、到期胶囊、行内操作、备注全文、灯箱都在
    @nas/ui/globals.css —— 门户的「待办管理」也会渲染同样的待办行，
    两边必须长得一样。这里只留待办应用独有的缩略图删除按钮。 */
 
@@ -252,168 +213,9 @@
   background: transparent;
 }
 
-/* ---------------------------------------------------------------- 紧凑行：一行标题 + 一行小字 */
-.todo-list {
-  gap: 8px;
-}
-
-.todo-row.is-compact {
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-}
-
-.todo-row.is-compact .todo-dot {
-  align-self: center;
-  margin-top: 0;
-  width: 7px;
-  height: 7px;
-}
-
-/* 勾选框撑满行高再居中：行是「标题 + 小字」两段，行整体 align-items: flex-start，
-   不 stretch 的话按钮会贴在行顶，看起来偏上 */
-.todo-row.is-compact .todo-check {
-  align-self: stretch;
-}
-
-.todo-row.is-compact .todo-box {
-  width: 18px;
-  height: 18px;
-  font-size: 11px;
-}
-
-.todo-main {
-  min-width: 0;
-  flex: 1;
-}
-
-/* 整块内容区可点开编辑弹窗时才显示手型（只读分享页的行不装可点） */
-.todo-main.is-clickable {
-  cursor: pointer;
-}
-
-.todo-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.todo-line .todo-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* 标题是「点击即编辑」的按钮：抹掉按钮默认外观，只留文字和指针光标 */
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 6px;
-}
-
-.todo-due {
-  flex: none;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--soft);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.todo-due.is-overdue {
-  background: var(--wash-coral);
-  color: var(--coral);
-  font-weight: 700;
-}
-
-.todo-due.is-none {
-  opacity: 0.7;
-}
-
-/* 行内操作：ghost 小胶囊（与门户 btn ghost sm 同款） */
-.todo-ops {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.todo-ops form {
-  margin: 0;
-  display: inline-flex;
-}
-
-.todo-op {
-  display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  align-items: center;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  padding: 3px 11px;
-  border-radius: 999px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-button.todo-op:hover,
-a.todo-op:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-
-.todo-op.is-danger {
-  color: var(--danger, #ff4d6a);
-  border-color: rgba(255, 77, 106, 0.4);
-}
-
-.todo-op.is-danger:hover {
-  background: rgba(255, 77, 106, 0.12);
-  color: var(--danger, #ff4d6a);
-}
-
-.todo-row .todo-meta {
-  margin-top: 3px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 8px;
-  align-items: center;
-  font-size: 12px;
-}
-
-.todo-flag {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--coral);
-}
-
-/* 备注：收起时只在 meta 里露一行预览，展开才显示全文，不再遮挡 */
-.todo-row .todo-note.is-full {
-  display: block;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  max-width: 100%;
-  margin-top: 8px;
-  padding: 9px 11px;
-  border-radius: 10px;
-  background: var(--soft);
-  line-height: 1.65;
-  font-size: 13px;
-}
+/* ---------------------------------------------------------------- 紧凑行
+ * 紧凑行（is-compact）、勾选框、到期胶囊、行内操作、备注全文都在
+ * @nas/ui/globals.css，门户「待办管理」用的是同一套样式。 */
 
 /* 底部快速添加：固定悬浮在视口底部，宽度跟内容列（max-width: 880px）对齐。
  * 外壳左侧有 248px 侧栏，主区左右 padding 共 52px，
@@ -475,26 +277,6 @@ a.todo-op:hover {
   }
   .quick-add-hint {
     display: none;
-  }
-  .todo-ops .todo-snooze {
-    display: none;
-  }
-  /* 手机上操作放第二行，标题和到期时间才有足够宽度 */
-  .todo-line {
-    flex-wrap: wrap;
-    row-gap: 6px;
-  }
-  .todo-line .todo-title {
-    flex: 1 1 auto;
-  }
-  .todo-line .todo-ops {
-    flex: 1 1 100%;
-    justify-content: flex-end;
-  }
-  .todo-due {
-    max-width: 60%;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }
 
@@ -730,41 +512,7 @@ table.data .todo-ops {
   gap: 12px;
 }
 
-/* 缩略图点击区 + 灯箱大图 */
-.todo-thumb-open {
-  display: block;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: zoom-in;
-}
-
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(8, 6, 12, 0.88);
-  cursor: zoom-out;
-  animation: lightbox-in 0.12s ease-out;
-}
-
-.lightbox img {
-  max-width: 100%;
-  max-height: 90vh;
-  border-radius: 10px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-}
-
-@keyframes lightbox-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/* 缩略图点击区 + 灯箱大图在 @nas/ui/globals.css（门户待办行也用同一套） */
 
 /* ---------------------------------------------------------------- 清单分享 */
 /* 行内「分享设置」弹窗：链接一段单独占行，长 token 不撑破弹窗 */

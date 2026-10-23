@@ -765,6 +765,8 @@ a.stat:hover,
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* 放进 grid / flex 容器时不被内容（长链接）顶宽 */
+  min-width: 0;
 }
 .todo-row {
   display: flex;
@@ -775,6 +777,7 @@ a.stat:hover,
   border-radius: 12px;
   background: var(--paper);
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 .todo-row:has(.todo-bills:hover),
 .todo-row:has(.todo-bills:focus-within) {
@@ -835,10 +838,14 @@ a.stat:hover,
 .todo-title {
   font-size: 14px;
   font-weight: 500;
+  /* 标题里粘了长链接也不许把卡片撑破 —— anywhere 会压低 min-content 宽度，
+     否则外层 grid 的列会被这一行拽到比屏幕还宽 */
+  overflow-wrap: anywhere;
 }
 .todo-meta {
   font-size: 12px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 /* 备注与图片缩略图：门户的「待办管理」和待办应用都要渲染，放公共样式里 */
 .todo-note {
@@ -846,6 +853,8 @@ a.stat:hover,
   color: var(--muted);
   margin-top: 3px;
   white-space: pre-wrap;
+  /* 备注里经常粘电商长链接（一个词几百字符），必须允许任意位置断行 */
+  overflow-wrap: anywhere;
 }
 .todo-thumbs {
   display: flex;
@@ -868,6 +877,249 @@ a.stat:hover,
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* ---- 紧凑行：勾选框 + 「标题 / 到期胶囊 / 行内操作」一行 + 一行小字 ----
+   待办应用和门户「待办管理」共用这一套，两边的待办行必须长得一样。 */
+.todo-check {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+.todo-box {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--field-line);
+  background: var(--chip);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.todo-box:hover {
+  border-color: var(--mint);
+}
+.todo-box.on {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+/* 完成的行标题划线 */
+.todo-row.done .todo-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.todo-row.is-compact {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+.todo-row.is-compact .todo-dot {
+  align-self: center;
+  margin-top: 0;
+  width: 7px;
+  height: 7px;
+}
+/* 勾选框撑满行高再居中：行是「标题 + 小字」两段，行整体 align-items: flex-start，
+   不 stretch 的话按钮会贴在行顶，看起来偏上 */
+.todo-row.is-compact .todo-check {
+  align-self: stretch;
+}
+.todo-row.is-compact .todo-box {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+/* 整块内容区可点开编辑弹窗时才显示手型（只读分享页的行不装可点） */
+.todo-main.is-clickable {
+  cursor: pointer;
+}
+.todo-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.todo-line .todo-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 标题是「点击即编辑」的按钮：抹掉按钮默认外观，只留文字和指针光标 */
+button.todo-title {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+/* 标题是链接时（门户的待办）不加下划线，颜色跟正文一致 */
+a.todo-title {
+  color: inherit;
+  text-decoration: none;
+}
+a.todo-title:hover {
+  color: var(--coral);
+}
+.todo-due {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.todo-due.is-overdue {
+  background: var(--wash-coral);
+  color: var(--coral);
+  font-weight: 700;
+}
+.todo-due.is-none {
+  opacity: 0.7;
+}
+/* 行内操作：ghost 小胶囊 */
+.todo-ops {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.todo-ops form {
+  margin: 0;
+  display: inline-flex;
+}
+.todo-op {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button.todo-op:hover,
+a.todo-op:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.todo-op.is-danger {
+  color: var(--danger, #ff4d6a);
+  border-color: rgba(255, 77, 106, 0.4);
+}
+.todo-op.is-danger:hover {
+  background: rgba(255, 77, 106, 0.12);
+  color: var(--danger, #ff4d6a);
+}
+/* 账单悬浮列表的触发胶囊：只用来 hover，不显示手型 */
+.todo-bills .todo-op {
+  cursor: default;
+}
+.todo-row .todo-meta {
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.todo-flag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--coral);
+}
+/* 备注：收起时只在 meta 里露一行预览，展开才显示全文，不再遮挡 */
+.todo-row .todo-note.is-full {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--soft);
+  line-height: 1.65;
+  font-size: 13px;
+}
+
+/* ---- 缩略图点击区 + 灯箱大图 ---- */
+.todo-thumb-open {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 6, 12, 0.88);
+  cursor: zoom-out;
+  animation: lightbox-in 0.12s ease-out;
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 窄屏：操作挪到第二行，标题和到期时间才有足够宽度 */
+@media (max-width: 900px) {
+  .todo-ops .todo-snooze {
+    display: none;
+  }
+  .todo-line {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .todo-line .todo-title {
+    flex: 1 1 auto;
+  }
+  .todo-line .todo-ops {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+  .todo-due {
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .badge {

@@ -5,6 +5,7 @@ export { ThemeScript, themeScript } from "./theme-script";
 export { AppShell, type AppShellProps, type ShellUser } from "./app-shell";
 export { BusyBar } from "./busy-bar";
 export { clipboardImageFiles, useImagePaste } from "./image-paste";
+export { LightboxImage } from "./lightbox";
 export { LoginForm, type LoginFormProps } from "./login-form";
 export {
   PageLoading,

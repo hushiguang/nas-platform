@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { SiteLink } from "@nas/ui";
 import { revalidatePath } from "next/cache";
-import type { Prisma, TodoPriority, TodoSource, TodoStatus } from "@nas/db";
+import type { Prisma, TodoSource, TodoStatus } from "@nas/db";
 import { requireUser } from "@/auth";
 import { prisma } from "@nas/db";
 import { setTodoStatus, deleteTodo, todoVisibilityWhere, toView } from "@nas/todo";
 import { appBaseUrl, recordAudit, zonedDate, zonedTime, dayDiff } from "@nas/core";
 import { anniversaryHints, ensureAnniversaryTodos, ensureBillFollowTodos, todoPortalSummary } from "@/server/summary";
-import { PortalDeleteButton, PortalCancelButton } from "./delete-button";
+import { PortalTodoRow } from "./todo-row";
 
 const SOURCE_LABEL: Record<TodoSource, string> = {
   MANUAL: "手动",
@@ -16,18 +16,6 @@ const SOURCE_LABEL: Record<TodoSource, string> = {
   WORK: "工作",
   PREGNANCY: "孕期",
   TRAVEL: "旅行",
-};
-
-const PRIORITY_COLOR: Record<TodoPriority, string> = {
-  HIGH: "var(--coral)",
-  MEDIUM: "var(--yellow)",
-  LOW: "var(--muted)",
-};
-
-const PRIORITY_LABEL: Record<TodoPriority, string> = {
-  HIGH: "重要",
-  MEDIUM: "普通",
-  LOW: "次要",
 };
 
 const FILTERS = [
@@ -137,7 +125,7 @@ async function removeOne(formData: FormData) {
 export default async function TodosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; todo?: string }>;
+  searchParams: Promise<{ status?: string; todo?: string; source?: string }>;
 }) {
   const user = await requireUser();
   // 可见范围与待办应用**共用同一个条件**（packages/todo 的 todoVisibilityWhere）：
@@ -150,7 +138,7 @@ export default async function TodosPage({
   const todoBase = appBaseUrl("todo");
   const imageSrc = (address: string) => `${todoBase}/api/image?u=${encodeURIComponent(address)}`;
 
-  const { status = "open", todo } = await searchParams;
+  const { status = "open", todo, source } = await searchParams;
   const focusId = Number(todo);
   await Promise.all([ensureAnniversaryTodos(), ensureBillFollowTodos()]);
   const [summary, hints, rows] = await Promise.all([
@@ -188,6 +176,14 @@ export default async function TodosPage({
     source,
     items: todos.filter((t) => t.source === source),
   })).filter((g) => g.items.length > 0);
+  // 分类切换：只列出当前筛选下有内容的分类，避免点进去是空列表
+  const sourceTabs = [
+    { key: "all", label: "全部来源", count: todos.length },
+    ...groups.map((g) => ({ key: g.source, label: SOURCE_LABEL[g.source], count: g.items.length })),
+  ];
+  const activeSource = sourceTabs.some((t) => t.key === source) ? (source as string) : "all";
+  const visibleGroups = groups.filter((g) => activeSource === "all" || g.source === activeSource);
+  const sourceHref = (key: string) => `/todos?status=${status}&source=${key}`;
 
   return (
     <div>
@@ -221,7 +217,7 @@ export default async function TodosPage({
         {FILTERS.map((f) => (
           <Link
             key={f.key}
-            href={`/todos?status=${f.key}`}
+            href={`/todos?status=${f.key}${activeSource === "all" ? "" : `&source=${activeSource}`}`}
             className={status === f.key ? "tab active" : "tab"}
           >
             {f.label}
@@ -229,153 +225,149 @@ export default async function TodosPage({
         ))}
       </div>
 
+      {todos.length > 0 && (
+        <div
+          className="tabs"
+          style={{ marginTop: -6, marginBottom: 4, paddingBottom: 8, borderBottom: "1px solid var(--line)" }}
+        >
+          {sourceTabs.map((tab) => {
+            const active = tab.key === activeSource;
+            return (
+              <Link
+                key={tab.key}
+                href={sourceHref(tab.key)}
+                className={active ? "tab active" : "tab"}
+                aria-current={active ? "page" : undefined}
+              >
+                {tab.label}
+                <span
+                  style={{
+                    marginLeft: 6,
+                    fontSize: 11,
+                    opacity: active ? 0.85 : 0.65,
+                    fontWeight: 400,
+                  }}
+                >
+                  {tab.count}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
       {todos.length === 0 ? (
         <div className="card muted" style={{ fontSize: 13 }}>
           这个筛选下没有待办。
         </div>
+      ) : visibleGroups.length === 0 ? (
+        <div className="card muted" style={{ fontSize: 13 }}>
+          这个分类下没有待办。
+        </div>
       ) : (
-        <div style={{ display: "grid", gap: 16 }}>
-          {groups.map((group) => (
+        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "minmax(0, 1fr)" }}>
+          {visibleGroups.map((group) => (
             <section key={group.source} id={`source-${group.source}`}>
-              <div className="row-actions" style={{ marginBottom: 8 }}>
-                <h2 style={{ fontSize: 15, margin: 0 }}>{SOURCE_LABEL[group.source]}</h2>
-                <span className="badge soft">{group.items.length} 条</span>
-              </div>
+              {activeSource === "all" && (
+                <div className="row-actions" style={{ marginBottom: 8 }}>
+                  <h2 style={{ fontSize: 15, margin: 0 }}>{SOURCE_LABEL[group.source]}</h2>
+                  <span className="badge soft">{group.items.length} 条</span>
+                </div>
+              )}
               <ul className="todo-list" style={{ marginTop: 0 }}>
                 {group.items.map((t) => {
-            const view = toView(t);
-            // 逾期按到期日现算，不信 status：到期日清空后状态可能还停在 OVERDUE
-            const overdue =
-              t.status !== "DONE" &&
-              t.status !== "CANCELLED" &&
-              Boolean(t.dueTime) &&
-              dayDiff(zonedDate(t.dueTime as Date), today) < 0;
-            const cancelled = t.status === "CANCELLED";
-            const mine = t.ownerId === user.id;
-            const anniversaryId = t.source === "ANNIVERSARY" ? Number(t.sourceBizId?.replace("anniversary:", "")) : NaN;
-            const hint = Number.isInteger(anniversaryId) ? hints.get(anniversaryId) : undefined;
-            const billId = t.source === "BILL" ? Number(t.sourceBizId?.replace("bill:", "")) : NaN;
-            const billBase = appBaseUrl("bill");
-            const billHref = Number.isInteger(billId) && billBase ? `${billBase}/bills?tx=${billId}` : "";
-            const href = hint?.href || billHref;
-            const bills = hint?.bills ?? [];
-            // 手动记的待办才给「编辑」入口（跳待办应用并高亮那一条）；
-            // 工作台收上来的给「去处理」：节点待办跳对应项目页，风险预报 / 待修问题直接跳该项目
-            const editHref =
-              todoBase && t.source === "MANUAL" ? `${todoBase}/?focus=${t.id}` : "";
-            const workBizId = t.sourceBizId ?? "";
-            const isWorkIssue = t.source === "WORK" && workBizId.startsWith("work-issues:");
-            let workHref = "";
-            if (t.source === "WORK" && workBase) {
-              if (workBizId.startsWith("work-node:")) {
-                const pid = workProjectOf.get(Number(workBizId.slice("work-node:".length)));
-                workHref = pid ? `${workBase}/p/${pid}` : workBase;
-              } else if (workBizId.startsWith("work-phase:")) {
-                const pid = Number(workBizId.split(":")[1]);
-                workHref = Number.isInteger(pid) ? `${workBase}/p/${pid}` : workBase;
-              } else if (isWorkIssue) {
-                const pid = Number(workBizId.slice("work-issues:".length));
-                workHref = Number.isInteger(pid) ? `${workBase}/p/${pid}` : workBase;
-              } else workHref = workBase;
-            }
-            return (
-              <li
-                key={t.id}
-                className={`todo-row${t.id === focusId ? " is-focus" : ""}${t.status === "DONE" ? " done" : ""}`}
-              >
-                <span
-                  className="todo-dot"
-                  style={{ background: PRIORITY_COLOR[t.priority] }}
-                  title={PRIORITY_LABEL[t.priority]}
-                />
-                <div className="todo-main">
-                  <div className="todo-title">
-                    {href ? <SiteLink href={href}>{t.title}</SiteLink> : t.title}
-                    {t.list && (
-                      <span className="badge soft" style={{ marginLeft: 8 }}>
-                        {t.list.icon} {t.list.name}
-                      </span>
-                    )}
-                  </div>
-                  <div className="todo-meta">
-                    {SOURCE_LABEL[t.source]}
-                    {hint
-                      ? ` · ${hint.text.replace(`${t.title} · `, "")}`
-                      : t.source === "BILL"
-                        ? ` · ${t.description?.split("\n")[0] || "后续跟进"}`
-                        : ` · ${dueLabel(t.dueTime, today)}`}
-                    {t.source === "WORK" && workBizId && (
-                      <span className="badge soft" style={{ marginLeft: 6 }}>
-                        {workBizId.startsWith("work-issues:")
-                          ? "待修问题"
-                          : workBizId.startsWith("work-phase:")
-                            ? "风险预报"
-                            : "工作"}
-                      </span>
-                    )}
-                    {t.snoozeUntil && ` · 已推迟到 ${zonedDate(t.snoozeUntil)} ${zonedTime(t.snoozeUntil)}`}
-                    {!mine && ` · ${t.owner.nickname}`}
-                  </div>
-                  {t.description && !hint && t.source !== "BILL" && (t.source !== "WORK" || workBizId.startsWith("work-issues:")) && (
-                    <div className="todo-note">{t.description}</div>
-                  )}
-                  {view.imageList.length > 0 && (
-                    <div className="todo-thumbs">
-                      {view.imageList.map((address) => (
-                        <a
-                          key={address}
-                          className="todo-thumb"
-                          href={imageSrc(address)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <img src={imageSrc(address)} alt="" loading="lazy" />
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="todo-actions">
-                {overdue && <span className="badge" style={{ background: "var(--wash-coral)", color: "var(--coral)" }}>逾期</span>}
-                {cancelled && <span className="badge soft">已取消</span>}
-                {t.source === "ANNIVERSARY" ? (
-                  <span className="todo-bills">
-                    <span className="btn ghost sm">查看账单</span>
-                    <div className="line-pop">
-                      {bills.length > 0 ? (
-                        bills.map((bill) => (
-                          <SiteLink key={`${bill.href}-${bill.label}`} href={bill.href}>
-                            <span>{bill.label}</span>
-                            <time>{bill.createdAt}</time>
-                          </SiteLink>
-                        ))
-                      ) : (
-                        <span className="todo-bills-empty">还没有账单</span>
-                      )}
-                    </div>
-                  </span>
-                ) : null}
-                {t.status !== "DONE" && !cancelled && (
-                  <form action={markDone}>
-                    <input type="hidden" name="id" value={t.id} />
-                    <button type="submit" className="btn ghost sm">
-                      完成
-                    </button>
-                  </form>
-                )}
-                {(workHref || editHref) && t.status !== "DONE" && !cancelled && (
-                  <SiteLink href={workHref || editHref} className="btn ghost sm">
-                    {workHref ? "去处理" : "编辑"}
-                  </SiteLink>
-                )}
-                {t.status !== "DONE" && !cancelled && (
-                  <PortalCancelButton action={cancelOne} id={t.id} title={t.title} />
-                )}
-                <PortalDeleteButton action={removeOne} id={t.id} title={t.title} />
-                </div>
-              </li>
-            );
-          })}
+                  const view = toView(t);
+                  // 逾期按到期日现算，不信 status：到期日清空后状态可能还停在 OVERDUE
+                  const overdue =
+                    t.status !== "DONE" &&
+                    t.status !== "CANCELLED" &&
+                    Boolean(t.dueTime) &&
+                    dayDiff(zonedDate(t.dueTime as Date), today) < 0;
+                  const cancelled = t.status === "CANCELLED";
+                  const mine = t.ownerId === user.id;
+                  const anniversaryId =
+                    t.source === "ANNIVERSARY" ? Number(t.sourceBizId?.replace("anniversary:", "")) : NaN;
+                  const hint = Number.isInteger(anniversaryId) ? hints.get(anniversaryId) : undefined;
+                  const billId = t.source === "BILL" ? Number(t.sourceBizId?.replace("bill:", "")) : NaN;
+                  const billBase = appBaseUrl("bill");
+                  const billHref =
+                    Number.isInteger(billId) && billBase ? `${billBase}/bills?tx=${billId}` : "";
+                  const href = hint?.href || billHref || undefined;
+                  // 手动记的待办才给「编辑」入口（跳待办应用并高亮那一条）；
+                  // 工作台收上来的给「去处理」：节点待办跳对应项目页，风险预报 / 待修问题直接跳该项目
+                  const editHref =
+                    todoBase && t.source === "MANUAL" ? `${todoBase}/?focus=${t.id}` : "";
+                  const workBizId = t.sourceBizId ?? "";
+                  const isWorkIssue = t.source === "WORK" && workBizId.startsWith("work-issues:");
+                  let workHref = "";
+                  if (t.source === "WORK" && workBase) {
+                    if (workBizId.startsWith("work-node:")) {
+                      const pid = workProjectOf.get(Number(workBizId.slice("work-node:".length)));
+                      workHref = pid ? `${workBase}/p/${pid}` : workBase;
+                    } else if (workBizId.startsWith("work-phase:")) {
+                      const pid = Number(workBizId.split(":")[1]);
+                      workHref = Number.isInteger(pid) ? `${workBase}/p/${pid}` : workBase;
+                    } else if (isWorkIssue) {
+                      const pid = Number(workBizId.slice("work-issues:".length));
+                      workHref = Number.isInteger(pid) ? `${workBase}/p/${pid}` : workBase;
+                    } else workHref = workBase;
+                  }
+                  // 来源补充：纪念日提醒文案（去掉重复的标题）或账单跟进的第一行
+                  const extra = hint
+                    ? hint.text.replace(`${t.title} · `, "")
+                    : t.source === "BILL"
+                      ? t.description?.split("\n")[0] || "后续跟进"
+                      : undefined;
+                  // 备注：纪念日 / 账单的说明已经在小字里露过，不再重复占一块
+                  const note =
+                    t.description &&
+                    !hint &&
+                    t.source !== "BILL" &&
+                    (t.source !== "WORK" || isWorkIssue)
+                      ? t.description
+                      : undefined;
+                  return (
+                    <PortalTodoRow
+                      key={t.id}
+                      id={t.id}
+                      title={t.title}
+                      href={href}
+                      priority={t.priority}
+                      due={dueLabel(t.dueTime, today)}
+                      hasDue={Boolean(t.dueTime)}
+                      overdue={overdue}
+                      done={t.status === "DONE"}
+                      cancelled={cancelled}
+                      focus={t.id === focusId}
+                      sourceLabel={SOURCE_LABEL[t.source]}
+                      extra={extra}
+                      listName={t.list ? { icon: t.list.icon, name: t.list.name } : undefined}
+                      workBadge={
+                        t.source === "WORK" && workBizId
+                          ? isWorkIssue
+                            ? "待修问题"
+                            : workBizId.startsWith("work-phase:")
+                              ? "风险预报"
+                              : "工作"
+                          : undefined
+                      }
+                      snoozeText={
+                        t.snoozeUntil
+                          ? `已推迟到 ${zonedDate(t.snoozeUntil)} ${zonedTime(t.snoozeUntil)}`
+                          : undefined
+                      }
+                      ownerName={!mine ? t.owner.nickname : undefined}
+                      note={note}
+                      images={view.imageList.map(imageSrc)}
+                      bills={hint?.bills}
+                      editHref={editHref || undefined}
+                      workHref={workHref || undefined}
+                      markDoneAction={markDone}
+                      cancelAction={cancelOne}
+                      deleteAction={removeOne}
+                    />
+                  );
+                })}
               </ul>
             </section>
           ))}
