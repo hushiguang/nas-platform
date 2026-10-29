@@ -12,6 +12,7 @@ export function visibleWhere(access: PlatformAccess, userId: number): Prisma.Wor
       { ownerId: userId },
       { members: { some: { userId } } },
       { phases: { some: { members: { some: { userId } } } } },
+      { phases: { some: { items: { some: { members: { some: { userId } } } } } } },
     ],
   };
 }

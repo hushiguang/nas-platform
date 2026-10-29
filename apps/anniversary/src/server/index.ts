@@ -14,4 +14,6 @@ export {
   type AnniversaryDraft,
   type BillDraft,
   type AnniversaryView,
+  type YearNoteDraft,
+  type YearNoteView,
 } from "./anniversary";

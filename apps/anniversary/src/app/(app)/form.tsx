@@ -6,7 +6,7 @@ import { GALLERY, GRADIENTS } from "@nas/media/catalog";
 import { useImagePaste } from "@nas/ui";
 import { LUNAR_DAYS, LUNAR_MONTHS, REMIND_CHOICES, TYPE_OPTIONS, lunarDayName } from "@/lib/labels";
 import { coverPresentation } from "@/lib/cover";
-import type { AnniversaryDraft, BillDraft } from "@/server";
+import type { AnniversaryDraft, BillDraft, YearNoteDraft } from "@/server";
 import { saveAnniversaryAction } from "./mutate";
 
 export function AnniversaryForm({
@@ -39,6 +39,12 @@ export function AnniversaryForm({
       ? initial.bills
       : [{ year: String(new Date().getFullYear()), label: "", href: "" }];
     return rows.map((bill, index) => ({ ...bill, key: `bill-${index}` }));
+  });
+  const [notes, setNotes] = useState<Array<YearNoteDraft & { key: string }>>(() => {
+    const rows = initial.notes.length
+      ? initial.notes
+      : [{ year: String(new Date().getFullYear()), note: "" }];
+    return rows.map((note, index) => ({ ...note, key: `note-${index}` }));
   });
 
   async function onUpload(file: File | undefined) {
@@ -87,6 +93,15 @@ export function AnniversaryForm({
       form.append("billYear", bill.year.trim());
       form.append("billLabel", bill.label.trim());
       form.append("billHref", bill.href.trim());
+    }
+    form.delete("noteId");
+    form.delete("noteYear");
+    form.delete("noteText");
+    for (const note of notes) {
+      if (!note.note.trim() && !note.year.trim()) continue;
+      form.append("noteId", note.id ? String(note.id) : "");
+      form.append("noteYear", note.year.trim());
+      form.append("noteText", note.note.trim());
     }
     const result = await saveAnniversaryAction(form);
     if (result?.message) setError(result.message);
@@ -330,6 +345,65 @@ export function AnniversaryForm({
         备注
         <textarea className="field" name="note" defaultValue={initial.note} maxLength={500} placeholder="想记住的话" />
       </label>
+
+      <div className="form-label">
+        每年的备注
+        <div className="bill-list">
+          {notes.map((note) => (
+            <div className="bill-row" key={note.key} style={{ alignItems: "flex-start" }}>
+              <input
+                className="field"
+                inputMode="numeric"
+                maxLength={4}
+                value={note.year}
+                placeholder="年份"
+                aria-label="年份"
+                onChange={(event) =>
+                  setNotes((rows) =>
+                    rows.map((row) => (row.key === note.key ? { ...row, year: event.target.value } : row)),
+                  )
+                }
+              />
+              <textarea
+                className="field"
+                maxLength={500}
+                value={note.note}
+                placeholder="这一年想记住的话"
+                aria-label="备注"
+                rows={2}
+                style={{ flex: 1, minHeight: 60 }}
+                onChange={(event) =>
+                  setNotes((rows) =>
+                    rows.map((row) => (row.key === note.key ? { ...row, note: event.target.value } : row)),
+                  )
+                }
+              />
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setNotes((rows) => rows.filter((row) => row.key !== note.key))}
+              >
+                去掉
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() =>
+              setNotes((rows) => [
+                ...rows,
+                { key: `note-${Date.now()}`, year: String(new Date().getFullYear()), note: "" },
+              ])
+            }
+          >
+            再加一条
+          </button>
+        </div>
+      </div>
+      <span className="muted" style={{ fontSize: 12, marginTop: -8 }}>
+        每年留下一句话，按年份保存。空着的不会保存。
+      </span>
 
       <div className="form-label">
         每年的账单

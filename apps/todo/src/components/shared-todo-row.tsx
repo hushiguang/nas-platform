@@ -147,8 +147,8 @@ export function SharedTodoRow({
         )}
         {todo.imageList.length > 0 && (
           <div className="todo-thumbs">
-            {todo.imageList.map((address) => (
-              <LightboxImage key={address} src={imageSrc(address)} />
+            {todo.imageList.map((address, index) => (
+              <LightboxImage key={address} src={imageSrc(address)} images={todo.imageList.map(imageSrc)} index={index} />
             ))}
           </div>
         )}

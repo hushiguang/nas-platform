@@ -1,12 +1,24 @@
 import { dayDiff, type PlatformAccess, type SessionUser, zonedDate, zonedTime } from "@nas/core";
-import { prisma, Prisma, type IssueKind, type IssueStatus, type NodeStatus, type ProjectStatus, type WorkPhaseKind, type WorkPriority } from "@nas/db";
+import { prisma, Prisma, type IssueKind, type IssueStatus, type NodeStatus, type ProjectStatus, type WorkPhaseItemStatus, type WorkPhaseKind, type WorkPriority } from "@nas/db";
 import { isAllowedImageUrl } from "@nas/media";
-import { ISSUE_KIND_LABEL, ISSUE_LABEL, NODE_LABEL, PHASE_LABEL, PHASE_RANK, PRIORITY_LABEL, PRIORITY_RANK, PROJECT_LABEL } from "@/lib/labels";
+import {
+  ISSUE_KIND_LABEL,
+  ISSUE_LABEL,
+  NODE_LABEL,
+  PHASE_GROUP,
+  PHASE_ITEM_STATUS_LABEL,
+  PHASE_LABEL,
+  PHASE_RANK,
+  PHASE_SHORT,
+  PRIORITY_LABEL,
+  PRIORITY_RANK,
+  PROJECT_LABEL,
+} from "@/lib/labels";
 import { canManage, visibleWhere } from "./access";
 import { dayLabel, isoDay, parseDay, rangeLabel, todayIso, utcDay, whenText } from "./dates";
 import { WorkError } from "./errors";
 import { parseNames } from "./names";
-import { ensurePhases, expectedProgress, phaseExpected, rolledProgress } from "./phase";
+import { ensurePhases, expectedProgress, phaseExpected, phaseProgressOf, workProgress } from "./phase";
 
 export { canManage, visibleWhere };
 
@@ -14,7 +26,16 @@ const detailInclude = {
   nodes: { orderBy: { planDate: "asc" as const } },
   issues: { orderBy: { updatedAt: "desc" as const } },
   members: true,
-  phases: { orderBy: { sort: "asc" as const }, include: { members: { orderBy: { id: "asc" as const } } } },
+  phases: {
+    orderBy: { sort: "asc" as const },
+    include: {
+      members: { orderBy: { id: "asc" as const } },
+      items: {
+        orderBy: { sort: "asc" as const },
+        include: { members: { orderBy: { id: "asc" as const } } },
+      },
+    },
+  },
 } satisfies Prisma.WorkProjectInclude;
 
 type ProjectRow = Prisma.WorkProjectGetPayload<{ include: typeof detailInclude }>;
@@ -71,6 +92,14 @@ export interface IssueView {
   createdLabel: string;
 }
 
+/** 一个人在某条事项上的投入。百分比只属于这一条事项。 */
+export interface PhaseAllocationView {
+  itemId: number;
+  itemName: string;
+  memberId: number;
+  ratio: number;
+}
+
 export interface PhaseMemberView {
   id: number;
   userId: number | null;
@@ -81,7 +110,42 @@ export interface PhaseMemberView {
   endDate: string;
   span: string;
   release: string;
+  /** 没拆到事项上时，沿用阶段上的旧比例；拆开之后这里是各事项百分比之和 */
   ratio: number;
+  /** 这个人在本阶段各事项上的投入。有内容时，百分比以这里为准 */
+  allocations: PhaseAllocationView[];
+}
+
+export interface PhaseItemMemberView {
+  id: number;
+  name: string;
+  external: boolean;
+  ratio: number;
+  /** 这条事项上的预计释放日，ISO 日期；没填是空字符串 */
+  endDate: string;
+  release: string;
+}
+
+export interface PhaseItemView {
+  id: number;
+  name: string;
+  status: WorkPhaseItemStatus;
+  statusLabel: string;
+  /** 单独记百分比的事项（研发实施 / SIT测试 / UAT测试） */
+  trackProgress: boolean;
+  /** UAT 新增需求。自己有起止、研发进入日和进度，按天数计入阶段实际进度 */
+  rework: boolean;
+  /** 新增需求的起始、结束，ISO 日期；没有是空字符串 */
+  startDate: string;
+  endDate: string;
+  span: string;
+  /** 这一轮研发进入日，ISO 日期；没有是空字符串 */
+  devEnterDate: string;
+  devEnterLabel: string;
+  progress: number;
+  link: string;
+  note: string;
+  members: PhaseItemMemberView[];
 }
 
 export interface PhaseView {
@@ -98,6 +162,9 @@ export interface PhaseView {
   devEnterLabel: string;
   progress: number;
   expected: number | null;
+  items: PhaseItemView[];
+  itemDone: number;
+  itemTotal: number;
   members: PhaseMemberView[];
 }
 
@@ -125,13 +192,24 @@ export interface ProjectView {
   priorityLabel: string;
   phase: WorkPhaseKind;
   phaseLabel: string;
+  /** 大阶段：商务 / 研发 / 测试 / 上线 */
+  phaseGroupLabel: string;
+  /** 小阶段：具体走到哪一步，如 研发节点 / SIT测试 / UAT */
+  phaseShortLabel: string;
+  /** 当前阶段正在做/下一个要做的节点，如 UAT阶段下的「环境部署」 */
+  stageNodeLabel: string;
+  /** 研发实施进度（%），没有记进度的事项时为 null */
+  devProgress: number | null;
+  /** 测试进度（SIT / UAT 单独记进度的事项平均），没有时为 null */
+  testProgress: number | null;
   startDate: string;
   endDate: string;
   dates: string;
   launchDate: string;
   launchLabel: string;
   description: string | null;
-  progress: number;
+  /** 实际进度：只按研发 + 测试阶段算，都来自于手填的百分比。没有研发 / 测试阶段时为 null */
+  progress: number | null;
   expected: number | null;
   ownerId: number;
   ownerName: string;
@@ -335,6 +413,86 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
       const start = isoDay(phase.startDate);
       const end = isoDay(phase.endDate);
       const devEnterDate = isoDay(phase.devEnterDate);
+      const items: PhaseItemView[] = phase.items.map((item) => {
+        const startDate = isoDay(item.startDate);
+        const endDate = isoDay(item.endDate);
+        const devEnterDate = isoDay(item.devEnterDate);
+        return {
+        id: item.id,
+        name: item.name,
+        status: item.status,
+        statusLabel: PHASE_ITEM_STATUS_LABEL[item.status],
+        trackProgress: item.trackProgress,
+        rework: item.rework,
+        startDate,
+        endDate,
+        span: startDate || endDate ? rangeLabel(startDate, endDate) : "",
+        devEnterDate,
+        devEnterLabel: devEnterDate ? dayLabel(devEnterDate) : "",
+        progress: item.status === "DONE" ? 100 : item.status === "PENDING" ? 0 : item.progress,
+        link: item.link ?? "",
+        note: item.note ?? "",
+        members: item.members.map((member) => {
+          const endDate = isoDay(member.endDate);
+          return {
+            id: member.id,
+            name: member.name,
+            external: member.userId == null,
+            ratio: member.ratio,
+            endDate,
+            release: endDate ? dayLabel(endDate) : "",
+          };
+        }),
+      };
+      });
+      const allocations = new Map<string, PhaseAllocationView[]>();
+      for (const item of items) {
+        for (const member of item.members) {
+          const list = allocations.get(member.name) ?? [];
+          list.push({ itemId: item.id, itemName: item.name, memberId: member.id, ratio: member.ratio });
+          allocations.set(member.name, list);
+        }
+      }
+      const members: PhaseMemberView[] = phase.members.map((member) => {
+        const memberStart = isoDay(member.startDate);
+        const memberEnd = isoDay(member.endDate);
+        const assigned = allocations.get(member.name) ?? [];
+        const ratio = assigned.length > 0 ? assigned.reduce((sum, row) => sum + row.ratio, 0) : member.ratio;
+        return {
+          id: member.id,
+          userId: member.userId,
+          name: member.name,
+          external: member.userId == null,
+          role: member.role ?? "",
+          startDate: memberStart,
+          endDate: memberEnd,
+          span: memberStart || memberEnd ? rangeLabel(memberStart, memberEnd) : "",
+          release: memberEnd ? dayLabel(memberEnd) : "",
+          ratio,
+          allocations: assigned,
+        };
+      });
+      const listed = new Set(members.map((member) => member.name));
+      for (const item of phase.items) {
+        for (const member of item.members) {
+          if (listed.has(member.name)) continue;
+          listed.add(member.name);
+          const assigned = allocations.get(member.name) ?? [];
+          members.push({
+            id: 0,
+            userId: member.userId,
+            name: member.name,
+            external: member.userId == null,
+            role: "",
+            startDate: "",
+            endDate: "",
+            span: "",
+            release: "",
+            ratio: assigned.reduce((sum, row) => sum + row.ratio, 0),
+            allocations: assigned,
+          });
+        }
+      }
       return {
         id: phase.id,
         kind: phase.kind,
@@ -346,26 +504,48 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
         days: start && end && end >= start ? dayDiff(end, start) + 1 : null,
         devEnterDate,
         devEnterLabel: devEnterDate ? dayLabel(devEnterDate) : "",
-        progress: phase.progress,
+        progress: phaseProgressOf(items, phase.progress, start, end),
         expected: phaseExpected(start, end),
-        members: phase.members.map((member) => {
-          const memberStart = isoDay(member.startDate);
-          const memberEnd = isoDay(member.endDate);
-          return {
-            id: member.id,
-            userId: member.userId,
-            name: member.name,
-            external: member.userId == null,
-            role: member.role ?? "",
-            startDate: memberStart,
-            endDate: memberEnd,
-            span: memberStart || memberEnd ? rangeLabel(memberStart, memberEnd) : "",
-            release: memberEnd ? dayLabel(memberEnd) : "",
-            ratio: member.ratio,
-          };
-        }),
+        items,
+        itemDone: items.filter((item) => item.status === "DONE").length,
+        itemTotal: items.length,
+        members,
       };
     });
+  // 当前阶段里先找卡住/进行中的节点，没有就取第一个还没完成的；全完成就落到最后一个。
+  const currentPhaseView = phases.find((phase) => phase.kind === row.phase);
+  const currentItem = currentPhaseView
+    ? (currentPhaseView.items.find((item) => item.status === "BLOCKED") ??
+      currentPhaseView.items.find((item) => item.status === "DOING") ??
+      currentPhaseView.items.find((item) => item.status === "PENDING") ??
+      currentPhaseView.items[currentPhaseView.items.length - 1] ??
+      null)
+    : null;
+  const trackedProgress = (kinds: WorkPhaseKind[]): number | null => {
+    const tracked = phases
+      .filter((phase) => phase.enabled && kinds.includes(phase.kind))
+      .flatMap((phase) => phase.items.filter((item) => item.trackProgress));
+    if (tracked.length === 0) return null;
+    // 只把已经启动的事项算进平均：SIT 填了 90、UAT 还没开始时，测试进度就是 90，不被 0 拉成 45。
+    const started = tracked.filter((item) => item.status !== "PENDING" || item.progress > 0);
+    const pool = started.length > 0 ? started : tracked;
+    return Math.round(pool.reduce((sum, item) => sum + item.progress, 0) / pool.length);
+  };
+  const devProgressOf = (rows: PhaseView[]): number | null => {
+    const dev = rows
+      .filter((phase) => phase.enabled && phase.kind === "DEV")
+      .flatMap((phase) => phase.items.filter((item) => item.trackProgress));
+    const extra = rows
+      .filter((phase) => phase.enabled)
+      .flatMap((phase) =>
+        phase.items.filter((item) => item.rework && (item.status !== "PENDING" || item.progress > 0)),
+      );
+    const all = [...dev, ...extra];
+    if (all.length === 0) return null;
+    const started = all.filter((item) => item.status !== "PENDING" || item.progress > 0);
+    const pool = started.length > 0 ? started : all;
+    return Math.round(pool.reduce((sum, item) => sum + item.progress, 0) / pool.length);
+  };
   const quality = (kind: IssueKind): QualityStats => {
     const rows = issues.filter((issue) => issue.kind === kind);
     const fixed = rows.filter((issue) => issue.status === "RESOLVED").length;
@@ -381,13 +561,18 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
     priorityLabel: PRIORITY_LABEL[row.priority],
     phase: row.phase,
     phaseLabel: PHASE_LABEL[row.phase],
+    phaseGroupLabel: PHASE_GROUP[row.phase],
+    phaseShortLabel: PHASE_SHORT[row.phase],
+    stageNodeLabel: currentItem?.name ?? "",
+    devProgress: devProgressOf(phases),
+    testProgress: trackedProgress(["SIT", "UAT"]),
     startDate,
     endDate,
     dates: rangeLabel(startDate, endDate),
     launchDate,
     launchLabel: launchDate ? dayLabel(launchDate) : "未定",
     description: row.description,
-    progress: rolledProgress(phases),
+    progress: workProgress(phases),
     expected: expectedProgress(phases),
     ownerId: row.ownerId,
     ownerName: row.managerName || names.get(row.ownerId) || "—",

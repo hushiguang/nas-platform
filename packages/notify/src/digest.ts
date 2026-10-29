@@ -49,6 +49,7 @@ function nextOccurrence(month: number, day: number, now = new Date()): Date {
 
 const PHASE_LABEL: Record<string, string> = {
   BUSINESS: "商务阶段",
+  PREPARE: "项目准备阶段",
   DEV: "研发节点",
   SIT: "SIT测试",
   UAT: "UAT",
@@ -57,7 +58,7 @@ const PHASE_LABEL: Record<string, string> = {
 };
 
 /** 阶段推进顺序。报告里的项目表按它倒序排（上线 → 准备上线 → UAT → SIT → 研发 → 商务） */
-const PHASE_ORDER = ["BUSINESS", "DEV", "SIT", "UAT", "PRELAUNCH", "LIVE"];
+const PHASE_ORDER = ["BUSINESS", "PREPARE", "DEV", "SIT", "UAT", "PRELAUNCH", "LIVE"];
 
 export async function collectDigest(userId: number) {
   const now = new Date();

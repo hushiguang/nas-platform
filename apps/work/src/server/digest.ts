@@ -205,6 +205,7 @@ function personalWhere(userId: number): Prisma.WorkProjectWhereInput {
       { ownerId: userId },
       { members: { some: { userId } } },
       { phases: { some: { members: { some: { userId } } } } },
+      { phases: { some: { items: { some: { members: { some: { userId } } } } } } },
     ],
   };
 }

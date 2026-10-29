@@ -18,6 +18,7 @@ function dayDiff(a: string, b: string): number {
 function personTags(person: PersonSummary, today: string): string[] {
   const tags: string[] = [];
   if (person.conflict) tags.push("时间冲突");
+  if (person.peakRatio > 100) tags.push(`峰值投入 ${person.peakRatio}%`);
   if (person.projects.length >= 4) tags.push(`多项目×${person.projects.length}`);
   if (person.projects.length > 0 && person.projects.every((p) => !p.from && !p.to)) tags.push("时间未定");
   const ends = person.projects.map((p) => p.to).filter(Boolean).sort();
@@ -75,7 +76,7 @@ export default async function PeoplePage() {
                         : { alignItems: "flex-start", padding: "14px 18px" }
                     }
                   >
-                    <span className="work-row-main" style={{ gap: 8 }}>
+                    <div className="work-row-main" style={{ gap: 8 }}>
                       <span className="work-row-title" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: 15 }}>
                         {person.name}
                         {kinds.has("dev") ? <span className="badge soft">研发</span> : null}
@@ -88,7 +89,7 @@ export default async function PeoplePage() {
                           <Link
                             key={project.projectId}
                             href={`/p/${project.projectId}`}
-                            title={`${project.projectName} · ${project.phases} · ${project.span} · 预计释放 ${project.release}`}
+                            title={`${project.projectName} · ${project.phases} · ${project.span} · 投入 ${project.ratio}% · 预计释放 ${project.release}`}
                             style={{
                               fontSize: 12.5,
                               padding: "5px 12px",
@@ -104,15 +105,49 @@ export default async function PeoplePage() {
                             }}
                           >
                             {project.projectName}
+                            {project.ratio < 100 ? ` · ${project.ratio}%` : ""}
                           </Link>
                         ))}
+                        <Link
+                          href={`/board?view=person&person=${encodeURIComponent(person.key)}`}
+                          style={{ fontSize: 12.5, padding: "5px 12px", color: "var(--coral)" }}
+                        >
+                          看排期 →
+                        </Link>
                       </span>
                       <span className="work-row-meta" style={{ marginTop: 2 }}>
                         {person.roles.join(" / ")}
                         {person.roles.length > 0 ? " · " : ""}
                         {person.projects.map((p) => p.span).filter((s, i, a) => a.indexOf(s) === i).slice(0, 2).join("；")}
+                        {person.peakRatio > 0 ? ` · 峰值投入 ${person.peakRatio}%` : ""}
                       </span>
-                    </span>
+                      <details className="person-plan">
+                        <summary>时间规划（{person.projects.reduce((count, p) => count + p.segments.length, 0)} 段）</summary>
+                        <div className="person-plan-list">
+                          {person.projects.flatMap((project) =>
+                            project.segments.length > 0
+                              ? project.segments.map((segment) => (
+                                  <div className="person-plan-row" key={`${project.projectId}-${segment.kind}`}>
+                                    <span>
+                                      {project.projectName} · {segment.label}
+                                    </span>
+                                    <span className="muted">
+                                      {segment.from} ～ {segment.to}
+                                    </span>
+                                    <b>{segment.ratio}%</b>
+                                  </div>
+                                ))
+                              : [
+                                  <div className="person-plan-row" key={`${project.projectId}-none`}>
+                                    <span>{project.projectName}</span>
+                                    <span className="muted">时间未定</span>
+                                    <b>{project.ratio}%</b>
+                                  </div>,
+                                ],
+                          )}
+                        </div>
+                      </details>
+                    </div>
                     <span style={{ textAlign: "right", flexShrink: 0, paddingTop: 2 }}>
                       <span style={{ fontFamily: "Source Serif 4, serif", fontSize: 26, fontWeight: 650 }}>
                         {person.projects.length}

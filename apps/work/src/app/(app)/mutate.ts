@@ -8,18 +8,24 @@ import {
   removeIssue,
   removeMember,
   removeNode,
+  removePhaseItemMember,
   removePhaseMember,
   removeProject,
   saveIssue,
   saveMember,
   saveNode,
   savePhase,
+  addPhaseRework,
+  removePhaseRework,
+  savePhaseItemMember,
+  savePhaseItems,
   savePhaseMembers,
   saveProject,
   setActualProgress,
   setCurrentPhase,
   setIssueStatus,
   setNodeStatus,
+  updatePhaseMember,
   WorkError,
 } from "@/server";
 
@@ -222,6 +228,76 @@ export async function savePhaseMembersAction(formData: FormData): Promise<Action
     await audit(user, "save", "work_phase_member", projectId, summary);
   } catch (err) {
     return fail(err, "保存失败");
+  }
+  refresh(projectId);
+}
+
+export async function addPhaseReworkAction(formData: FormData): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  const projectId = Number(formData.get("projectId"));
+  try {
+    const summary = await addPhaseRework(access, user.id, formData);
+    await audit(user, "create", "work_phase_item", projectId, summary);
+  } catch (err) {
+    return fail(err, "添加失败");
+  }
+  refresh(projectId);
+}
+
+export async function removePhaseReworkAction(projectId: number, itemId: number): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  try {
+    const removed = await removePhaseRework(access, user.id, itemId);
+    await audit(user, "delete", "work_phase_item", itemId, removed.summary);
+  } catch (err) {
+    return fail(err, "删除失败");
+  }
+  refresh(projectId);
+}
+
+export async function savePhaseItemsAction(formData: FormData): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  const projectId = Number(formData.get("projectId"));
+  try {
+    const summary = await savePhaseItems(access, user.id, formData);
+    await audit(user, "update", "work_phase_item", projectId, summary);
+  } catch (err) {
+    return fail(err, "保存失败");
+  }
+  refresh(projectId);
+}
+
+export async function updatePhaseMemberAction(formData: FormData): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  const projectId = Number(formData.get("projectId"));
+  try {
+    const summary = await updatePhaseMember(access, user.id, formData);
+    await audit(user, "update", "work_phase_member", projectId, summary);
+  } catch (err) {
+    return fail(err, "保存失败");
+  }
+  refresh(projectId);
+}
+
+export async function savePhaseItemMemberAction(formData: FormData): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  const projectId = Number(formData.get("projectId"));
+  try {
+    const summary = await savePhaseItemMember(access, user.id, formData);
+    await audit(user, "save", "work_phase_item_member", projectId, summary);
+  } catch (err) {
+    return fail(err, "保存失败");
+  }
+  refresh(projectId);
+}
+
+export async function removePhaseItemMemberAction(projectId: number, memberId: number): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  try {
+    const removed = await removePhaseItemMember(access, user.id, memberId);
+    await audit(user, "delete", "work_phase_item_member", memberId, removed.summary);
+  } catch (err) {
+    return fail(err, "移出失败");
   }
   refresh(projectId);
 }

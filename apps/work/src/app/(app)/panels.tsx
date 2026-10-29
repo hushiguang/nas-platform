@@ -266,17 +266,29 @@ export function IssuePanel({
   const [busy, setBusy] = useState(false);
   const [quickBusy, setQuickBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const lbTouchStartX = useRef<number | null>(null);
+  const lbMoved = useRef(false);
   const quickRef = useRef<HTMLInputElement>(null);
 
-  // 大图 Esc 关闭；捕获阶段掐断传播，避免把同页的编辑弹窗一起关掉
   useEffect(() => {
     if (!lightbox) return undefined;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      setLightbox(null);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setLightbox(null);
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        event.stopPropagation();
+        setLightbox((prev) => (prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : prev));
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        event.stopPropagation();
+        setLightbox((prev) => (prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : prev));
+      }
     }
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
@@ -428,7 +440,7 @@ export function IssuePanel({
                         key={`${issue.id}-${index}`}
                         type="button"
                         className="work-timeline-thumb"
-                        onClick={() => setLightbox(url)}
+                        onClick={() => setLightbox({ images: issue.images, index })}
                         aria-label={`查看第 ${index + 1} 张截图`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -490,10 +502,83 @@ export function IssuePanel({
       </div>
 
       {lightbox ? (
-        <div className="work-lightbox" role="dialog" aria-modal="true" onClick={() => setLightbox(null)}>
+        <div
+          className="work-lightbox"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightbox(null)}
+          onTouchStart={(event) => {
+            lbTouchStartX.current = event.touches[0]?.clientX ?? null;
+            lbMoved.current = false;
+          }}
+          onTouchEnd={(event) => {
+            const startX = lbTouchStartX.current;
+            if (startX == null) return;
+            const endX = event.changedTouches[0]?.clientX ?? startX;
+            const delta = endX - startX;
+            lbTouchStartX.current = null;
+            if (Math.abs(delta) < 40) return;
+            lbMoved.current = true;
+            setLightbox((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    index:
+                      delta < 0
+                        ? (prev.index + 1) % prev.images.length
+                        : (prev.index - 1 + prev.images.length) % prev.images.length,
+                  }
+                : prev,
+            );
+          }}
+        >
+          {lightbox.images.length > 1 ? (
+            <button
+              type="button"
+              className="work-lightbox-nav work-lightbox-prev"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightbox((prev) =>
+                  prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : prev,
+                );
+              }}
+              aria-label="上一张"
+            >
+              ‹
+            </button>
+          ) : null}
           {/* 点大图本身也直接关闭（与待办应用的灯箱保持一致） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={proxyUrl(lightbox)} alt="问题截图" />
+          <img
+            src={proxyUrl(lightbox.images[lightbox.index])}
+            alt="问题截图"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (lbMoved.current) {
+                lbMoved.current = false;
+                return;
+              }
+              setLightbox(null);
+            }}
+          />
+          {lightbox.images.length > 1 ? (
+            <button
+              type="button"
+              className="work-lightbox-nav work-lightbox-next"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightbox((prev) => (prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : prev));
+              }}
+              aria-label="下一张"
+            >
+              ›
+            </button>
+          ) : null}
+          {lightbox.images.length > 1 ? (
+            <span className="work-lightbox-counter">
+              {lightbox.index + 1} / {lightbox.images.length}
+            </span>
+          ) : null}
           <button type="button" className="btn ghost sm" onClick={() => setLightbox(null)}>
             关闭
           </button>

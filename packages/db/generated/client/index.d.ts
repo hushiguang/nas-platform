@@ -84,6 +84,11 @@ export type Anniversary = $Result.DefaultSelection<Prisma.$AnniversaryPayload>
  */
 export type AnniversaryBill = $Result.DefaultSelection<Prisma.$AnniversaryBillPayload>
 /**
+ * Model AnniversaryNote
+ * 纪念日每年的备注。比如 25 年留下一句话，26 年留下一句话。
+ */
+export type AnniversaryNote = $Result.DefaultSelection<Prisma.$AnniversaryNotePayload>
+/**
  * Model WorkProject
  * 
  */
@@ -109,6 +114,17 @@ export type WorkIssue = $Result.DefaultSelection<Prisma.$WorkIssuePayload>
  * 项目自己的阶段配置。六个阶段都有一行，关掉的不出现在清单里。
  */
 export type WorkPhase = $Result.DefaultSelection<Prisma.$WorkPhasePayload>
+/**
+ * Model WorkPhaseItem
+ * 阶段清单里的事项：需求调研、原型交付、研发实施、SIT测试……
+ * 状态是走没走完，progress 只给「研发实施 / SIT测试」这类要单独看百分比的事项用。
+ */
+export type WorkPhaseItem = $Result.DefaultSelection<Prisma.$WorkPhaseItemPayload>
+/**
+ * Model WorkPhaseItemMember
+ * 事项上的投入。同一个人在不同事项上的百分比可以不一样，这是项目里最细的一层。
+ */
+export type WorkPhaseItemMember = $Result.DefaultSelection<Prisma.$WorkPhaseItemMemberPayload>
 /**
  * Model WorkPhaseMember
  * 阶段上的人。userId 为空就是系统外的人，只留名字。
@@ -408,6 +424,7 @@ export type WorkPriority = (typeof WorkPriority)[keyof typeof WorkPriority]
 
 export const WorkPhaseKind: {
   BUSINESS: 'BUSINESS',
+  PREPARE: 'PREPARE',
   DEV: 'DEV',
   SIT: 'SIT',
   UAT: 'UAT',
@@ -416,6 +433,26 @@ export const WorkPhaseKind: {
 };
 
 export type WorkPhaseKind = (typeof WorkPhaseKind)[keyof typeof WorkPhaseKind]
+
+
+export const WorkPhaseResult: {
+  PENDING: 'PENDING',
+  DOING: 'DOING',
+  OK: 'OK',
+  RISK: 'RISK'
+};
+
+export type WorkPhaseResult = (typeof WorkPhaseResult)[keyof typeof WorkPhaseResult]
+
+
+export const WorkPhaseItemStatus: {
+  PENDING: 'PENDING',
+  DOING: 'DOING',
+  DONE: 'DONE',
+  BLOCKED: 'BLOCKED'
+};
+
+export type WorkPhaseItemStatus = (typeof WorkPhaseItemStatus)[keyof typeof WorkPhaseItemStatus]
 
 
 export const PregStage: {
@@ -585,6 +622,14 @@ export const WorkPriority: typeof $Enums.WorkPriority
 export type WorkPhaseKind = $Enums.WorkPhaseKind
 
 export const WorkPhaseKind: typeof $Enums.WorkPhaseKind
+
+export type WorkPhaseResult = $Enums.WorkPhaseResult
+
+export const WorkPhaseResult: typeof $Enums.WorkPhaseResult
+
+export type WorkPhaseItemStatus = $Enums.WorkPhaseItemStatus
+
+export const WorkPhaseItemStatus: typeof $Enums.WorkPhaseItemStatus
 
 export type PregStage = $Enums.PregStage
 
@@ -861,6 +906,16 @@ export class PrismaClient<
   get anniversaryBill(): Prisma.AnniversaryBillDelegate<ExtArgs, ClientOptions>;
 
   /**
+   * `prisma.anniversaryNote`: Exposes CRUD operations for the **AnniversaryNote** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AnniversaryNotes
+    * const anniversaryNotes = await prisma.anniversaryNote.findMany()
+    * ```
+    */
+  get anniversaryNote(): Prisma.AnniversaryNoteDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.workProject`: Exposes CRUD operations for the **WorkProject** model.
     * Example usage:
     * ```ts
@@ -909,6 +964,26 @@ export class PrismaClient<
     * ```
     */
   get workPhase(): Prisma.WorkPhaseDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.workPhaseItem`: Exposes CRUD operations for the **WorkPhaseItem** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more WorkPhaseItems
+    * const workPhaseItems = await prisma.workPhaseItem.findMany()
+    * ```
+    */
+  get workPhaseItem(): Prisma.WorkPhaseItemDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.workPhaseItemMember`: Exposes CRUD operations for the **WorkPhaseItemMember** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more WorkPhaseItemMembers
+    * const workPhaseItemMembers = await prisma.workPhaseItemMember.findMany()
+    * ```
+    */
+  get workPhaseItemMember(): Prisma.WorkPhaseItemMemberDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.workPhaseMember`: Exposes CRUD operations for the **WorkPhaseMember** model.
@@ -1632,11 +1707,14 @@ export namespace Prisma {
     AuditLog: 'AuditLog',
     Anniversary: 'Anniversary',
     AnniversaryBill: 'AnniversaryBill',
+    AnniversaryNote: 'AnniversaryNote',
     WorkProject: 'WorkProject',
     WorkNode: 'WorkNode',
     WorkMember: 'WorkMember',
     WorkIssue: 'WorkIssue',
     WorkPhase: 'WorkPhase',
+    WorkPhaseItem: 'WorkPhaseItem',
+    WorkPhaseItemMember: 'WorkPhaseItemMember',
     WorkPhaseMember: 'WorkPhaseMember',
     Pregnancy: 'Pregnancy',
     PregNode: 'PregNode',
@@ -1682,7 +1760,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "platform" | "userPlatform" | "todo" | "todoList" | "todoListMember" | "notifyLog" | "notifyChannel" | "setting" | "auditLog" | "anniversary" | "anniversaryBill" | "workProject" | "workNode" | "workMember" | "workIssue" | "workPhase" | "workPhaseMember" | "pregnancy" | "pregNode" | "pregMedicine" | "pregDaily" | "pregCheckup" | "pregBagItem" | "travelCity" | "travelTrip" | "travelStop" | "travelPhoto" | "billAccount" | "billCategory" | "billBook" | "billBookMember" | "billBookParticipant" | "billTransaction" | "billTransactionImage" | "billRecurringRule" | "billAccountAlias" | "billCategoryAlias" | "billCategoryRule" | "billTransferRule" | "billCmbTextFix" | "billDuplicateIgnore" | "billImportTemplate" | "billImportDraft"
+      modelProps: "user" | "platform" | "userPlatform" | "todo" | "todoList" | "todoListMember" | "notifyLog" | "notifyChannel" | "setting" | "auditLog" | "anniversary" | "anniversaryBill" | "anniversaryNote" | "workProject" | "workNode" | "workMember" | "workIssue" | "workPhase" | "workPhaseItem" | "workPhaseItemMember" | "workPhaseMember" | "pregnancy" | "pregNode" | "pregMedicine" | "pregDaily" | "pregCheckup" | "pregBagItem" | "travelCity" | "travelTrip" | "travelStop" | "travelPhoto" | "billAccount" | "billCategory" | "billBook" | "billBookMember" | "billBookParticipant" | "billTransaction" | "billTransactionImage" | "billRecurringRule" | "billAccountAlias" | "billCategoryAlias" | "billCategoryRule" | "billTransferRule" | "billCmbTextFix" | "billDuplicateIgnore" | "billImportTemplate" | "billImportDraft"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2574,6 +2652,80 @@ export namespace Prisma {
           }
         }
       }
+      AnniversaryNote: {
+        payload: Prisma.$AnniversaryNotePayload<ExtArgs>
+        fields: Prisma.AnniversaryNoteFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.AnniversaryNoteFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.AnniversaryNoteFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>
+          }
+          findFirst: {
+            args: Prisma.AnniversaryNoteFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.AnniversaryNoteFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>
+          }
+          findMany: {
+            args: Prisma.AnniversaryNoteFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>[]
+          }
+          create: {
+            args: Prisma.AnniversaryNoteCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>
+          }
+          createMany: {
+            args: Prisma.AnniversaryNoteCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.AnniversaryNoteCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>[]
+          }
+          delete: {
+            args: Prisma.AnniversaryNoteDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>
+          }
+          update: {
+            args: Prisma.AnniversaryNoteUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>
+          }
+          deleteMany: {
+            args: Prisma.AnniversaryNoteDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.AnniversaryNoteUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.AnniversaryNoteUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>[]
+          }
+          upsert: {
+            args: Prisma.AnniversaryNoteUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnniversaryNotePayload>
+          }
+          aggregate: {
+            args: Prisma.AnniversaryNoteAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateAnniversaryNote>
+          }
+          groupBy: {
+            args: Prisma.AnniversaryNoteGroupByArgs<ExtArgs>
+            result: $Utils.Optional<AnniversaryNoteGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.AnniversaryNoteCountArgs<ExtArgs>
+            result: $Utils.Optional<AnniversaryNoteCountAggregateOutputType> | number
+          }
+        }
+      }
       WorkProject: {
         payload: Prisma.$WorkProjectPayload<ExtArgs>
         fields: Prisma.WorkProjectFieldRefs
@@ -2941,6 +3093,154 @@ export namespace Prisma {
           count: {
             args: Prisma.WorkPhaseCountArgs<ExtArgs>
             result: $Utils.Optional<WorkPhaseCountAggregateOutputType> | number
+          }
+        }
+      }
+      WorkPhaseItem: {
+        payload: Prisma.$WorkPhaseItemPayload<ExtArgs>
+        fields: Prisma.WorkPhaseItemFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.WorkPhaseItemFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.WorkPhaseItemFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>
+          }
+          findFirst: {
+            args: Prisma.WorkPhaseItemFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.WorkPhaseItemFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>
+          }
+          findMany: {
+            args: Prisma.WorkPhaseItemFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>[]
+          }
+          create: {
+            args: Prisma.WorkPhaseItemCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>
+          }
+          createMany: {
+            args: Prisma.WorkPhaseItemCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.WorkPhaseItemCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>[]
+          }
+          delete: {
+            args: Prisma.WorkPhaseItemDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>
+          }
+          update: {
+            args: Prisma.WorkPhaseItemUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>
+          }
+          deleteMany: {
+            args: Prisma.WorkPhaseItemDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.WorkPhaseItemUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.WorkPhaseItemUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>[]
+          }
+          upsert: {
+            args: Prisma.WorkPhaseItemUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemPayload>
+          }
+          aggregate: {
+            args: Prisma.WorkPhaseItemAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateWorkPhaseItem>
+          }
+          groupBy: {
+            args: Prisma.WorkPhaseItemGroupByArgs<ExtArgs>
+            result: $Utils.Optional<WorkPhaseItemGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.WorkPhaseItemCountArgs<ExtArgs>
+            result: $Utils.Optional<WorkPhaseItemCountAggregateOutputType> | number
+          }
+        }
+      }
+      WorkPhaseItemMember: {
+        payload: Prisma.$WorkPhaseItemMemberPayload<ExtArgs>
+        fields: Prisma.WorkPhaseItemMemberFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.WorkPhaseItemMemberFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.WorkPhaseItemMemberFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>
+          }
+          findFirst: {
+            args: Prisma.WorkPhaseItemMemberFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.WorkPhaseItemMemberFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>
+          }
+          findMany: {
+            args: Prisma.WorkPhaseItemMemberFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>[]
+          }
+          create: {
+            args: Prisma.WorkPhaseItemMemberCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>
+          }
+          createMany: {
+            args: Prisma.WorkPhaseItemMemberCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.WorkPhaseItemMemberCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>[]
+          }
+          delete: {
+            args: Prisma.WorkPhaseItemMemberDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>
+          }
+          update: {
+            args: Prisma.WorkPhaseItemMemberUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>
+          }
+          deleteMany: {
+            args: Prisma.WorkPhaseItemMemberDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.WorkPhaseItemMemberUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.WorkPhaseItemMemberUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>[]
+          }
+          upsert: {
+            args: Prisma.WorkPhaseItemMemberUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$WorkPhaseItemMemberPayload>
+          }
+          aggregate: {
+            args: Prisma.WorkPhaseItemMemberAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateWorkPhaseItemMember>
+          }
+          groupBy: {
+            args: Prisma.WorkPhaseItemMemberGroupByArgs<ExtArgs>
+            result: $Utils.Optional<WorkPhaseItemMemberGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.WorkPhaseItemMemberCountArgs<ExtArgs>
+            result: $Utils.Optional<WorkPhaseItemMemberCountAggregateOutputType> | number
           }
         }
       }
@@ -5050,11 +5350,14 @@ export namespace Prisma {
     auditLog?: AuditLogOmit
     anniversary?: AnniversaryOmit
     anniversaryBill?: AnniversaryBillOmit
+    anniversaryNote?: AnniversaryNoteOmit
     workProject?: WorkProjectOmit
     workNode?: WorkNodeOmit
     workMember?: WorkMemberOmit
     workIssue?: WorkIssueOmit
     workPhase?: WorkPhaseOmit
+    workPhaseItem?: WorkPhaseItemOmit
+    workPhaseItemMember?: WorkPhaseItemMemberOmit
     workPhaseMember?: WorkPhaseMemberOmit
     pregnancy?: PregnancyOmit
     pregNode?: PregNodeOmit
@@ -5341,10 +5644,12 @@ export namespace Prisma {
 
   export type AnniversaryCountOutputType = {
     bills: number
+    notes: number
   }
 
   export type AnniversaryCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     bills?: boolean | AnniversaryCountOutputTypeCountBillsArgs
+    notes?: boolean | AnniversaryCountOutputTypeCountNotesArgs
   }
 
   // Custom InputTypes
@@ -5363,6 +5668,13 @@ export namespace Prisma {
    */
   export type AnniversaryCountOutputTypeCountBillsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: AnniversaryBillWhereInput
+  }
+
+  /**
+   * AnniversaryCountOutputType without action
+   */
+  export type AnniversaryCountOutputTypeCountNotesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AnniversaryNoteWhereInput
   }
 
 
@@ -5430,10 +5742,12 @@ export namespace Prisma {
 
   export type WorkPhaseCountOutputType = {
     members: number
+    items: number
   }
 
   export type WorkPhaseCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     members?: boolean | WorkPhaseCountOutputTypeCountMembersArgs
+    items?: boolean | WorkPhaseCountOutputTypeCountItemsArgs
   }
 
   // Custom InputTypes
@@ -5452,6 +5766,44 @@ export namespace Prisma {
    */
   export type WorkPhaseCountOutputTypeCountMembersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: WorkPhaseMemberWhereInput
+  }
+
+  /**
+   * WorkPhaseCountOutputType without action
+   */
+  export type WorkPhaseCountOutputTypeCountItemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: WorkPhaseItemWhereInput
+  }
+
+
+  /**
+   * Count Type WorkPhaseItemCountOutputType
+   */
+
+  export type WorkPhaseItemCountOutputType = {
+    members: number
+  }
+
+  export type WorkPhaseItemCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    members?: boolean | WorkPhaseItemCountOutputTypeCountMembersArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * WorkPhaseItemCountOutputType without action
+   */
+  export type WorkPhaseItemCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemCountOutputType
+     */
+    select?: WorkPhaseItemCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * WorkPhaseItemCountOutputType without action
+   */
+  export type WorkPhaseItemCountOutputTypeCountMembersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: WorkPhaseItemMemberWhereInput
   }
 
 
@@ -17541,6 +17893,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     bills?: boolean | Anniversary$billsArgs<ExtArgs>
+    notes?: boolean | Anniversary$notesArgs<ExtArgs>
     _count?: boolean | AnniversaryCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["anniversary"]>
 
@@ -17604,6 +17957,7 @@ export namespace Prisma {
   export type AnniversaryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "type" | "date" | "calendar" | "ownerId" | "remindDays" | "remindTime" | "note" | "icon" | "background" | "lunarLeap" | "lunarMonth" | "lunarDay" | "createdAt" | "updatedAt", ExtArgs["result"]["anniversary"]>
   export type AnniversaryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     bills?: boolean | Anniversary$billsArgs<ExtArgs>
+    notes?: boolean | Anniversary$notesArgs<ExtArgs>
     _count?: boolean | AnniversaryCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type AnniversaryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -17613,6 +17967,7 @@ export namespace Prisma {
     name: "Anniversary"
     objects: {
       bills: Prisma.$AnniversaryBillPayload<ExtArgs>[]
+      notes: Prisma.$AnniversaryNotePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: number
@@ -18035,6 +18390,7 @@ export namespace Prisma {
   export interface Prisma__AnniversaryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     bills<T extends Anniversary$billsArgs<ExtArgs> = {}>(args?: Subset<T, Anniversary$billsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnniversaryBillPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    notes<T extends Anniversary$notesArgs<ExtArgs> = {}>(args?: Subset<T, Anniversary$notesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -18489,6 +18845,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: AnniversaryBillScalarFieldEnum | AnniversaryBillScalarFieldEnum[]
+  }
+
+  /**
+   * Anniversary.notes
+   */
+  export type Anniversary$notesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    where?: AnniversaryNoteWhereInput
+    orderBy?: AnniversaryNoteOrderByWithRelationInput | AnniversaryNoteOrderByWithRelationInput[]
+    cursor?: AnniversaryNoteWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: AnniversaryNoteScalarFieldEnum | AnniversaryNoteScalarFieldEnum[]
   }
 
   /**
@@ -19640,6 +20020,1126 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: AnniversaryBillInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model AnniversaryNote
+   */
+
+  export type AggregateAnniversaryNote = {
+    _count: AnniversaryNoteCountAggregateOutputType | null
+    _avg: AnniversaryNoteAvgAggregateOutputType | null
+    _sum: AnniversaryNoteSumAggregateOutputType | null
+    _min: AnniversaryNoteMinAggregateOutputType | null
+    _max: AnniversaryNoteMaxAggregateOutputType | null
+  }
+
+  export type AnniversaryNoteAvgAggregateOutputType = {
+    id: number | null
+    anniversaryId: number | null
+    year: number | null
+    sort: number | null
+  }
+
+  export type AnniversaryNoteSumAggregateOutputType = {
+    id: number | null
+    anniversaryId: number | null
+    year: number | null
+    sort: number | null
+  }
+
+  export type AnniversaryNoteMinAggregateOutputType = {
+    id: number | null
+    anniversaryId: number | null
+    year: number | null
+    note: string | null
+    sort: number | null
+    createdAt: Date | null
+  }
+
+  export type AnniversaryNoteMaxAggregateOutputType = {
+    id: number | null
+    anniversaryId: number | null
+    year: number | null
+    note: string | null
+    sort: number | null
+    createdAt: Date | null
+  }
+
+  export type AnniversaryNoteCountAggregateOutputType = {
+    id: number
+    anniversaryId: number
+    year: number
+    note: number
+    sort: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type AnniversaryNoteAvgAggregateInputType = {
+    id?: true
+    anniversaryId?: true
+    year?: true
+    sort?: true
+  }
+
+  export type AnniversaryNoteSumAggregateInputType = {
+    id?: true
+    anniversaryId?: true
+    year?: true
+    sort?: true
+  }
+
+  export type AnniversaryNoteMinAggregateInputType = {
+    id?: true
+    anniversaryId?: true
+    year?: true
+    note?: true
+    sort?: true
+    createdAt?: true
+  }
+
+  export type AnniversaryNoteMaxAggregateInputType = {
+    id?: true
+    anniversaryId?: true
+    year?: true
+    note?: true
+    sort?: true
+    createdAt?: true
+  }
+
+  export type AnniversaryNoteCountAggregateInputType = {
+    id?: true
+    anniversaryId?: true
+    year?: true
+    note?: true
+    sort?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type AnniversaryNoteAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AnniversaryNote to aggregate.
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnniversaryNotes to fetch.
+     */
+    orderBy?: AnniversaryNoteOrderByWithRelationInput | AnniversaryNoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: AnniversaryNoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnniversaryNotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnniversaryNotes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned AnniversaryNotes
+    **/
+    _count?: true | AnniversaryNoteCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: AnniversaryNoteAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: AnniversaryNoteSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: AnniversaryNoteMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: AnniversaryNoteMaxAggregateInputType
+  }
+
+  export type GetAnniversaryNoteAggregateType<T extends AnniversaryNoteAggregateArgs> = {
+        [P in keyof T & keyof AggregateAnniversaryNote]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateAnniversaryNote[P]>
+      : GetScalarType<T[P], AggregateAnniversaryNote[P]>
+  }
+
+
+
+
+  export type AnniversaryNoteGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AnniversaryNoteWhereInput
+    orderBy?: AnniversaryNoteOrderByWithAggregationInput | AnniversaryNoteOrderByWithAggregationInput[]
+    by: AnniversaryNoteScalarFieldEnum[] | AnniversaryNoteScalarFieldEnum
+    having?: AnniversaryNoteScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: AnniversaryNoteCountAggregateInputType | true
+    _avg?: AnniversaryNoteAvgAggregateInputType
+    _sum?: AnniversaryNoteSumAggregateInputType
+    _min?: AnniversaryNoteMinAggregateInputType
+    _max?: AnniversaryNoteMaxAggregateInputType
+  }
+
+  export type AnniversaryNoteGroupByOutputType = {
+    id: number
+    anniversaryId: number
+    year: number
+    note: string
+    sort: number
+    createdAt: Date
+    _count: AnniversaryNoteCountAggregateOutputType | null
+    _avg: AnniversaryNoteAvgAggregateOutputType | null
+    _sum: AnniversaryNoteSumAggregateOutputType | null
+    _min: AnniversaryNoteMinAggregateOutputType | null
+    _max: AnniversaryNoteMaxAggregateOutputType | null
+  }
+
+  type GetAnniversaryNoteGroupByPayload<T extends AnniversaryNoteGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<AnniversaryNoteGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof AnniversaryNoteGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], AnniversaryNoteGroupByOutputType[P]>
+            : GetScalarType<T[P], AnniversaryNoteGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type AnniversaryNoteSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    anniversaryId?: boolean
+    year?: boolean
+    note?: boolean
+    sort?: boolean
+    createdAt?: boolean
+    anniversary?: boolean | AnniversaryDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["anniversaryNote"]>
+
+  export type AnniversaryNoteSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    anniversaryId?: boolean
+    year?: boolean
+    note?: boolean
+    sort?: boolean
+    createdAt?: boolean
+    anniversary?: boolean | AnniversaryDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["anniversaryNote"]>
+
+  export type AnniversaryNoteSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    anniversaryId?: boolean
+    year?: boolean
+    note?: boolean
+    sort?: boolean
+    createdAt?: boolean
+    anniversary?: boolean | AnniversaryDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["anniversaryNote"]>
+
+  export type AnniversaryNoteSelectScalar = {
+    id?: boolean
+    anniversaryId?: boolean
+    year?: boolean
+    note?: boolean
+    sort?: boolean
+    createdAt?: boolean
+  }
+
+  export type AnniversaryNoteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "anniversaryId" | "year" | "note" | "sort" | "createdAt", ExtArgs["result"]["anniversaryNote"]>
+  export type AnniversaryNoteInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    anniversary?: boolean | AnniversaryDefaultArgs<ExtArgs>
+  }
+  export type AnniversaryNoteIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    anniversary?: boolean | AnniversaryDefaultArgs<ExtArgs>
+  }
+  export type AnniversaryNoteIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    anniversary?: boolean | AnniversaryDefaultArgs<ExtArgs>
+  }
+
+  export type $AnniversaryNotePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "AnniversaryNote"
+    objects: {
+      anniversary: Prisma.$AnniversaryPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      anniversaryId: number
+      /**
+       * 这条备注对应哪一年
+       */
+      year: number
+      note: string
+      sort: number
+      createdAt: Date
+    }, ExtArgs["result"]["anniversaryNote"]>
+    composites: {}
+  }
+
+  type AnniversaryNoteGetPayload<S extends boolean | null | undefined | AnniversaryNoteDefaultArgs> = $Result.GetResult<Prisma.$AnniversaryNotePayload, S>
+
+  type AnniversaryNoteCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<AnniversaryNoteFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: AnniversaryNoteCountAggregateInputType | true
+    }
+
+  export interface AnniversaryNoteDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['AnniversaryNote'], meta: { name: 'AnniversaryNote' } }
+    /**
+     * Find zero or one AnniversaryNote that matches the filter.
+     * @param {AnniversaryNoteFindUniqueArgs} args - Arguments to find a AnniversaryNote
+     * @example
+     * // Get one AnniversaryNote
+     * const anniversaryNote = await prisma.anniversaryNote.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends AnniversaryNoteFindUniqueArgs>(args: SelectSubset<T, AnniversaryNoteFindUniqueArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one AnniversaryNote that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {AnniversaryNoteFindUniqueOrThrowArgs} args - Arguments to find a AnniversaryNote
+     * @example
+     * // Get one AnniversaryNote
+     * const anniversaryNote = await prisma.anniversaryNote.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends AnniversaryNoteFindUniqueOrThrowArgs>(args: SelectSubset<T, AnniversaryNoteFindUniqueOrThrowArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AnniversaryNote that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteFindFirstArgs} args - Arguments to find a AnniversaryNote
+     * @example
+     * // Get one AnniversaryNote
+     * const anniversaryNote = await prisma.anniversaryNote.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends AnniversaryNoteFindFirstArgs>(args?: SelectSubset<T, AnniversaryNoteFindFirstArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AnniversaryNote that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteFindFirstOrThrowArgs} args - Arguments to find a AnniversaryNote
+     * @example
+     * // Get one AnniversaryNote
+     * const anniversaryNote = await prisma.anniversaryNote.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends AnniversaryNoteFindFirstOrThrowArgs>(args?: SelectSubset<T, AnniversaryNoteFindFirstOrThrowArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more AnniversaryNotes that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all AnniversaryNotes
+     * const anniversaryNotes = await prisma.anniversaryNote.findMany()
+     * 
+     * // Get first 10 AnniversaryNotes
+     * const anniversaryNotes = await prisma.anniversaryNote.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const anniversaryNoteWithIdOnly = await prisma.anniversaryNote.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends AnniversaryNoteFindManyArgs>(args?: SelectSubset<T, AnniversaryNoteFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a AnniversaryNote.
+     * @param {AnniversaryNoteCreateArgs} args - Arguments to create a AnniversaryNote.
+     * @example
+     * // Create one AnniversaryNote
+     * const AnniversaryNote = await prisma.anniversaryNote.create({
+     *   data: {
+     *     // ... data to create a AnniversaryNote
+     *   }
+     * })
+     * 
+     */
+    create<T extends AnniversaryNoteCreateArgs>(args: SelectSubset<T, AnniversaryNoteCreateArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many AnniversaryNotes.
+     * @param {AnniversaryNoteCreateManyArgs} args - Arguments to create many AnniversaryNotes.
+     * @example
+     * // Create many AnniversaryNotes
+     * const anniversaryNote = await prisma.anniversaryNote.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends AnniversaryNoteCreateManyArgs>(args?: SelectSubset<T, AnniversaryNoteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many AnniversaryNotes and returns the data saved in the database.
+     * @param {AnniversaryNoteCreateManyAndReturnArgs} args - Arguments to create many AnniversaryNotes.
+     * @example
+     * // Create many AnniversaryNotes
+     * const anniversaryNote = await prisma.anniversaryNote.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many AnniversaryNotes and only return the `id`
+     * const anniversaryNoteWithIdOnly = await prisma.anniversaryNote.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends AnniversaryNoteCreateManyAndReturnArgs>(args?: SelectSubset<T, AnniversaryNoteCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a AnniversaryNote.
+     * @param {AnniversaryNoteDeleteArgs} args - Arguments to delete one AnniversaryNote.
+     * @example
+     * // Delete one AnniversaryNote
+     * const AnniversaryNote = await prisma.anniversaryNote.delete({
+     *   where: {
+     *     // ... filter to delete one AnniversaryNote
+     *   }
+     * })
+     * 
+     */
+    delete<T extends AnniversaryNoteDeleteArgs>(args: SelectSubset<T, AnniversaryNoteDeleteArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one AnniversaryNote.
+     * @param {AnniversaryNoteUpdateArgs} args - Arguments to update one AnniversaryNote.
+     * @example
+     * // Update one AnniversaryNote
+     * const anniversaryNote = await prisma.anniversaryNote.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends AnniversaryNoteUpdateArgs>(args: SelectSubset<T, AnniversaryNoteUpdateArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more AnniversaryNotes.
+     * @param {AnniversaryNoteDeleteManyArgs} args - Arguments to filter AnniversaryNotes to delete.
+     * @example
+     * // Delete a few AnniversaryNotes
+     * const { count } = await prisma.anniversaryNote.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends AnniversaryNoteDeleteManyArgs>(args?: SelectSubset<T, AnniversaryNoteDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AnniversaryNotes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many AnniversaryNotes
+     * const anniversaryNote = await prisma.anniversaryNote.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends AnniversaryNoteUpdateManyArgs>(args: SelectSubset<T, AnniversaryNoteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AnniversaryNotes and returns the data updated in the database.
+     * @param {AnniversaryNoteUpdateManyAndReturnArgs} args - Arguments to update many AnniversaryNotes.
+     * @example
+     * // Update many AnniversaryNotes
+     * const anniversaryNote = await prisma.anniversaryNote.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more AnniversaryNotes and only return the `id`
+     * const anniversaryNoteWithIdOnly = await prisma.anniversaryNote.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends AnniversaryNoteUpdateManyAndReturnArgs>(args: SelectSubset<T, AnniversaryNoteUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one AnniversaryNote.
+     * @param {AnniversaryNoteUpsertArgs} args - Arguments to update or create a AnniversaryNote.
+     * @example
+     * // Update or create a AnniversaryNote
+     * const anniversaryNote = await prisma.anniversaryNote.upsert({
+     *   create: {
+     *     // ... data to create a AnniversaryNote
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the AnniversaryNote we want to update
+     *   }
+     * })
+     */
+    upsert<T extends AnniversaryNoteUpsertArgs>(args: SelectSubset<T, AnniversaryNoteUpsertArgs<ExtArgs>>): Prisma__AnniversaryNoteClient<$Result.GetResult<Prisma.$AnniversaryNotePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of AnniversaryNotes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteCountArgs} args - Arguments to filter AnniversaryNotes to count.
+     * @example
+     * // Count the number of AnniversaryNotes
+     * const count = await prisma.anniversaryNote.count({
+     *   where: {
+     *     // ... the filter for the AnniversaryNotes we want to count
+     *   }
+     * })
+    **/
+    count<T extends AnniversaryNoteCountArgs>(
+      args?: Subset<T, AnniversaryNoteCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], AnniversaryNoteCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a AnniversaryNote.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends AnniversaryNoteAggregateArgs>(args: Subset<T, AnniversaryNoteAggregateArgs>): Prisma.PrismaPromise<GetAnniversaryNoteAggregateType<T>>
+
+    /**
+     * Group by AnniversaryNote.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnniversaryNoteGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends AnniversaryNoteGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: AnniversaryNoteGroupByArgs['orderBy'] }
+        : { orderBy?: AnniversaryNoteGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, AnniversaryNoteGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetAnniversaryNoteGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the AnniversaryNote model
+   */
+  readonly fields: AnniversaryNoteFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for AnniversaryNote.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__AnniversaryNoteClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    anniversary<T extends AnniversaryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, AnniversaryDefaultArgs<ExtArgs>>): Prisma__AnniversaryClient<$Result.GetResult<Prisma.$AnniversaryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the AnniversaryNote model
+   */
+  interface AnniversaryNoteFieldRefs {
+    readonly id: FieldRef<"AnniversaryNote", 'Int'>
+    readonly anniversaryId: FieldRef<"AnniversaryNote", 'Int'>
+    readonly year: FieldRef<"AnniversaryNote", 'Int'>
+    readonly note: FieldRef<"AnniversaryNote", 'String'>
+    readonly sort: FieldRef<"AnniversaryNote", 'Int'>
+    readonly createdAt: FieldRef<"AnniversaryNote", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * AnniversaryNote findUnique
+   */
+  export type AnniversaryNoteFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * Filter, which AnniversaryNote to fetch.
+     */
+    where: AnniversaryNoteWhereUniqueInput
+  }
+
+  /**
+   * AnniversaryNote findUniqueOrThrow
+   */
+  export type AnniversaryNoteFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * Filter, which AnniversaryNote to fetch.
+     */
+    where: AnniversaryNoteWhereUniqueInput
+  }
+
+  /**
+   * AnniversaryNote findFirst
+   */
+  export type AnniversaryNoteFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * Filter, which AnniversaryNote to fetch.
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnniversaryNotes to fetch.
+     */
+    orderBy?: AnniversaryNoteOrderByWithRelationInput | AnniversaryNoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AnniversaryNotes.
+     */
+    cursor?: AnniversaryNoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnniversaryNotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnniversaryNotes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AnniversaryNotes.
+     */
+    distinct?: AnniversaryNoteScalarFieldEnum | AnniversaryNoteScalarFieldEnum[]
+  }
+
+  /**
+   * AnniversaryNote findFirstOrThrow
+   */
+  export type AnniversaryNoteFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * Filter, which AnniversaryNote to fetch.
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnniversaryNotes to fetch.
+     */
+    orderBy?: AnniversaryNoteOrderByWithRelationInput | AnniversaryNoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AnniversaryNotes.
+     */
+    cursor?: AnniversaryNoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnniversaryNotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnniversaryNotes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AnniversaryNotes.
+     */
+    distinct?: AnniversaryNoteScalarFieldEnum | AnniversaryNoteScalarFieldEnum[]
+  }
+
+  /**
+   * AnniversaryNote findMany
+   */
+  export type AnniversaryNoteFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * Filter, which AnniversaryNotes to fetch.
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnniversaryNotes to fetch.
+     */
+    orderBy?: AnniversaryNoteOrderByWithRelationInput | AnniversaryNoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing AnniversaryNotes.
+     */
+    cursor?: AnniversaryNoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnniversaryNotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnniversaryNotes.
+     */
+    skip?: number
+    distinct?: AnniversaryNoteScalarFieldEnum | AnniversaryNoteScalarFieldEnum[]
+  }
+
+  /**
+   * AnniversaryNote create
+   */
+  export type AnniversaryNoteCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * The data needed to create a AnniversaryNote.
+     */
+    data: XOR<AnniversaryNoteCreateInput, AnniversaryNoteUncheckedCreateInput>
+  }
+
+  /**
+   * AnniversaryNote createMany
+   */
+  export type AnniversaryNoteCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many AnniversaryNotes.
+     */
+    data: AnniversaryNoteCreateManyInput | AnniversaryNoteCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AnniversaryNote createManyAndReturn
+   */
+  export type AnniversaryNoteCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * The data used to create many AnniversaryNotes.
+     */
+    data: AnniversaryNoteCreateManyInput | AnniversaryNoteCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * AnniversaryNote update
+   */
+  export type AnniversaryNoteUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * The data needed to update a AnniversaryNote.
+     */
+    data: XOR<AnniversaryNoteUpdateInput, AnniversaryNoteUncheckedUpdateInput>
+    /**
+     * Choose, which AnniversaryNote to update.
+     */
+    where: AnniversaryNoteWhereUniqueInput
+  }
+
+  /**
+   * AnniversaryNote updateMany
+   */
+  export type AnniversaryNoteUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update AnniversaryNotes.
+     */
+    data: XOR<AnniversaryNoteUpdateManyMutationInput, AnniversaryNoteUncheckedUpdateManyInput>
+    /**
+     * Filter which AnniversaryNotes to update
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * Limit how many AnniversaryNotes to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * AnniversaryNote updateManyAndReturn
+   */
+  export type AnniversaryNoteUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * The data used to update AnniversaryNotes.
+     */
+    data: XOR<AnniversaryNoteUpdateManyMutationInput, AnniversaryNoteUncheckedUpdateManyInput>
+    /**
+     * Filter which AnniversaryNotes to update
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * Limit how many AnniversaryNotes to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * AnniversaryNote upsert
+   */
+  export type AnniversaryNoteUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * The filter to search for the AnniversaryNote to update in case it exists.
+     */
+    where: AnniversaryNoteWhereUniqueInput
+    /**
+     * In case the AnniversaryNote found by the `where` argument doesn't exist, create a new AnniversaryNote with this data.
+     */
+    create: XOR<AnniversaryNoteCreateInput, AnniversaryNoteUncheckedCreateInput>
+    /**
+     * In case the AnniversaryNote was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<AnniversaryNoteUpdateInput, AnniversaryNoteUncheckedUpdateInput>
+  }
+
+  /**
+   * AnniversaryNote delete
+   */
+  export type AnniversaryNoteDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
+    /**
+     * Filter which AnniversaryNote to delete.
+     */
+    where: AnniversaryNoteWhereUniqueInput
+  }
+
+  /**
+   * AnniversaryNote deleteMany
+   */
+  export type AnniversaryNoteDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AnniversaryNotes to delete
+     */
+    where?: AnniversaryNoteWhereInput
+    /**
+     * Limit how many AnniversaryNotes to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * AnniversaryNote without action
+   */
+  export type AnniversaryNoteDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnniversaryNote
+     */
+    select?: AnniversaryNoteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnniversaryNote
+     */
+    omit?: AnniversaryNoteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AnniversaryNoteInclude<ExtArgs> | null
   }
 
 
@@ -24489,6 +25989,8 @@ export namespace Prisma {
     endDate: Date | null
     devEnterDate: Date | null
     progress: number | null
+    result: $Enums.WorkPhaseResult | null
+    resultNote: string | null
     sort: number | null
   }
 
@@ -24501,6 +26003,8 @@ export namespace Prisma {
     endDate: Date | null
     devEnterDate: Date | null
     progress: number | null
+    result: $Enums.WorkPhaseResult | null
+    resultNote: string | null
     sort: number | null
   }
 
@@ -24513,6 +26017,8 @@ export namespace Prisma {
     endDate: number
     devEnterDate: number
     progress: number
+    result: number
+    resultNote: number
     sort: number
     _all: number
   }
@@ -24541,6 +26047,8 @@ export namespace Prisma {
     endDate?: true
     devEnterDate?: true
     progress?: true
+    result?: true
+    resultNote?: true
     sort?: true
   }
 
@@ -24553,6 +26061,8 @@ export namespace Prisma {
     endDate?: true
     devEnterDate?: true
     progress?: true
+    result?: true
+    resultNote?: true
     sort?: true
   }
 
@@ -24565,6 +26075,8 @@ export namespace Prisma {
     endDate?: true
     devEnterDate?: true
     progress?: true
+    result?: true
+    resultNote?: true
     sort?: true
     _all?: true
   }
@@ -24664,6 +26176,8 @@ export namespace Prisma {
     endDate: Date | null
     devEnterDate: Date | null
     progress: number
+    result: $Enums.WorkPhaseResult
+    resultNote: string | null
     sort: number
     _count: WorkPhaseCountAggregateOutputType | null
     _avg: WorkPhaseAvgAggregateOutputType | null
@@ -24695,9 +26209,12 @@ export namespace Prisma {
     endDate?: boolean
     devEnterDate?: boolean
     progress?: boolean
+    result?: boolean
+    resultNote?: boolean
     sort?: boolean
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
     members?: boolean | WorkPhase$membersArgs<ExtArgs>
+    items?: boolean | WorkPhase$itemsArgs<ExtArgs>
     _count?: boolean | WorkPhaseCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["workPhase"]>
 
@@ -24710,6 +26227,8 @@ export namespace Prisma {
     endDate?: boolean
     devEnterDate?: boolean
     progress?: boolean
+    result?: boolean
+    resultNote?: boolean
     sort?: boolean
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["workPhase"]>
@@ -24723,6 +26242,8 @@ export namespace Prisma {
     endDate?: boolean
     devEnterDate?: boolean
     progress?: boolean
+    result?: boolean
+    resultNote?: boolean
     sort?: boolean
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["workPhase"]>
@@ -24736,13 +26257,16 @@ export namespace Prisma {
     endDate?: boolean
     devEnterDate?: boolean
     progress?: boolean
+    result?: boolean
+    resultNote?: boolean
     sort?: boolean
   }
 
-  export type WorkPhaseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "kind" | "enabled" | "startDate" | "endDate" | "devEnterDate" | "progress" | "sort", ExtArgs["result"]["workPhase"]>
+  export type WorkPhaseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "kind" | "enabled" | "startDate" | "endDate" | "devEnterDate" | "progress" | "result" | "resultNote" | "sort", ExtArgs["result"]["workPhase"]>
   export type WorkPhaseInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     project?: boolean | WorkProjectDefaultArgs<ExtArgs>
     members?: boolean | WorkPhase$membersArgs<ExtArgs>
+    items?: boolean | WorkPhase$itemsArgs<ExtArgs>
     _count?: boolean | WorkPhaseCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type WorkPhaseIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -24757,6 +26281,7 @@ export namespace Prisma {
     objects: {
       project: Prisma.$WorkProjectPayload<ExtArgs>
       members: Prisma.$WorkPhaseMemberPayload<ExtArgs>[]
+      items: Prisma.$WorkPhaseItemPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: number
@@ -24773,6 +26298,14 @@ export namespace Prisma {
        * 这个阶段自己的实际进度。预期进度按本阶段日期现算
        */
       progress: number
+      /**
+       * 阶段结论：未开始 / 进行中 / OK / 有问题
+       */
+      result: $Enums.WorkPhaseResult
+      /**
+       * 结论备注，比如「UAT 遗留 2 个问题」
+       */
+      resultNote: string | null
       sort: number
     }, ExtArgs["result"]["workPhase"]>
     composites: {}
@@ -25170,6 +26703,7 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     project<T extends WorkProjectDefaultArgs<ExtArgs> = {}>(args?: Subset<T, WorkProjectDefaultArgs<ExtArgs>>): Prisma__WorkProjectClient<$Result.GetResult<Prisma.$WorkProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     members<T extends WorkPhase$membersArgs<ExtArgs> = {}>(args?: Subset<T, WorkPhase$membersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    items<T extends WorkPhase$itemsArgs<ExtArgs> = {}>(args?: Subset<T, WorkPhase$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -25207,6 +26741,8 @@ export namespace Prisma {
     readonly endDate: FieldRef<"WorkPhase", 'DateTime'>
     readonly devEnterDate: FieldRef<"WorkPhase", 'DateTime'>
     readonly progress: FieldRef<"WorkPhase", 'Int'>
+    readonly result: FieldRef<"WorkPhase", 'WorkPhaseResult'>
+    readonly resultNote: FieldRef<"WorkPhase", 'String'>
     readonly sort: FieldRef<"WorkPhase", 'Int'>
   }
     
@@ -25628,6 +27164,30 @@ export namespace Prisma {
   }
 
   /**
+   * WorkPhase.items
+   */
+  export type WorkPhase$itemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    where?: WorkPhaseItemWhereInput
+    orderBy?: WorkPhaseItemOrderByWithRelationInput | WorkPhaseItemOrderByWithRelationInput[]
+    cursor?: WorkPhaseItemWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: WorkPhaseItemScalarFieldEnum | WorkPhaseItemScalarFieldEnum[]
+  }
+
+  /**
    * WorkPhase without action
    */
   export type WorkPhaseDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -25643,6 +27203,2380 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: WorkPhaseInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model WorkPhaseItem
+   */
+
+  export type AggregateWorkPhaseItem = {
+    _count: WorkPhaseItemCountAggregateOutputType | null
+    _avg: WorkPhaseItemAvgAggregateOutputType | null
+    _sum: WorkPhaseItemSumAggregateOutputType | null
+    _min: WorkPhaseItemMinAggregateOutputType | null
+    _max: WorkPhaseItemMaxAggregateOutputType | null
+  }
+
+  export type WorkPhaseItemAvgAggregateOutputType = {
+    id: number | null
+    phaseId: number | null
+    progress: number | null
+    sort: number | null
+  }
+
+  export type WorkPhaseItemSumAggregateOutputType = {
+    id: number | null
+    phaseId: number | null
+    progress: number | null
+    sort: number | null
+  }
+
+  export type WorkPhaseItemMinAggregateOutputType = {
+    id: number | null
+    phaseId: number | null
+    name: string | null
+    status: $Enums.WorkPhaseItemStatus | null
+    progress: number | null
+    trackProgress: boolean | null
+    rework: boolean | null
+    startDate: Date | null
+    endDate: Date | null
+    devEnterDate: Date | null
+    link: string | null
+    note: string | null
+    sort: number | null
+  }
+
+  export type WorkPhaseItemMaxAggregateOutputType = {
+    id: number | null
+    phaseId: number | null
+    name: string | null
+    status: $Enums.WorkPhaseItemStatus | null
+    progress: number | null
+    trackProgress: boolean | null
+    rework: boolean | null
+    startDate: Date | null
+    endDate: Date | null
+    devEnterDate: Date | null
+    link: string | null
+    note: string | null
+    sort: number | null
+  }
+
+  export type WorkPhaseItemCountAggregateOutputType = {
+    id: number
+    phaseId: number
+    name: number
+    status: number
+    progress: number
+    trackProgress: number
+    rework: number
+    startDate: number
+    endDate: number
+    devEnterDate: number
+    link: number
+    note: number
+    sort: number
+    _all: number
+  }
+
+
+  export type WorkPhaseItemAvgAggregateInputType = {
+    id?: true
+    phaseId?: true
+    progress?: true
+    sort?: true
+  }
+
+  export type WorkPhaseItemSumAggregateInputType = {
+    id?: true
+    phaseId?: true
+    progress?: true
+    sort?: true
+  }
+
+  export type WorkPhaseItemMinAggregateInputType = {
+    id?: true
+    phaseId?: true
+    name?: true
+    status?: true
+    progress?: true
+    trackProgress?: true
+    rework?: true
+    startDate?: true
+    endDate?: true
+    devEnterDate?: true
+    link?: true
+    note?: true
+    sort?: true
+  }
+
+  export type WorkPhaseItemMaxAggregateInputType = {
+    id?: true
+    phaseId?: true
+    name?: true
+    status?: true
+    progress?: true
+    trackProgress?: true
+    rework?: true
+    startDate?: true
+    endDate?: true
+    devEnterDate?: true
+    link?: true
+    note?: true
+    sort?: true
+  }
+
+  export type WorkPhaseItemCountAggregateInputType = {
+    id?: true
+    phaseId?: true
+    name?: true
+    status?: true
+    progress?: true
+    trackProgress?: true
+    rework?: true
+    startDate?: true
+    endDate?: true
+    devEnterDate?: true
+    link?: true
+    note?: true
+    sort?: true
+    _all?: true
+  }
+
+  export type WorkPhaseItemAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which WorkPhaseItem to aggregate.
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItems to fetch.
+     */
+    orderBy?: WorkPhaseItemOrderByWithRelationInput | WorkPhaseItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: WorkPhaseItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItems.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned WorkPhaseItems
+    **/
+    _count?: true | WorkPhaseItemCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: WorkPhaseItemAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: WorkPhaseItemSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: WorkPhaseItemMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: WorkPhaseItemMaxAggregateInputType
+  }
+
+  export type GetWorkPhaseItemAggregateType<T extends WorkPhaseItemAggregateArgs> = {
+        [P in keyof T & keyof AggregateWorkPhaseItem]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateWorkPhaseItem[P]>
+      : GetScalarType<T[P], AggregateWorkPhaseItem[P]>
+  }
+
+
+
+
+  export type WorkPhaseItemGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: WorkPhaseItemWhereInput
+    orderBy?: WorkPhaseItemOrderByWithAggregationInput | WorkPhaseItemOrderByWithAggregationInput[]
+    by: WorkPhaseItemScalarFieldEnum[] | WorkPhaseItemScalarFieldEnum
+    having?: WorkPhaseItemScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: WorkPhaseItemCountAggregateInputType | true
+    _avg?: WorkPhaseItemAvgAggregateInputType
+    _sum?: WorkPhaseItemSumAggregateInputType
+    _min?: WorkPhaseItemMinAggregateInputType
+    _max?: WorkPhaseItemMaxAggregateInputType
+  }
+
+  export type WorkPhaseItemGroupByOutputType = {
+    id: number
+    phaseId: number
+    name: string
+    status: $Enums.WorkPhaseItemStatus
+    progress: number
+    trackProgress: boolean
+    rework: boolean
+    startDate: Date | null
+    endDate: Date | null
+    devEnterDate: Date | null
+    link: string | null
+    note: string | null
+    sort: number
+    _count: WorkPhaseItemCountAggregateOutputType | null
+    _avg: WorkPhaseItemAvgAggregateOutputType | null
+    _sum: WorkPhaseItemSumAggregateOutputType | null
+    _min: WorkPhaseItemMinAggregateOutputType | null
+    _max: WorkPhaseItemMaxAggregateOutputType | null
+  }
+
+  type GetWorkPhaseItemGroupByPayload<T extends WorkPhaseItemGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<WorkPhaseItemGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof WorkPhaseItemGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], WorkPhaseItemGroupByOutputType[P]>
+            : GetScalarType<T[P], WorkPhaseItemGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type WorkPhaseItemSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    phaseId?: boolean
+    name?: boolean
+    status?: boolean
+    progress?: boolean
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: boolean
+    endDate?: boolean
+    devEnterDate?: boolean
+    link?: boolean
+    note?: boolean
+    sort?: boolean
+    phase?: boolean | WorkPhaseDefaultArgs<ExtArgs>
+    members?: boolean | WorkPhaseItem$membersArgs<ExtArgs>
+    _count?: boolean | WorkPhaseItemCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["workPhaseItem"]>
+
+  export type WorkPhaseItemSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    phaseId?: boolean
+    name?: boolean
+    status?: boolean
+    progress?: boolean
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: boolean
+    endDate?: boolean
+    devEnterDate?: boolean
+    link?: boolean
+    note?: boolean
+    sort?: boolean
+    phase?: boolean | WorkPhaseDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["workPhaseItem"]>
+
+  export type WorkPhaseItemSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    phaseId?: boolean
+    name?: boolean
+    status?: boolean
+    progress?: boolean
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: boolean
+    endDate?: boolean
+    devEnterDate?: boolean
+    link?: boolean
+    note?: boolean
+    sort?: boolean
+    phase?: boolean | WorkPhaseDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["workPhaseItem"]>
+
+  export type WorkPhaseItemSelectScalar = {
+    id?: boolean
+    phaseId?: boolean
+    name?: boolean
+    status?: boolean
+    progress?: boolean
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: boolean
+    endDate?: boolean
+    devEnterDate?: boolean
+    link?: boolean
+    note?: boolean
+    sort?: boolean
+  }
+
+  export type WorkPhaseItemOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "phaseId" | "name" | "status" | "progress" | "trackProgress" | "rework" | "startDate" | "endDate" | "devEnterDate" | "link" | "note" | "sort", ExtArgs["result"]["workPhaseItem"]>
+  export type WorkPhaseItemInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    phase?: boolean | WorkPhaseDefaultArgs<ExtArgs>
+    members?: boolean | WorkPhaseItem$membersArgs<ExtArgs>
+    _count?: boolean | WorkPhaseItemCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type WorkPhaseItemIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    phase?: boolean | WorkPhaseDefaultArgs<ExtArgs>
+  }
+  export type WorkPhaseItemIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    phase?: boolean | WorkPhaseDefaultArgs<ExtArgs>
+  }
+
+  export type $WorkPhaseItemPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "WorkPhaseItem"
+    objects: {
+      phase: Prisma.$WorkPhasePayload<ExtArgs>
+      members: Prisma.$WorkPhaseItemMemberPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      phaseId: number
+      name: string
+      status: $Enums.WorkPhaseItemStatus
+      progress: number
+      /**
+       * 是否单独记进度百分比。研发实施、SIT测试、UAT测试默认打开。
+       * 新增需求自己也有进度，但不打开这个开关，避免把阶段百分比拉低。
+       */
+      trackProgress: boolean
+      /**
+       * UAT 里后补的需求。研发重新进入这一轮，阶段本身不退回研发节点。
+       */
+      rework: boolean
+      /**
+       * 新增需求自己的起止，用来排这一轮研发，也按天数计入阶段实际进度。
+       */
+      startDate: Date | null
+      endDate: Date | null
+      /**
+       * 这一轮研发进入的日子。阶段上的研发进入只记第一次。
+       */
+      devEnterDate: Date | null
+      /**
+       * ChangeList / Jira 这类事项的链接
+       */
+      link: string | null
+      note: string | null
+      sort: number
+    }, ExtArgs["result"]["workPhaseItem"]>
+    composites: {}
+  }
+
+  type WorkPhaseItemGetPayload<S extends boolean | null | undefined | WorkPhaseItemDefaultArgs> = $Result.GetResult<Prisma.$WorkPhaseItemPayload, S>
+
+  type WorkPhaseItemCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<WorkPhaseItemFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: WorkPhaseItemCountAggregateInputType | true
+    }
+
+  export interface WorkPhaseItemDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['WorkPhaseItem'], meta: { name: 'WorkPhaseItem' } }
+    /**
+     * Find zero or one WorkPhaseItem that matches the filter.
+     * @param {WorkPhaseItemFindUniqueArgs} args - Arguments to find a WorkPhaseItem
+     * @example
+     * // Get one WorkPhaseItem
+     * const workPhaseItem = await prisma.workPhaseItem.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends WorkPhaseItemFindUniqueArgs>(args: SelectSubset<T, WorkPhaseItemFindUniqueArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one WorkPhaseItem that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {WorkPhaseItemFindUniqueOrThrowArgs} args - Arguments to find a WorkPhaseItem
+     * @example
+     * // Get one WorkPhaseItem
+     * const workPhaseItem = await prisma.workPhaseItem.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends WorkPhaseItemFindUniqueOrThrowArgs>(args: SelectSubset<T, WorkPhaseItemFindUniqueOrThrowArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first WorkPhaseItem that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemFindFirstArgs} args - Arguments to find a WorkPhaseItem
+     * @example
+     * // Get one WorkPhaseItem
+     * const workPhaseItem = await prisma.workPhaseItem.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends WorkPhaseItemFindFirstArgs>(args?: SelectSubset<T, WorkPhaseItemFindFirstArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first WorkPhaseItem that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemFindFirstOrThrowArgs} args - Arguments to find a WorkPhaseItem
+     * @example
+     * // Get one WorkPhaseItem
+     * const workPhaseItem = await prisma.workPhaseItem.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends WorkPhaseItemFindFirstOrThrowArgs>(args?: SelectSubset<T, WorkPhaseItemFindFirstOrThrowArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more WorkPhaseItems that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all WorkPhaseItems
+     * const workPhaseItems = await prisma.workPhaseItem.findMany()
+     * 
+     * // Get first 10 WorkPhaseItems
+     * const workPhaseItems = await prisma.workPhaseItem.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const workPhaseItemWithIdOnly = await prisma.workPhaseItem.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends WorkPhaseItemFindManyArgs>(args?: SelectSubset<T, WorkPhaseItemFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a WorkPhaseItem.
+     * @param {WorkPhaseItemCreateArgs} args - Arguments to create a WorkPhaseItem.
+     * @example
+     * // Create one WorkPhaseItem
+     * const WorkPhaseItem = await prisma.workPhaseItem.create({
+     *   data: {
+     *     // ... data to create a WorkPhaseItem
+     *   }
+     * })
+     * 
+     */
+    create<T extends WorkPhaseItemCreateArgs>(args: SelectSubset<T, WorkPhaseItemCreateArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many WorkPhaseItems.
+     * @param {WorkPhaseItemCreateManyArgs} args - Arguments to create many WorkPhaseItems.
+     * @example
+     * // Create many WorkPhaseItems
+     * const workPhaseItem = await prisma.workPhaseItem.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends WorkPhaseItemCreateManyArgs>(args?: SelectSubset<T, WorkPhaseItemCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many WorkPhaseItems and returns the data saved in the database.
+     * @param {WorkPhaseItemCreateManyAndReturnArgs} args - Arguments to create many WorkPhaseItems.
+     * @example
+     * // Create many WorkPhaseItems
+     * const workPhaseItem = await prisma.workPhaseItem.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many WorkPhaseItems and only return the `id`
+     * const workPhaseItemWithIdOnly = await prisma.workPhaseItem.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends WorkPhaseItemCreateManyAndReturnArgs>(args?: SelectSubset<T, WorkPhaseItemCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a WorkPhaseItem.
+     * @param {WorkPhaseItemDeleteArgs} args - Arguments to delete one WorkPhaseItem.
+     * @example
+     * // Delete one WorkPhaseItem
+     * const WorkPhaseItem = await prisma.workPhaseItem.delete({
+     *   where: {
+     *     // ... filter to delete one WorkPhaseItem
+     *   }
+     * })
+     * 
+     */
+    delete<T extends WorkPhaseItemDeleteArgs>(args: SelectSubset<T, WorkPhaseItemDeleteArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one WorkPhaseItem.
+     * @param {WorkPhaseItemUpdateArgs} args - Arguments to update one WorkPhaseItem.
+     * @example
+     * // Update one WorkPhaseItem
+     * const workPhaseItem = await prisma.workPhaseItem.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends WorkPhaseItemUpdateArgs>(args: SelectSubset<T, WorkPhaseItemUpdateArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more WorkPhaseItems.
+     * @param {WorkPhaseItemDeleteManyArgs} args - Arguments to filter WorkPhaseItems to delete.
+     * @example
+     * // Delete a few WorkPhaseItems
+     * const { count } = await prisma.workPhaseItem.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends WorkPhaseItemDeleteManyArgs>(args?: SelectSubset<T, WorkPhaseItemDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more WorkPhaseItems.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many WorkPhaseItems
+     * const workPhaseItem = await prisma.workPhaseItem.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends WorkPhaseItemUpdateManyArgs>(args: SelectSubset<T, WorkPhaseItemUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more WorkPhaseItems and returns the data updated in the database.
+     * @param {WorkPhaseItemUpdateManyAndReturnArgs} args - Arguments to update many WorkPhaseItems.
+     * @example
+     * // Update many WorkPhaseItems
+     * const workPhaseItem = await prisma.workPhaseItem.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more WorkPhaseItems and only return the `id`
+     * const workPhaseItemWithIdOnly = await prisma.workPhaseItem.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends WorkPhaseItemUpdateManyAndReturnArgs>(args: SelectSubset<T, WorkPhaseItemUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one WorkPhaseItem.
+     * @param {WorkPhaseItemUpsertArgs} args - Arguments to update or create a WorkPhaseItem.
+     * @example
+     * // Update or create a WorkPhaseItem
+     * const workPhaseItem = await prisma.workPhaseItem.upsert({
+     *   create: {
+     *     // ... data to create a WorkPhaseItem
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the WorkPhaseItem we want to update
+     *   }
+     * })
+     */
+    upsert<T extends WorkPhaseItemUpsertArgs>(args: SelectSubset<T, WorkPhaseItemUpsertArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of WorkPhaseItems.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemCountArgs} args - Arguments to filter WorkPhaseItems to count.
+     * @example
+     * // Count the number of WorkPhaseItems
+     * const count = await prisma.workPhaseItem.count({
+     *   where: {
+     *     // ... the filter for the WorkPhaseItems we want to count
+     *   }
+     * })
+    **/
+    count<T extends WorkPhaseItemCountArgs>(
+      args?: Subset<T, WorkPhaseItemCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], WorkPhaseItemCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a WorkPhaseItem.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends WorkPhaseItemAggregateArgs>(args: Subset<T, WorkPhaseItemAggregateArgs>): Prisma.PrismaPromise<GetWorkPhaseItemAggregateType<T>>
+
+    /**
+     * Group by WorkPhaseItem.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends WorkPhaseItemGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: WorkPhaseItemGroupByArgs['orderBy'] }
+        : { orderBy?: WorkPhaseItemGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, WorkPhaseItemGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetWorkPhaseItemGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the WorkPhaseItem model
+   */
+  readonly fields: WorkPhaseItemFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for WorkPhaseItem.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__WorkPhaseItemClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    phase<T extends WorkPhaseDefaultArgs<ExtArgs> = {}>(args?: Subset<T, WorkPhaseDefaultArgs<ExtArgs>>): Prisma__WorkPhaseClient<$Result.GetResult<Prisma.$WorkPhasePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    members<T extends WorkPhaseItem$membersArgs<ExtArgs> = {}>(args?: Subset<T, WorkPhaseItem$membersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the WorkPhaseItem model
+   */
+  interface WorkPhaseItemFieldRefs {
+    readonly id: FieldRef<"WorkPhaseItem", 'Int'>
+    readonly phaseId: FieldRef<"WorkPhaseItem", 'Int'>
+    readonly name: FieldRef<"WorkPhaseItem", 'String'>
+    readonly status: FieldRef<"WorkPhaseItem", 'WorkPhaseItemStatus'>
+    readonly progress: FieldRef<"WorkPhaseItem", 'Int'>
+    readonly trackProgress: FieldRef<"WorkPhaseItem", 'Boolean'>
+    readonly rework: FieldRef<"WorkPhaseItem", 'Boolean'>
+    readonly startDate: FieldRef<"WorkPhaseItem", 'DateTime'>
+    readonly endDate: FieldRef<"WorkPhaseItem", 'DateTime'>
+    readonly devEnterDate: FieldRef<"WorkPhaseItem", 'DateTime'>
+    readonly link: FieldRef<"WorkPhaseItem", 'String'>
+    readonly note: FieldRef<"WorkPhaseItem", 'String'>
+    readonly sort: FieldRef<"WorkPhaseItem", 'Int'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * WorkPhaseItem findUnique
+   */
+  export type WorkPhaseItemFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItem to fetch.
+     */
+    where: WorkPhaseItemWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItem findUniqueOrThrow
+   */
+  export type WorkPhaseItemFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItem to fetch.
+     */
+    where: WorkPhaseItemWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItem findFirst
+   */
+  export type WorkPhaseItemFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItem to fetch.
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItems to fetch.
+     */
+    orderBy?: WorkPhaseItemOrderByWithRelationInput | WorkPhaseItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for WorkPhaseItems.
+     */
+    cursor?: WorkPhaseItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItems.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of WorkPhaseItems.
+     */
+    distinct?: WorkPhaseItemScalarFieldEnum | WorkPhaseItemScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItem findFirstOrThrow
+   */
+  export type WorkPhaseItemFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItem to fetch.
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItems to fetch.
+     */
+    orderBy?: WorkPhaseItemOrderByWithRelationInput | WorkPhaseItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for WorkPhaseItems.
+     */
+    cursor?: WorkPhaseItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItems.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of WorkPhaseItems.
+     */
+    distinct?: WorkPhaseItemScalarFieldEnum | WorkPhaseItemScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItem findMany
+   */
+  export type WorkPhaseItemFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItems to fetch.
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItems to fetch.
+     */
+    orderBy?: WorkPhaseItemOrderByWithRelationInput | WorkPhaseItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing WorkPhaseItems.
+     */
+    cursor?: WorkPhaseItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItems.
+     */
+    skip?: number
+    distinct?: WorkPhaseItemScalarFieldEnum | WorkPhaseItemScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItem create
+   */
+  export type WorkPhaseItemCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * The data needed to create a WorkPhaseItem.
+     */
+    data: XOR<WorkPhaseItemCreateInput, WorkPhaseItemUncheckedCreateInput>
+  }
+
+  /**
+   * WorkPhaseItem createMany
+   */
+  export type WorkPhaseItemCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many WorkPhaseItems.
+     */
+    data: WorkPhaseItemCreateManyInput | WorkPhaseItemCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * WorkPhaseItem createManyAndReturn
+   */
+  export type WorkPhaseItemCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * The data used to create many WorkPhaseItems.
+     */
+    data: WorkPhaseItemCreateManyInput | WorkPhaseItemCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * WorkPhaseItem update
+   */
+  export type WorkPhaseItemUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * The data needed to update a WorkPhaseItem.
+     */
+    data: XOR<WorkPhaseItemUpdateInput, WorkPhaseItemUncheckedUpdateInput>
+    /**
+     * Choose, which WorkPhaseItem to update.
+     */
+    where: WorkPhaseItemWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItem updateMany
+   */
+  export type WorkPhaseItemUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update WorkPhaseItems.
+     */
+    data: XOR<WorkPhaseItemUpdateManyMutationInput, WorkPhaseItemUncheckedUpdateManyInput>
+    /**
+     * Filter which WorkPhaseItems to update
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * Limit how many WorkPhaseItems to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * WorkPhaseItem updateManyAndReturn
+   */
+  export type WorkPhaseItemUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * The data used to update WorkPhaseItems.
+     */
+    data: XOR<WorkPhaseItemUpdateManyMutationInput, WorkPhaseItemUncheckedUpdateManyInput>
+    /**
+     * Filter which WorkPhaseItems to update
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * Limit how many WorkPhaseItems to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * WorkPhaseItem upsert
+   */
+  export type WorkPhaseItemUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * The filter to search for the WorkPhaseItem to update in case it exists.
+     */
+    where: WorkPhaseItemWhereUniqueInput
+    /**
+     * In case the WorkPhaseItem found by the `where` argument doesn't exist, create a new WorkPhaseItem with this data.
+     */
+    create: XOR<WorkPhaseItemCreateInput, WorkPhaseItemUncheckedCreateInput>
+    /**
+     * In case the WorkPhaseItem was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<WorkPhaseItemUpdateInput, WorkPhaseItemUncheckedUpdateInput>
+  }
+
+  /**
+   * WorkPhaseItem delete
+   */
+  export type WorkPhaseItemDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+    /**
+     * Filter which WorkPhaseItem to delete.
+     */
+    where: WorkPhaseItemWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItem deleteMany
+   */
+  export type WorkPhaseItemDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which WorkPhaseItems to delete
+     */
+    where?: WorkPhaseItemWhereInput
+    /**
+     * Limit how many WorkPhaseItems to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * WorkPhaseItem.members
+   */
+  export type WorkPhaseItem$membersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    where?: WorkPhaseItemMemberWhereInput
+    orderBy?: WorkPhaseItemMemberOrderByWithRelationInput | WorkPhaseItemMemberOrderByWithRelationInput[]
+    cursor?: WorkPhaseItemMemberWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: WorkPhaseItemMemberScalarFieldEnum | WorkPhaseItemMemberScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItem without action
+   */
+  export type WorkPhaseItemDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItem
+     */
+    select?: WorkPhaseItemSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItem
+     */
+    omit?: WorkPhaseItemOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model WorkPhaseItemMember
+   */
+
+  export type AggregateWorkPhaseItemMember = {
+    _count: WorkPhaseItemMemberCountAggregateOutputType | null
+    _avg: WorkPhaseItemMemberAvgAggregateOutputType | null
+    _sum: WorkPhaseItemMemberSumAggregateOutputType | null
+    _min: WorkPhaseItemMemberMinAggregateOutputType | null
+    _max: WorkPhaseItemMemberMaxAggregateOutputType | null
+  }
+
+  export type WorkPhaseItemMemberAvgAggregateOutputType = {
+    id: number | null
+    itemId: number | null
+    userId: number | null
+    ratio: number | null
+  }
+
+  export type WorkPhaseItemMemberSumAggregateOutputType = {
+    id: number | null
+    itemId: number | null
+    userId: number | null
+    ratio: number | null
+  }
+
+  export type WorkPhaseItemMemberMinAggregateOutputType = {
+    id: number | null
+    itemId: number | null
+    userId: number | null
+    name: string | null
+    ratio: number | null
+    endDate: Date | null
+  }
+
+  export type WorkPhaseItemMemberMaxAggregateOutputType = {
+    id: number | null
+    itemId: number | null
+    userId: number | null
+    name: string | null
+    ratio: number | null
+    endDate: Date | null
+  }
+
+  export type WorkPhaseItemMemberCountAggregateOutputType = {
+    id: number
+    itemId: number
+    userId: number
+    name: number
+    ratio: number
+    endDate: number
+    _all: number
+  }
+
+
+  export type WorkPhaseItemMemberAvgAggregateInputType = {
+    id?: true
+    itemId?: true
+    userId?: true
+    ratio?: true
+  }
+
+  export type WorkPhaseItemMemberSumAggregateInputType = {
+    id?: true
+    itemId?: true
+    userId?: true
+    ratio?: true
+  }
+
+  export type WorkPhaseItemMemberMinAggregateInputType = {
+    id?: true
+    itemId?: true
+    userId?: true
+    name?: true
+    ratio?: true
+    endDate?: true
+  }
+
+  export type WorkPhaseItemMemberMaxAggregateInputType = {
+    id?: true
+    itemId?: true
+    userId?: true
+    name?: true
+    ratio?: true
+    endDate?: true
+  }
+
+  export type WorkPhaseItemMemberCountAggregateInputType = {
+    id?: true
+    itemId?: true
+    userId?: true
+    name?: true
+    ratio?: true
+    endDate?: true
+    _all?: true
+  }
+
+  export type WorkPhaseItemMemberAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which WorkPhaseItemMember to aggregate.
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItemMembers to fetch.
+     */
+    orderBy?: WorkPhaseItemMemberOrderByWithRelationInput | WorkPhaseItemMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: WorkPhaseItemMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItemMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItemMembers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned WorkPhaseItemMembers
+    **/
+    _count?: true | WorkPhaseItemMemberCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: WorkPhaseItemMemberAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: WorkPhaseItemMemberSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: WorkPhaseItemMemberMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: WorkPhaseItemMemberMaxAggregateInputType
+  }
+
+  export type GetWorkPhaseItemMemberAggregateType<T extends WorkPhaseItemMemberAggregateArgs> = {
+        [P in keyof T & keyof AggregateWorkPhaseItemMember]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateWorkPhaseItemMember[P]>
+      : GetScalarType<T[P], AggregateWorkPhaseItemMember[P]>
+  }
+
+
+
+
+  export type WorkPhaseItemMemberGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: WorkPhaseItemMemberWhereInput
+    orderBy?: WorkPhaseItemMemberOrderByWithAggregationInput | WorkPhaseItemMemberOrderByWithAggregationInput[]
+    by: WorkPhaseItemMemberScalarFieldEnum[] | WorkPhaseItemMemberScalarFieldEnum
+    having?: WorkPhaseItemMemberScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: WorkPhaseItemMemberCountAggregateInputType | true
+    _avg?: WorkPhaseItemMemberAvgAggregateInputType
+    _sum?: WorkPhaseItemMemberSumAggregateInputType
+    _min?: WorkPhaseItemMemberMinAggregateInputType
+    _max?: WorkPhaseItemMemberMaxAggregateInputType
+  }
+
+  export type WorkPhaseItemMemberGroupByOutputType = {
+    id: number
+    itemId: number
+    userId: number | null
+    name: string
+    ratio: number
+    endDate: Date | null
+    _count: WorkPhaseItemMemberCountAggregateOutputType | null
+    _avg: WorkPhaseItemMemberAvgAggregateOutputType | null
+    _sum: WorkPhaseItemMemberSumAggregateOutputType | null
+    _min: WorkPhaseItemMemberMinAggregateOutputType | null
+    _max: WorkPhaseItemMemberMaxAggregateOutputType | null
+  }
+
+  type GetWorkPhaseItemMemberGroupByPayload<T extends WorkPhaseItemMemberGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<WorkPhaseItemMemberGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof WorkPhaseItemMemberGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], WorkPhaseItemMemberGroupByOutputType[P]>
+            : GetScalarType<T[P], WorkPhaseItemMemberGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type WorkPhaseItemMemberSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    itemId?: boolean
+    userId?: boolean
+    name?: boolean
+    ratio?: boolean
+    endDate?: boolean
+    item?: boolean | WorkPhaseItemDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["workPhaseItemMember"]>
+
+  export type WorkPhaseItemMemberSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    itemId?: boolean
+    userId?: boolean
+    name?: boolean
+    ratio?: boolean
+    endDate?: boolean
+    item?: boolean | WorkPhaseItemDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["workPhaseItemMember"]>
+
+  export type WorkPhaseItemMemberSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    itemId?: boolean
+    userId?: boolean
+    name?: boolean
+    ratio?: boolean
+    endDate?: boolean
+    item?: boolean | WorkPhaseItemDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["workPhaseItemMember"]>
+
+  export type WorkPhaseItemMemberSelectScalar = {
+    id?: boolean
+    itemId?: boolean
+    userId?: boolean
+    name?: boolean
+    ratio?: boolean
+    endDate?: boolean
+  }
+
+  export type WorkPhaseItemMemberOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "itemId" | "userId" | "name" | "ratio" | "endDate", ExtArgs["result"]["workPhaseItemMember"]>
+  export type WorkPhaseItemMemberInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    item?: boolean | WorkPhaseItemDefaultArgs<ExtArgs>
+  }
+  export type WorkPhaseItemMemberIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    item?: boolean | WorkPhaseItemDefaultArgs<ExtArgs>
+  }
+  export type WorkPhaseItemMemberIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    item?: boolean | WorkPhaseItemDefaultArgs<ExtArgs>
+  }
+
+  export type $WorkPhaseItemMemberPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "WorkPhaseItemMember"
+    objects: {
+      item: Prisma.$WorkPhaseItemPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      itemId: number
+      userId: number | null
+      name: string
+      ratio: number
+      /**
+       * 这个人在这条事项上的预计释放日。没填就跟阶段结束日走
+       */
+      endDate: Date | null
+    }, ExtArgs["result"]["workPhaseItemMember"]>
+    composites: {}
+  }
+
+  type WorkPhaseItemMemberGetPayload<S extends boolean | null | undefined | WorkPhaseItemMemberDefaultArgs> = $Result.GetResult<Prisma.$WorkPhaseItemMemberPayload, S>
+
+  type WorkPhaseItemMemberCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<WorkPhaseItemMemberFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: WorkPhaseItemMemberCountAggregateInputType | true
+    }
+
+  export interface WorkPhaseItemMemberDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['WorkPhaseItemMember'], meta: { name: 'WorkPhaseItemMember' } }
+    /**
+     * Find zero or one WorkPhaseItemMember that matches the filter.
+     * @param {WorkPhaseItemMemberFindUniqueArgs} args - Arguments to find a WorkPhaseItemMember
+     * @example
+     * // Get one WorkPhaseItemMember
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends WorkPhaseItemMemberFindUniqueArgs>(args: SelectSubset<T, WorkPhaseItemMemberFindUniqueArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one WorkPhaseItemMember that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {WorkPhaseItemMemberFindUniqueOrThrowArgs} args - Arguments to find a WorkPhaseItemMember
+     * @example
+     * // Get one WorkPhaseItemMember
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends WorkPhaseItemMemberFindUniqueOrThrowArgs>(args: SelectSubset<T, WorkPhaseItemMemberFindUniqueOrThrowArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first WorkPhaseItemMember that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberFindFirstArgs} args - Arguments to find a WorkPhaseItemMember
+     * @example
+     * // Get one WorkPhaseItemMember
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends WorkPhaseItemMemberFindFirstArgs>(args?: SelectSubset<T, WorkPhaseItemMemberFindFirstArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first WorkPhaseItemMember that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberFindFirstOrThrowArgs} args - Arguments to find a WorkPhaseItemMember
+     * @example
+     * // Get one WorkPhaseItemMember
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends WorkPhaseItemMemberFindFirstOrThrowArgs>(args?: SelectSubset<T, WorkPhaseItemMemberFindFirstOrThrowArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more WorkPhaseItemMembers that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all WorkPhaseItemMembers
+     * const workPhaseItemMembers = await prisma.workPhaseItemMember.findMany()
+     * 
+     * // Get first 10 WorkPhaseItemMembers
+     * const workPhaseItemMembers = await prisma.workPhaseItemMember.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const workPhaseItemMemberWithIdOnly = await prisma.workPhaseItemMember.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends WorkPhaseItemMemberFindManyArgs>(args?: SelectSubset<T, WorkPhaseItemMemberFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a WorkPhaseItemMember.
+     * @param {WorkPhaseItemMemberCreateArgs} args - Arguments to create a WorkPhaseItemMember.
+     * @example
+     * // Create one WorkPhaseItemMember
+     * const WorkPhaseItemMember = await prisma.workPhaseItemMember.create({
+     *   data: {
+     *     // ... data to create a WorkPhaseItemMember
+     *   }
+     * })
+     * 
+     */
+    create<T extends WorkPhaseItemMemberCreateArgs>(args: SelectSubset<T, WorkPhaseItemMemberCreateArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many WorkPhaseItemMembers.
+     * @param {WorkPhaseItemMemberCreateManyArgs} args - Arguments to create many WorkPhaseItemMembers.
+     * @example
+     * // Create many WorkPhaseItemMembers
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends WorkPhaseItemMemberCreateManyArgs>(args?: SelectSubset<T, WorkPhaseItemMemberCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many WorkPhaseItemMembers and returns the data saved in the database.
+     * @param {WorkPhaseItemMemberCreateManyAndReturnArgs} args - Arguments to create many WorkPhaseItemMembers.
+     * @example
+     * // Create many WorkPhaseItemMembers
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many WorkPhaseItemMembers and only return the `id`
+     * const workPhaseItemMemberWithIdOnly = await prisma.workPhaseItemMember.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends WorkPhaseItemMemberCreateManyAndReturnArgs>(args?: SelectSubset<T, WorkPhaseItemMemberCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a WorkPhaseItemMember.
+     * @param {WorkPhaseItemMemberDeleteArgs} args - Arguments to delete one WorkPhaseItemMember.
+     * @example
+     * // Delete one WorkPhaseItemMember
+     * const WorkPhaseItemMember = await prisma.workPhaseItemMember.delete({
+     *   where: {
+     *     // ... filter to delete one WorkPhaseItemMember
+     *   }
+     * })
+     * 
+     */
+    delete<T extends WorkPhaseItemMemberDeleteArgs>(args: SelectSubset<T, WorkPhaseItemMemberDeleteArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one WorkPhaseItemMember.
+     * @param {WorkPhaseItemMemberUpdateArgs} args - Arguments to update one WorkPhaseItemMember.
+     * @example
+     * // Update one WorkPhaseItemMember
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends WorkPhaseItemMemberUpdateArgs>(args: SelectSubset<T, WorkPhaseItemMemberUpdateArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more WorkPhaseItemMembers.
+     * @param {WorkPhaseItemMemberDeleteManyArgs} args - Arguments to filter WorkPhaseItemMembers to delete.
+     * @example
+     * // Delete a few WorkPhaseItemMembers
+     * const { count } = await prisma.workPhaseItemMember.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends WorkPhaseItemMemberDeleteManyArgs>(args?: SelectSubset<T, WorkPhaseItemMemberDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more WorkPhaseItemMembers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many WorkPhaseItemMembers
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends WorkPhaseItemMemberUpdateManyArgs>(args: SelectSubset<T, WorkPhaseItemMemberUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more WorkPhaseItemMembers and returns the data updated in the database.
+     * @param {WorkPhaseItemMemberUpdateManyAndReturnArgs} args - Arguments to update many WorkPhaseItemMembers.
+     * @example
+     * // Update many WorkPhaseItemMembers
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more WorkPhaseItemMembers and only return the `id`
+     * const workPhaseItemMemberWithIdOnly = await prisma.workPhaseItemMember.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends WorkPhaseItemMemberUpdateManyAndReturnArgs>(args: SelectSubset<T, WorkPhaseItemMemberUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one WorkPhaseItemMember.
+     * @param {WorkPhaseItemMemberUpsertArgs} args - Arguments to update or create a WorkPhaseItemMember.
+     * @example
+     * // Update or create a WorkPhaseItemMember
+     * const workPhaseItemMember = await prisma.workPhaseItemMember.upsert({
+     *   create: {
+     *     // ... data to create a WorkPhaseItemMember
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the WorkPhaseItemMember we want to update
+     *   }
+     * })
+     */
+    upsert<T extends WorkPhaseItemMemberUpsertArgs>(args: SelectSubset<T, WorkPhaseItemMemberUpsertArgs<ExtArgs>>): Prisma__WorkPhaseItemMemberClient<$Result.GetResult<Prisma.$WorkPhaseItemMemberPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of WorkPhaseItemMembers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberCountArgs} args - Arguments to filter WorkPhaseItemMembers to count.
+     * @example
+     * // Count the number of WorkPhaseItemMembers
+     * const count = await prisma.workPhaseItemMember.count({
+     *   where: {
+     *     // ... the filter for the WorkPhaseItemMembers we want to count
+     *   }
+     * })
+    **/
+    count<T extends WorkPhaseItemMemberCountArgs>(
+      args?: Subset<T, WorkPhaseItemMemberCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], WorkPhaseItemMemberCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a WorkPhaseItemMember.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends WorkPhaseItemMemberAggregateArgs>(args: Subset<T, WorkPhaseItemMemberAggregateArgs>): Prisma.PrismaPromise<GetWorkPhaseItemMemberAggregateType<T>>
+
+    /**
+     * Group by WorkPhaseItemMember.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkPhaseItemMemberGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends WorkPhaseItemMemberGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: WorkPhaseItemMemberGroupByArgs['orderBy'] }
+        : { orderBy?: WorkPhaseItemMemberGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, WorkPhaseItemMemberGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetWorkPhaseItemMemberGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the WorkPhaseItemMember model
+   */
+  readonly fields: WorkPhaseItemMemberFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for WorkPhaseItemMember.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__WorkPhaseItemMemberClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    item<T extends WorkPhaseItemDefaultArgs<ExtArgs> = {}>(args?: Subset<T, WorkPhaseItemDefaultArgs<ExtArgs>>): Prisma__WorkPhaseItemClient<$Result.GetResult<Prisma.$WorkPhaseItemPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the WorkPhaseItemMember model
+   */
+  interface WorkPhaseItemMemberFieldRefs {
+    readonly id: FieldRef<"WorkPhaseItemMember", 'Int'>
+    readonly itemId: FieldRef<"WorkPhaseItemMember", 'Int'>
+    readonly userId: FieldRef<"WorkPhaseItemMember", 'Int'>
+    readonly name: FieldRef<"WorkPhaseItemMember", 'String'>
+    readonly ratio: FieldRef<"WorkPhaseItemMember", 'Int'>
+    readonly endDate: FieldRef<"WorkPhaseItemMember", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * WorkPhaseItemMember findUnique
+   */
+  export type WorkPhaseItemMemberFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItemMember to fetch.
+     */
+    where: WorkPhaseItemMemberWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItemMember findUniqueOrThrow
+   */
+  export type WorkPhaseItemMemberFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItemMember to fetch.
+     */
+    where: WorkPhaseItemMemberWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItemMember findFirst
+   */
+  export type WorkPhaseItemMemberFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItemMember to fetch.
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItemMembers to fetch.
+     */
+    orderBy?: WorkPhaseItemMemberOrderByWithRelationInput | WorkPhaseItemMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for WorkPhaseItemMembers.
+     */
+    cursor?: WorkPhaseItemMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItemMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItemMembers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of WorkPhaseItemMembers.
+     */
+    distinct?: WorkPhaseItemMemberScalarFieldEnum | WorkPhaseItemMemberScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItemMember findFirstOrThrow
+   */
+  export type WorkPhaseItemMemberFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItemMember to fetch.
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItemMembers to fetch.
+     */
+    orderBy?: WorkPhaseItemMemberOrderByWithRelationInput | WorkPhaseItemMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for WorkPhaseItemMembers.
+     */
+    cursor?: WorkPhaseItemMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItemMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItemMembers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of WorkPhaseItemMembers.
+     */
+    distinct?: WorkPhaseItemMemberScalarFieldEnum | WorkPhaseItemMemberScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItemMember findMany
+   */
+  export type WorkPhaseItemMemberFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which WorkPhaseItemMembers to fetch.
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of WorkPhaseItemMembers to fetch.
+     */
+    orderBy?: WorkPhaseItemMemberOrderByWithRelationInput | WorkPhaseItemMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing WorkPhaseItemMembers.
+     */
+    cursor?: WorkPhaseItemMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` WorkPhaseItemMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` WorkPhaseItemMembers.
+     */
+    skip?: number
+    distinct?: WorkPhaseItemMemberScalarFieldEnum | WorkPhaseItemMemberScalarFieldEnum[]
+  }
+
+  /**
+   * WorkPhaseItemMember create
+   */
+  export type WorkPhaseItemMemberCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * The data needed to create a WorkPhaseItemMember.
+     */
+    data: XOR<WorkPhaseItemMemberCreateInput, WorkPhaseItemMemberUncheckedCreateInput>
+  }
+
+  /**
+   * WorkPhaseItemMember createMany
+   */
+  export type WorkPhaseItemMemberCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many WorkPhaseItemMembers.
+     */
+    data: WorkPhaseItemMemberCreateManyInput | WorkPhaseItemMemberCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * WorkPhaseItemMember createManyAndReturn
+   */
+  export type WorkPhaseItemMemberCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * The data used to create many WorkPhaseItemMembers.
+     */
+    data: WorkPhaseItemMemberCreateManyInput | WorkPhaseItemMemberCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * WorkPhaseItemMember update
+   */
+  export type WorkPhaseItemMemberUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * The data needed to update a WorkPhaseItemMember.
+     */
+    data: XOR<WorkPhaseItemMemberUpdateInput, WorkPhaseItemMemberUncheckedUpdateInput>
+    /**
+     * Choose, which WorkPhaseItemMember to update.
+     */
+    where: WorkPhaseItemMemberWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItemMember updateMany
+   */
+  export type WorkPhaseItemMemberUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update WorkPhaseItemMembers.
+     */
+    data: XOR<WorkPhaseItemMemberUpdateManyMutationInput, WorkPhaseItemMemberUncheckedUpdateManyInput>
+    /**
+     * Filter which WorkPhaseItemMembers to update
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * Limit how many WorkPhaseItemMembers to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * WorkPhaseItemMember updateManyAndReturn
+   */
+  export type WorkPhaseItemMemberUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * The data used to update WorkPhaseItemMembers.
+     */
+    data: XOR<WorkPhaseItemMemberUpdateManyMutationInput, WorkPhaseItemMemberUncheckedUpdateManyInput>
+    /**
+     * Filter which WorkPhaseItemMembers to update
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * Limit how many WorkPhaseItemMembers to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * WorkPhaseItemMember upsert
+   */
+  export type WorkPhaseItemMemberUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * The filter to search for the WorkPhaseItemMember to update in case it exists.
+     */
+    where: WorkPhaseItemMemberWhereUniqueInput
+    /**
+     * In case the WorkPhaseItemMember found by the `where` argument doesn't exist, create a new WorkPhaseItemMember with this data.
+     */
+    create: XOR<WorkPhaseItemMemberCreateInput, WorkPhaseItemMemberUncheckedCreateInput>
+    /**
+     * In case the WorkPhaseItemMember was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<WorkPhaseItemMemberUpdateInput, WorkPhaseItemMemberUncheckedUpdateInput>
+  }
+
+  /**
+   * WorkPhaseItemMember delete
+   */
+  export type WorkPhaseItemMemberDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
+    /**
+     * Filter which WorkPhaseItemMember to delete.
+     */
+    where: WorkPhaseItemMemberWhereUniqueInput
+  }
+
+  /**
+   * WorkPhaseItemMember deleteMany
+   */
+  export type WorkPhaseItemMemberDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which WorkPhaseItemMembers to delete
+     */
+    where?: WorkPhaseItemMemberWhereInput
+    /**
+     * Limit how many WorkPhaseItemMembers to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * WorkPhaseItemMember without action
+   */
+  export type WorkPhaseItemMemberDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkPhaseItemMember
+     */
+    select?: WorkPhaseItemMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the WorkPhaseItemMember
+     */
+    omit?: WorkPhaseItemMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: WorkPhaseItemMemberInclude<ExtArgs> | null
   }
 
 
@@ -56026,6 +59960,18 @@ export namespace Prisma {
   export type AnniversaryBillScalarFieldEnum = (typeof AnniversaryBillScalarFieldEnum)[keyof typeof AnniversaryBillScalarFieldEnum]
 
 
+  export const AnniversaryNoteScalarFieldEnum: {
+    id: 'id',
+    anniversaryId: 'anniversaryId',
+    year: 'year',
+    note: 'note',
+    sort: 'sort',
+    createdAt: 'createdAt'
+  };
+
+  export type AnniversaryNoteScalarFieldEnum = (typeof AnniversaryNoteScalarFieldEnum)[keyof typeof AnniversaryNoteScalarFieldEnum]
+
+
   export const WorkProjectScalarFieldEnum: {
     id: 'id',
     name: 'name',
@@ -56101,10 +60047,43 @@ export namespace Prisma {
     endDate: 'endDate',
     devEnterDate: 'devEnterDate',
     progress: 'progress',
+    result: 'result',
+    resultNote: 'resultNote',
     sort: 'sort'
   };
 
   export type WorkPhaseScalarFieldEnum = (typeof WorkPhaseScalarFieldEnum)[keyof typeof WorkPhaseScalarFieldEnum]
+
+
+  export const WorkPhaseItemScalarFieldEnum: {
+    id: 'id',
+    phaseId: 'phaseId',
+    name: 'name',
+    status: 'status',
+    progress: 'progress',
+    trackProgress: 'trackProgress',
+    rework: 'rework',
+    startDate: 'startDate',
+    endDate: 'endDate',
+    devEnterDate: 'devEnterDate',
+    link: 'link',
+    note: 'note',
+    sort: 'sort'
+  };
+
+  export type WorkPhaseItemScalarFieldEnum = (typeof WorkPhaseItemScalarFieldEnum)[keyof typeof WorkPhaseItemScalarFieldEnum]
+
+
+  export const WorkPhaseItemMemberScalarFieldEnum: {
+    id: 'id',
+    itemId: 'itemId',
+    userId: 'userId',
+    name: 'name',
+    ratio: 'ratio',
+    endDate: 'endDate'
+  };
+
+  export type WorkPhaseItemMemberScalarFieldEnum = (typeof WorkPhaseItemMemberScalarFieldEnum)[keyof typeof WorkPhaseItemMemberScalarFieldEnum]
 
 
   export const WorkPhaseMemberScalarFieldEnum: {
@@ -56860,6 +60839,34 @@ export namespace Prisma {
    * Reference to a field of type 'IssueKind[]'
    */
   export type ListEnumIssueKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IssueKind[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'WorkPhaseResult'
+   */
+  export type EnumWorkPhaseResultFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkPhaseResult'>
+    
+
+
+  /**
+   * Reference to a field of type 'WorkPhaseResult[]'
+   */
+  export type ListEnumWorkPhaseResultFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkPhaseResult[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'WorkPhaseItemStatus'
+   */
+  export type EnumWorkPhaseItemStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkPhaseItemStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'WorkPhaseItemStatus[]'
+   */
+  export type ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkPhaseItemStatus[]'>
     
 
 
@@ -57838,6 +61845,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Anniversary"> | Date | string
     updatedAt?: DateTimeFilter<"Anniversary"> | Date | string
     bills?: AnniversaryBillListRelationFilter
+    notes?: AnniversaryNoteListRelationFilter
   }
 
   export type AnniversaryOrderByWithRelationInput = {
@@ -57858,6 +61866,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     bills?: AnniversaryBillOrderByRelationAggregateInput
+    notes?: AnniversaryNoteOrderByRelationAggregateInput
   }
 
   export type AnniversaryWhereUniqueInput = Prisma.AtLeast<{
@@ -57881,6 +61890,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Anniversary"> | Date | string
     updatedAt?: DateTimeFilter<"Anniversary"> | Date | string
     bills?: AnniversaryBillListRelationFilter
+    notes?: AnniversaryNoteListRelationFilter
   }, "id">
 
   export type AnniversaryOrderByWithAggregationInput = {
@@ -57994,6 +62004,68 @@ export namespace Prisma {
     href?: StringWithAggregatesFilter<"AnniversaryBill"> | string
     sort?: IntWithAggregatesFilter<"AnniversaryBill"> | number
     createdAt?: DateTimeWithAggregatesFilter<"AnniversaryBill"> | Date | string
+  }
+
+  export type AnniversaryNoteWhereInput = {
+    AND?: AnniversaryNoteWhereInput | AnniversaryNoteWhereInput[]
+    OR?: AnniversaryNoteWhereInput[]
+    NOT?: AnniversaryNoteWhereInput | AnniversaryNoteWhereInput[]
+    id?: IntFilter<"AnniversaryNote"> | number
+    anniversaryId?: IntFilter<"AnniversaryNote"> | number
+    year?: IntFilter<"AnniversaryNote"> | number
+    note?: StringFilter<"AnniversaryNote"> | string
+    sort?: IntFilter<"AnniversaryNote"> | number
+    createdAt?: DateTimeFilter<"AnniversaryNote"> | Date | string
+    anniversary?: XOR<AnniversaryScalarRelationFilter, AnniversaryWhereInput>
+  }
+
+  export type AnniversaryNoteOrderByWithRelationInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+    createdAt?: SortOrder
+    anniversary?: AnniversaryOrderByWithRelationInput
+  }
+
+  export type AnniversaryNoteWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: AnniversaryNoteWhereInput | AnniversaryNoteWhereInput[]
+    OR?: AnniversaryNoteWhereInput[]
+    NOT?: AnniversaryNoteWhereInput | AnniversaryNoteWhereInput[]
+    anniversaryId?: IntFilter<"AnniversaryNote"> | number
+    year?: IntFilter<"AnniversaryNote"> | number
+    note?: StringFilter<"AnniversaryNote"> | string
+    sort?: IntFilter<"AnniversaryNote"> | number
+    createdAt?: DateTimeFilter<"AnniversaryNote"> | Date | string
+    anniversary?: XOR<AnniversaryScalarRelationFilter, AnniversaryWhereInput>
+  }, "id">
+
+  export type AnniversaryNoteOrderByWithAggregationInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+    createdAt?: SortOrder
+    _count?: AnniversaryNoteCountOrderByAggregateInput
+    _avg?: AnniversaryNoteAvgOrderByAggregateInput
+    _max?: AnniversaryNoteMaxOrderByAggregateInput
+    _min?: AnniversaryNoteMinOrderByAggregateInput
+    _sum?: AnniversaryNoteSumOrderByAggregateInput
+  }
+
+  export type AnniversaryNoteScalarWhereWithAggregatesInput = {
+    AND?: AnniversaryNoteScalarWhereWithAggregatesInput | AnniversaryNoteScalarWhereWithAggregatesInput[]
+    OR?: AnniversaryNoteScalarWhereWithAggregatesInput[]
+    NOT?: AnniversaryNoteScalarWhereWithAggregatesInput | AnniversaryNoteScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"AnniversaryNote"> | number
+    anniversaryId?: IntWithAggregatesFilter<"AnniversaryNote"> | number
+    year?: IntWithAggregatesFilter<"AnniversaryNote"> | number
+    note?: StringWithAggregatesFilter<"AnniversaryNote"> | string
+    sort?: IntWithAggregatesFilter<"AnniversaryNote"> | number
+    createdAt?: DateTimeWithAggregatesFilter<"AnniversaryNote"> | Date | string
   }
 
   export type WorkProjectWhereInput = {
@@ -58356,9 +62428,12 @@ export namespace Prisma {
     endDate?: DateTimeNullableFilter<"WorkPhase"> | Date | string | null
     devEnterDate?: DateTimeNullableFilter<"WorkPhase"> | Date | string | null
     progress?: IntFilter<"WorkPhase"> | number
+    result?: EnumWorkPhaseResultFilter<"WorkPhase"> | $Enums.WorkPhaseResult
+    resultNote?: StringNullableFilter<"WorkPhase"> | string | null
     sort?: IntFilter<"WorkPhase"> | number
     project?: XOR<WorkProjectScalarRelationFilter, WorkProjectWhereInput>
     members?: WorkPhaseMemberListRelationFilter
+    items?: WorkPhaseItemListRelationFilter
   }
 
   export type WorkPhaseOrderByWithRelationInput = {
@@ -58370,9 +62445,12 @@ export namespace Prisma {
     endDate?: SortOrderInput | SortOrder
     devEnterDate?: SortOrderInput | SortOrder
     progress?: SortOrder
+    result?: SortOrder
+    resultNote?: SortOrderInput | SortOrder
     sort?: SortOrder
     project?: WorkProjectOrderByWithRelationInput
     members?: WorkPhaseMemberOrderByRelationAggregateInput
+    items?: WorkPhaseItemOrderByRelationAggregateInput
   }
 
   export type WorkPhaseWhereUniqueInput = Prisma.AtLeast<{
@@ -58388,9 +62466,12 @@ export namespace Prisma {
     endDate?: DateTimeNullableFilter<"WorkPhase"> | Date | string | null
     devEnterDate?: DateTimeNullableFilter<"WorkPhase"> | Date | string | null
     progress?: IntFilter<"WorkPhase"> | number
+    result?: EnumWorkPhaseResultFilter<"WorkPhase"> | $Enums.WorkPhaseResult
+    resultNote?: StringNullableFilter<"WorkPhase"> | string | null
     sort?: IntFilter<"WorkPhase"> | number
     project?: XOR<WorkProjectScalarRelationFilter, WorkProjectWhereInput>
     members?: WorkPhaseMemberListRelationFilter
+    items?: WorkPhaseItemListRelationFilter
   }, "id" | "projectId_kind">
 
   export type WorkPhaseOrderByWithAggregationInput = {
@@ -58402,6 +62483,8 @@ export namespace Prisma {
     endDate?: SortOrderInput | SortOrder
     devEnterDate?: SortOrderInput | SortOrder
     progress?: SortOrder
+    result?: SortOrder
+    resultNote?: SortOrderInput | SortOrder
     sort?: SortOrder
     _count?: WorkPhaseCountOrderByAggregateInput
     _avg?: WorkPhaseAvgOrderByAggregateInput
@@ -58422,7 +62505,173 @@ export namespace Prisma {
     endDate?: DateTimeNullableWithAggregatesFilter<"WorkPhase"> | Date | string | null
     devEnterDate?: DateTimeNullableWithAggregatesFilter<"WorkPhase"> | Date | string | null
     progress?: IntWithAggregatesFilter<"WorkPhase"> | number
+    result?: EnumWorkPhaseResultWithAggregatesFilter<"WorkPhase"> | $Enums.WorkPhaseResult
+    resultNote?: StringNullableWithAggregatesFilter<"WorkPhase"> | string | null
     sort?: IntWithAggregatesFilter<"WorkPhase"> | number
+  }
+
+  export type WorkPhaseItemWhereInput = {
+    AND?: WorkPhaseItemWhereInput | WorkPhaseItemWhereInput[]
+    OR?: WorkPhaseItemWhereInput[]
+    NOT?: WorkPhaseItemWhereInput | WorkPhaseItemWhereInput[]
+    id?: IntFilter<"WorkPhaseItem"> | number
+    phaseId?: IntFilter<"WorkPhaseItem"> | number
+    name?: StringFilter<"WorkPhaseItem"> | string
+    status?: EnumWorkPhaseItemStatusFilter<"WorkPhaseItem"> | $Enums.WorkPhaseItemStatus
+    progress?: IntFilter<"WorkPhaseItem"> | number
+    trackProgress?: BoolFilter<"WorkPhaseItem"> | boolean
+    rework?: BoolFilter<"WorkPhaseItem"> | boolean
+    startDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    endDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    devEnterDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    link?: StringNullableFilter<"WorkPhaseItem"> | string | null
+    note?: StringNullableFilter<"WorkPhaseItem"> | string | null
+    sort?: IntFilter<"WorkPhaseItem"> | number
+    phase?: XOR<WorkPhaseScalarRelationFilter, WorkPhaseWhereInput>
+    members?: WorkPhaseItemMemberListRelationFilter
+  }
+
+  export type WorkPhaseItemOrderByWithRelationInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    name?: SortOrder
+    status?: SortOrder
+    progress?: SortOrder
+    trackProgress?: SortOrder
+    rework?: SortOrder
+    startDate?: SortOrderInput | SortOrder
+    endDate?: SortOrderInput | SortOrder
+    devEnterDate?: SortOrderInput | SortOrder
+    link?: SortOrderInput | SortOrder
+    note?: SortOrderInput | SortOrder
+    sort?: SortOrder
+    phase?: WorkPhaseOrderByWithRelationInput
+    members?: WorkPhaseItemMemberOrderByRelationAggregateInput
+  }
+
+  export type WorkPhaseItemWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    phaseId_name?: WorkPhaseItemPhaseIdNameCompoundUniqueInput
+    AND?: WorkPhaseItemWhereInput | WorkPhaseItemWhereInput[]
+    OR?: WorkPhaseItemWhereInput[]
+    NOT?: WorkPhaseItemWhereInput | WorkPhaseItemWhereInput[]
+    phaseId?: IntFilter<"WorkPhaseItem"> | number
+    name?: StringFilter<"WorkPhaseItem"> | string
+    status?: EnumWorkPhaseItemStatusFilter<"WorkPhaseItem"> | $Enums.WorkPhaseItemStatus
+    progress?: IntFilter<"WorkPhaseItem"> | number
+    trackProgress?: BoolFilter<"WorkPhaseItem"> | boolean
+    rework?: BoolFilter<"WorkPhaseItem"> | boolean
+    startDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    endDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    devEnterDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    link?: StringNullableFilter<"WorkPhaseItem"> | string | null
+    note?: StringNullableFilter<"WorkPhaseItem"> | string | null
+    sort?: IntFilter<"WorkPhaseItem"> | number
+    phase?: XOR<WorkPhaseScalarRelationFilter, WorkPhaseWhereInput>
+    members?: WorkPhaseItemMemberListRelationFilter
+  }, "id" | "phaseId_name">
+
+  export type WorkPhaseItemOrderByWithAggregationInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    name?: SortOrder
+    status?: SortOrder
+    progress?: SortOrder
+    trackProgress?: SortOrder
+    rework?: SortOrder
+    startDate?: SortOrderInput | SortOrder
+    endDate?: SortOrderInput | SortOrder
+    devEnterDate?: SortOrderInput | SortOrder
+    link?: SortOrderInput | SortOrder
+    note?: SortOrderInput | SortOrder
+    sort?: SortOrder
+    _count?: WorkPhaseItemCountOrderByAggregateInput
+    _avg?: WorkPhaseItemAvgOrderByAggregateInput
+    _max?: WorkPhaseItemMaxOrderByAggregateInput
+    _min?: WorkPhaseItemMinOrderByAggregateInput
+    _sum?: WorkPhaseItemSumOrderByAggregateInput
+  }
+
+  export type WorkPhaseItemScalarWhereWithAggregatesInput = {
+    AND?: WorkPhaseItemScalarWhereWithAggregatesInput | WorkPhaseItemScalarWhereWithAggregatesInput[]
+    OR?: WorkPhaseItemScalarWhereWithAggregatesInput[]
+    NOT?: WorkPhaseItemScalarWhereWithAggregatesInput | WorkPhaseItemScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"WorkPhaseItem"> | number
+    phaseId?: IntWithAggregatesFilter<"WorkPhaseItem"> | number
+    name?: StringWithAggregatesFilter<"WorkPhaseItem"> | string
+    status?: EnumWorkPhaseItemStatusWithAggregatesFilter<"WorkPhaseItem"> | $Enums.WorkPhaseItemStatus
+    progress?: IntWithAggregatesFilter<"WorkPhaseItem"> | number
+    trackProgress?: BoolWithAggregatesFilter<"WorkPhaseItem"> | boolean
+    rework?: BoolWithAggregatesFilter<"WorkPhaseItem"> | boolean
+    startDate?: DateTimeNullableWithAggregatesFilter<"WorkPhaseItem"> | Date | string | null
+    endDate?: DateTimeNullableWithAggregatesFilter<"WorkPhaseItem"> | Date | string | null
+    devEnterDate?: DateTimeNullableWithAggregatesFilter<"WorkPhaseItem"> | Date | string | null
+    link?: StringNullableWithAggregatesFilter<"WorkPhaseItem"> | string | null
+    note?: StringNullableWithAggregatesFilter<"WorkPhaseItem"> | string | null
+    sort?: IntWithAggregatesFilter<"WorkPhaseItem"> | number
+  }
+
+  export type WorkPhaseItemMemberWhereInput = {
+    AND?: WorkPhaseItemMemberWhereInput | WorkPhaseItemMemberWhereInput[]
+    OR?: WorkPhaseItemMemberWhereInput[]
+    NOT?: WorkPhaseItemMemberWhereInput | WorkPhaseItemMemberWhereInput[]
+    id?: IntFilter<"WorkPhaseItemMember"> | number
+    itemId?: IntFilter<"WorkPhaseItemMember"> | number
+    userId?: IntNullableFilter<"WorkPhaseItemMember"> | number | null
+    name?: StringFilter<"WorkPhaseItemMember"> | string
+    ratio?: IntFilter<"WorkPhaseItemMember"> | number
+    endDate?: DateTimeNullableFilter<"WorkPhaseItemMember"> | Date | string | null
+    item?: XOR<WorkPhaseItemScalarRelationFilter, WorkPhaseItemWhereInput>
+  }
+
+  export type WorkPhaseItemMemberOrderByWithRelationInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrderInput | SortOrder
+    name?: SortOrder
+    ratio?: SortOrder
+    endDate?: SortOrderInput | SortOrder
+    item?: WorkPhaseItemOrderByWithRelationInput
+  }
+
+  export type WorkPhaseItemMemberWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    itemId_name?: WorkPhaseItemMemberItemIdNameCompoundUniqueInput
+    AND?: WorkPhaseItemMemberWhereInput | WorkPhaseItemMemberWhereInput[]
+    OR?: WorkPhaseItemMemberWhereInput[]
+    NOT?: WorkPhaseItemMemberWhereInput | WorkPhaseItemMemberWhereInput[]
+    itemId?: IntFilter<"WorkPhaseItemMember"> | number
+    userId?: IntNullableFilter<"WorkPhaseItemMember"> | number | null
+    name?: StringFilter<"WorkPhaseItemMember"> | string
+    ratio?: IntFilter<"WorkPhaseItemMember"> | number
+    endDate?: DateTimeNullableFilter<"WorkPhaseItemMember"> | Date | string | null
+    item?: XOR<WorkPhaseItemScalarRelationFilter, WorkPhaseItemWhereInput>
+  }, "id" | "itemId_name">
+
+  export type WorkPhaseItemMemberOrderByWithAggregationInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrderInput | SortOrder
+    name?: SortOrder
+    ratio?: SortOrder
+    endDate?: SortOrderInput | SortOrder
+    _count?: WorkPhaseItemMemberCountOrderByAggregateInput
+    _avg?: WorkPhaseItemMemberAvgOrderByAggregateInput
+    _max?: WorkPhaseItemMemberMaxOrderByAggregateInput
+    _min?: WorkPhaseItemMemberMinOrderByAggregateInput
+    _sum?: WorkPhaseItemMemberSumOrderByAggregateInput
+  }
+
+  export type WorkPhaseItemMemberScalarWhereWithAggregatesInput = {
+    AND?: WorkPhaseItemMemberScalarWhereWithAggregatesInput | WorkPhaseItemMemberScalarWhereWithAggregatesInput[]
+    OR?: WorkPhaseItemMemberScalarWhereWithAggregatesInput[]
+    NOT?: WorkPhaseItemMemberScalarWhereWithAggregatesInput | WorkPhaseItemMemberScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"WorkPhaseItemMember"> | number
+    itemId?: IntWithAggregatesFilter<"WorkPhaseItemMember"> | number
+    userId?: IntNullableWithAggregatesFilter<"WorkPhaseItemMember"> | number | null
+    name?: StringWithAggregatesFilter<"WorkPhaseItemMember"> | string
+    ratio?: IntWithAggregatesFilter<"WorkPhaseItemMember"> | number
+    endDate?: DateTimeNullableWithAggregatesFilter<"WorkPhaseItemMember"> | Date | string | null
   }
 
   export type WorkPhaseMemberWhereInput = {
@@ -61255,6 +65504,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     bills?: AnniversaryBillCreateNestedManyWithoutAnniversaryInput
+    notes?: AnniversaryNoteCreateNestedManyWithoutAnniversaryInput
   }
 
   export type AnniversaryUncheckedCreateInput = {
@@ -61275,6 +65525,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     bills?: AnniversaryBillUncheckedCreateNestedManyWithoutAnniversaryInput
+    notes?: AnniversaryNoteUncheckedCreateNestedManyWithoutAnniversaryInput
   }
 
   export type AnniversaryUpdateInput = {
@@ -61294,6 +65545,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     bills?: AnniversaryBillUpdateManyWithoutAnniversaryNestedInput
+    notes?: AnniversaryNoteUpdateManyWithoutAnniversaryNestedInput
   }
 
   export type AnniversaryUncheckedUpdateInput = {
@@ -61314,6 +65566,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     bills?: AnniversaryBillUncheckedUpdateManyWithoutAnniversaryNestedInput
+    notes?: AnniversaryNoteUncheckedUpdateManyWithoutAnniversaryNestedInput
   }
 
   export type AnniversaryCreateManyInput = {
@@ -61434,6 +65687,65 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     label?: StringFieldUpdateOperationsInput | string
     href?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnniversaryNoteCreateInput = {
+    year: number
+    note: string
+    sort?: number
+    createdAt?: Date | string
+    anniversary: AnniversaryCreateNestedOneWithoutNotesInput
+  }
+
+  export type AnniversaryNoteUncheckedCreateInput = {
+    id?: number
+    anniversaryId: number
+    year: number
+    note: string
+    sort?: number
+    createdAt?: Date | string
+  }
+
+  export type AnniversaryNoteUpdateInput = {
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    anniversary?: AnniversaryUpdateOneRequiredWithoutNotesNestedInput
+  }
+
+  export type AnniversaryNoteUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    anniversaryId?: IntFieldUpdateOperationsInput | number
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnniversaryNoteCreateManyInput = {
+    id?: number
+    anniversaryId: number
+    year: number
+    note: string
+    sort?: number
+    createdAt?: Date | string
+  }
+
+  export type AnniversaryNoteUpdateManyMutationInput = {
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnniversaryNoteUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    anniversaryId?: IntFieldUpdateOperationsInput | number
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
     sort?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -61824,9 +66136,12 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
     project: WorkProjectCreateNestedOneWithoutPhasesInput
     members?: WorkPhaseMemberCreateNestedManyWithoutPhaseInput
+    items?: WorkPhaseItemCreateNestedManyWithoutPhaseInput
   }
 
   export type WorkPhaseUncheckedCreateInput = {
@@ -61838,8 +66153,11 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
     members?: WorkPhaseMemberUncheckedCreateNestedManyWithoutPhaseInput
+    items?: WorkPhaseItemUncheckedCreateNestedManyWithoutPhaseInput
   }
 
   export type WorkPhaseUpdateInput = {
@@ -61849,9 +66167,12 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
     project?: WorkProjectUpdateOneRequiredWithoutPhasesNestedInput
     members?: WorkPhaseMemberUpdateManyWithoutPhaseNestedInput
+    items?: WorkPhaseItemUpdateManyWithoutPhaseNestedInput
   }
 
   export type WorkPhaseUncheckedUpdateInput = {
@@ -61863,8 +66184,11 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
     members?: WorkPhaseMemberUncheckedUpdateManyWithoutPhaseNestedInput
+    items?: WorkPhaseItemUncheckedUpdateManyWithoutPhaseNestedInput
   }
 
   export type WorkPhaseCreateManyInput = {
@@ -61876,6 +66200,8 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
   }
 
@@ -61886,6 +66212,8 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
   }
 
@@ -61898,7 +66226,180 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type WorkPhaseItemCreateInput = {
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+    phase: WorkPhaseCreateNestedOneWithoutItemsInput
+    members?: WorkPhaseItemMemberCreateNestedManyWithoutItemInput
+  }
+
+  export type WorkPhaseItemUncheckedCreateInput = {
+    id?: number
+    phaseId: number
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+    members?: WorkPhaseItemMemberUncheckedCreateNestedManyWithoutItemInput
+  }
+
+  export type WorkPhaseItemUpdateInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    phase?: WorkPhaseUpdateOneRequiredWithoutItemsNestedInput
+    members?: WorkPhaseItemMemberUpdateManyWithoutItemNestedInput
+  }
+
+  export type WorkPhaseItemUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    phaseId?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    members?: WorkPhaseItemMemberUncheckedUpdateManyWithoutItemNestedInput
+  }
+
+  export type WorkPhaseItemCreateManyInput = {
+    id?: number
+    phaseId: number
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+  }
+
+  export type WorkPhaseItemUpdateManyMutationInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type WorkPhaseItemUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    phaseId?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type WorkPhaseItemMemberCreateInput = {
+    userId?: number | null
+    name: string
+    ratio?: number
+    endDate?: Date | string | null
+    item: WorkPhaseItemCreateNestedOneWithoutMembersInput
+  }
+
+  export type WorkPhaseItemMemberUncheckedCreateInput = {
+    id?: number
+    itemId: number
+    userId?: number | null
+    name: string
+    ratio?: number
+    endDate?: Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUpdateInput = {
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    item?: WorkPhaseItemUpdateOneRequiredWithoutMembersNestedInput
+  }
+
+  export type WorkPhaseItemMemberUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    itemId?: IntFieldUpdateOperationsInput | number
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type WorkPhaseItemMemberCreateManyInput = {
+    id?: number
+    itemId: number
+    userId?: number | null
+    name: string
+    ratio?: number
+    endDate?: Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUpdateManyMutationInput = {
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    itemId?: IntFieldUpdateOperationsInput | number
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type WorkPhaseMemberCreateInput = {
@@ -65033,7 +69534,17 @@ export namespace Prisma {
     none?: AnniversaryBillWhereInput
   }
 
+  export type AnniversaryNoteListRelationFilter = {
+    every?: AnniversaryNoteWhereInput
+    some?: AnniversaryNoteWhereInput
+    none?: AnniversaryNoteWhereInput
+  }
+
   export type AnniversaryBillOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type AnniversaryNoteOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -65171,6 +69682,47 @@ export namespace Prisma {
   }
 
   export type AnniversaryBillSumOrderByAggregateInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type AnniversaryNoteCountOrderByAggregateInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type AnniversaryNoteAvgOrderByAggregateInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type AnniversaryNoteMaxOrderByAggregateInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type AnniversaryNoteMinOrderByAggregateInput = {
+    id?: SortOrder
+    anniversaryId?: SortOrder
+    year?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type AnniversaryNoteSumOrderByAggregateInput = {
     id?: SortOrder
     anniversaryId?: SortOrder
     year?: SortOrder
@@ -65543,13 +70095,30 @@ export namespace Prisma {
     _max?: NestedEnumIssueKindFilter<$PrismaModel>
   }
 
+  export type EnumWorkPhaseResultFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseResult | EnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseResultFilter<$PrismaModel> | $Enums.WorkPhaseResult
+  }
+
   export type WorkPhaseMemberListRelationFilter = {
     every?: WorkPhaseMemberWhereInput
     some?: WorkPhaseMemberWhereInput
     none?: WorkPhaseMemberWhereInput
   }
 
+  export type WorkPhaseItemListRelationFilter = {
+    every?: WorkPhaseItemWhereInput
+    some?: WorkPhaseItemWhereInput
+    none?: WorkPhaseItemWhereInput
+  }
+
   export type WorkPhaseMemberOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type WorkPhaseItemOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -65567,6 +70136,8 @@ export namespace Prisma {
     endDate?: SortOrder
     devEnterDate?: SortOrder
     progress?: SortOrder
+    result?: SortOrder
+    resultNote?: SortOrder
     sort?: SortOrder
   }
 
@@ -65586,6 +70157,8 @@ export namespace Prisma {
     endDate?: SortOrder
     devEnterDate?: SortOrder
     progress?: SortOrder
+    result?: SortOrder
+    resultNote?: SortOrder
     sort?: SortOrder
   }
 
@@ -65598,6 +70171,8 @@ export namespace Prisma {
     endDate?: SortOrder
     devEnterDate?: SortOrder
     progress?: SortOrder
+    result?: SortOrder
+    resultNote?: SortOrder
     sort?: SortOrder
   }
 
@@ -65608,9 +70183,164 @@ export namespace Prisma {
     sort?: SortOrder
   }
 
+  export type EnumWorkPhaseResultWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseResult | EnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseResultWithAggregatesFilter<$PrismaModel> | $Enums.WorkPhaseResult
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumWorkPhaseResultFilter<$PrismaModel>
+    _max?: NestedEnumWorkPhaseResultFilter<$PrismaModel>
+  }
+
+  export type EnumWorkPhaseItemStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseItemStatus | EnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseItemStatusFilter<$PrismaModel> | $Enums.WorkPhaseItemStatus
+  }
+
   export type WorkPhaseScalarRelationFilter = {
     is?: WorkPhaseWhereInput
     isNot?: WorkPhaseWhereInput
+  }
+
+  export type WorkPhaseItemMemberListRelationFilter = {
+    every?: WorkPhaseItemMemberWhereInput
+    some?: WorkPhaseItemMemberWhereInput
+    none?: WorkPhaseItemMemberWhereInput
+  }
+
+  export type WorkPhaseItemMemberOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type WorkPhaseItemPhaseIdNameCompoundUniqueInput = {
+    phaseId: number
+    name: string
+  }
+
+  export type WorkPhaseItemCountOrderByAggregateInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    name?: SortOrder
+    status?: SortOrder
+    progress?: SortOrder
+    trackProgress?: SortOrder
+    rework?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    devEnterDate?: SortOrder
+    link?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type WorkPhaseItemAvgOrderByAggregateInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    progress?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type WorkPhaseItemMaxOrderByAggregateInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    name?: SortOrder
+    status?: SortOrder
+    progress?: SortOrder
+    trackProgress?: SortOrder
+    rework?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    devEnterDate?: SortOrder
+    link?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type WorkPhaseItemMinOrderByAggregateInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    name?: SortOrder
+    status?: SortOrder
+    progress?: SortOrder
+    trackProgress?: SortOrder
+    rework?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    devEnterDate?: SortOrder
+    link?: SortOrder
+    note?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type WorkPhaseItemSumOrderByAggregateInput = {
+    id?: SortOrder
+    phaseId?: SortOrder
+    progress?: SortOrder
+    sort?: SortOrder
+  }
+
+  export type EnumWorkPhaseItemStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseItemStatus | EnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseItemStatusWithAggregatesFilter<$PrismaModel> | $Enums.WorkPhaseItemStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumWorkPhaseItemStatusFilter<$PrismaModel>
+    _max?: NestedEnumWorkPhaseItemStatusFilter<$PrismaModel>
+  }
+
+  export type WorkPhaseItemScalarRelationFilter = {
+    is?: WorkPhaseItemWhereInput
+    isNot?: WorkPhaseItemWhereInput
+  }
+
+  export type WorkPhaseItemMemberItemIdNameCompoundUniqueInput = {
+    itemId: number
+    name: string
+  }
+
+  export type WorkPhaseItemMemberCountOrderByAggregateInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrder
+    name?: SortOrder
+    ratio?: SortOrder
+    endDate?: SortOrder
+  }
+
+  export type WorkPhaseItemMemberAvgOrderByAggregateInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrder
+    ratio?: SortOrder
+  }
+
+  export type WorkPhaseItemMemberMaxOrderByAggregateInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrder
+    name?: SortOrder
+    ratio?: SortOrder
+    endDate?: SortOrder
+  }
+
+  export type WorkPhaseItemMemberMinOrderByAggregateInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrder
+    name?: SortOrder
+    ratio?: SortOrder
+    endDate?: SortOrder
+  }
+
+  export type WorkPhaseItemMemberSumOrderByAggregateInput = {
+    id?: SortOrder
+    itemId?: SortOrder
+    userId?: SortOrder
+    ratio?: SortOrder
   }
 
   export type WorkPhaseMemberCountOrderByAggregateInput = {
@@ -67882,11 +72612,25 @@ export namespace Prisma {
     connect?: AnniversaryBillWhereUniqueInput | AnniversaryBillWhereUniqueInput[]
   }
 
+  export type AnniversaryNoteCreateNestedManyWithoutAnniversaryInput = {
+    create?: XOR<AnniversaryNoteCreateWithoutAnniversaryInput, AnniversaryNoteUncheckedCreateWithoutAnniversaryInput> | AnniversaryNoteCreateWithoutAnniversaryInput[] | AnniversaryNoteUncheckedCreateWithoutAnniversaryInput[]
+    connectOrCreate?: AnniversaryNoteCreateOrConnectWithoutAnniversaryInput | AnniversaryNoteCreateOrConnectWithoutAnniversaryInput[]
+    createMany?: AnniversaryNoteCreateManyAnniversaryInputEnvelope
+    connect?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+  }
+
   export type AnniversaryBillUncheckedCreateNestedManyWithoutAnniversaryInput = {
     create?: XOR<AnniversaryBillCreateWithoutAnniversaryInput, AnniversaryBillUncheckedCreateWithoutAnniversaryInput> | AnniversaryBillCreateWithoutAnniversaryInput[] | AnniversaryBillUncheckedCreateWithoutAnniversaryInput[]
     connectOrCreate?: AnniversaryBillCreateOrConnectWithoutAnniversaryInput | AnniversaryBillCreateOrConnectWithoutAnniversaryInput[]
     createMany?: AnniversaryBillCreateManyAnniversaryInputEnvelope
     connect?: AnniversaryBillWhereUniqueInput | AnniversaryBillWhereUniqueInput[]
+  }
+
+  export type AnniversaryNoteUncheckedCreateNestedManyWithoutAnniversaryInput = {
+    create?: XOR<AnniversaryNoteCreateWithoutAnniversaryInput, AnniversaryNoteUncheckedCreateWithoutAnniversaryInput> | AnniversaryNoteCreateWithoutAnniversaryInput[] | AnniversaryNoteUncheckedCreateWithoutAnniversaryInput[]
+    connectOrCreate?: AnniversaryNoteCreateOrConnectWithoutAnniversaryInput | AnniversaryNoteCreateOrConnectWithoutAnniversaryInput[]
+    createMany?: AnniversaryNoteCreateManyAnniversaryInputEnvelope
+    connect?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
   }
 
   export type EnumAnniversaryTypeFieldUpdateOperationsInput = {
@@ -67916,6 +72660,20 @@ export namespace Prisma {
     deleteMany?: AnniversaryBillScalarWhereInput | AnniversaryBillScalarWhereInput[]
   }
 
+  export type AnniversaryNoteUpdateManyWithoutAnniversaryNestedInput = {
+    create?: XOR<AnniversaryNoteCreateWithoutAnniversaryInput, AnniversaryNoteUncheckedCreateWithoutAnniversaryInput> | AnniversaryNoteCreateWithoutAnniversaryInput[] | AnniversaryNoteUncheckedCreateWithoutAnniversaryInput[]
+    connectOrCreate?: AnniversaryNoteCreateOrConnectWithoutAnniversaryInput | AnniversaryNoteCreateOrConnectWithoutAnniversaryInput[]
+    upsert?: AnniversaryNoteUpsertWithWhereUniqueWithoutAnniversaryInput | AnniversaryNoteUpsertWithWhereUniqueWithoutAnniversaryInput[]
+    createMany?: AnniversaryNoteCreateManyAnniversaryInputEnvelope
+    set?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    disconnect?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    delete?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    connect?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    update?: AnniversaryNoteUpdateWithWhereUniqueWithoutAnniversaryInput | AnniversaryNoteUpdateWithWhereUniqueWithoutAnniversaryInput[]
+    updateMany?: AnniversaryNoteUpdateManyWithWhereWithoutAnniversaryInput | AnniversaryNoteUpdateManyWithWhereWithoutAnniversaryInput[]
+    deleteMany?: AnniversaryNoteScalarWhereInput | AnniversaryNoteScalarWhereInput[]
+  }
+
   export type AnniversaryBillUncheckedUpdateManyWithoutAnniversaryNestedInput = {
     create?: XOR<AnniversaryBillCreateWithoutAnniversaryInput, AnniversaryBillUncheckedCreateWithoutAnniversaryInput> | AnniversaryBillCreateWithoutAnniversaryInput[] | AnniversaryBillUncheckedCreateWithoutAnniversaryInput[]
     connectOrCreate?: AnniversaryBillCreateOrConnectWithoutAnniversaryInput | AnniversaryBillCreateOrConnectWithoutAnniversaryInput[]
@@ -67930,6 +72688,20 @@ export namespace Prisma {
     deleteMany?: AnniversaryBillScalarWhereInput | AnniversaryBillScalarWhereInput[]
   }
 
+  export type AnniversaryNoteUncheckedUpdateManyWithoutAnniversaryNestedInput = {
+    create?: XOR<AnniversaryNoteCreateWithoutAnniversaryInput, AnniversaryNoteUncheckedCreateWithoutAnniversaryInput> | AnniversaryNoteCreateWithoutAnniversaryInput[] | AnniversaryNoteUncheckedCreateWithoutAnniversaryInput[]
+    connectOrCreate?: AnniversaryNoteCreateOrConnectWithoutAnniversaryInput | AnniversaryNoteCreateOrConnectWithoutAnniversaryInput[]
+    upsert?: AnniversaryNoteUpsertWithWhereUniqueWithoutAnniversaryInput | AnniversaryNoteUpsertWithWhereUniqueWithoutAnniversaryInput[]
+    createMany?: AnniversaryNoteCreateManyAnniversaryInputEnvelope
+    set?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    disconnect?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    delete?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    connect?: AnniversaryNoteWhereUniqueInput | AnniversaryNoteWhereUniqueInput[]
+    update?: AnniversaryNoteUpdateWithWhereUniqueWithoutAnniversaryInput | AnniversaryNoteUpdateWithWhereUniqueWithoutAnniversaryInput[]
+    updateMany?: AnniversaryNoteUpdateManyWithWhereWithoutAnniversaryInput | AnniversaryNoteUpdateManyWithWhereWithoutAnniversaryInput[]
+    deleteMany?: AnniversaryNoteScalarWhereInput | AnniversaryNoteScalarWhereInput[]
+  }
+
   export type AnniversaryCreateNestedOneWithoutBillsInput = {
     create?: XOR<AnniversaryCreateWithoutBillsInput, AnniversaryUncheckedCreateWithoutBillsInput>
     connectOrCreate?: AnniversaryCreateOrConnectWithoutBillsInput
@@ -67942,6 +72714,20 @@ export namespace Prisma {
     upsert?: AnniversaryUpsertWithoutBillsInput
     connect?: AnniversaryWhereUniqueInput
     update?: XOR<XOR<AnniversaryUpdateToOneWithWhereWithoutBillsInput, AnniversaryUpdateWithoutBillsInput>, AnniversaryUncheckedUpdateWithoutBillsInput>
+  }
+
+  export type AnniversaryCreateNestedOneWithoutNotesInput = {
+    create?: XOR<AnniversaryCreateWithoutNotesInput, AnniversaryUncheckedCreateWithoutNotesInput>
+    connectOrCreate?: AnniversaryCreateOrConnectWithoutNotesInput
+    connect?: AnniversaryWhereUniqueInput
+  }
+
+  export type AnniversaryUpdateOneRequiredWithoutNotesNestedInput = {
+    create?: XOR<AnniversaryCreateWithoutNotesInput, AnniversaryUncheckedCreateWithoutNotesInput>
+    connectOrCreate?: AnniversaryCreateOrConnectWithoutNotesInput
+    upsert?: AnniversaryUpsertWithoutNotesInput
+    connect?: AnniversaryWhereUniqueInput
+    update?: XOR<XOR<AnniversaryUpdateToOneWithWhereWithoutNotesInput, AnniversaryUpdateWithoutNotesInput>, AnniversaryUncheckedUpdateWithoutNotesInput>
   }
 
   export type WorkNodeCreateNestedManyWithoutProjectInput = {
@@ -68191,11 +72977,29 @@ export namespace Prisma {
     connect?: WorkPhaseMemberWhereUniqueInput | WorkPhaseMemberWhereUniqueInput[]
   }
 
+  export type WorkPhaseItemCreateNestedManyWithoutPhaseInput = {
+    create?: XOR<WorkPhaseItemCreateWithoutPhaseInput, WorkPhaseItemUncheckedCreateWithoutPhaseInput> | WorkPhaseItemCreateWithoutPhaseInput[] | WorkPhaseItemUncheckedCreateWithoutPhaseInput[]
+    connectOrCreate?: WorkPhaseItemCreateOrConnectWithoutPhaseInput | WorkPhaseItemCreateOrConnectWithoutPhaseInput[]
+    createMany?: WorkPhaseItemCreateManyPhaseInputEnvelope
+    connect?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+  }
+
   export type WorkPhaseMemberUncheckedCreateNestedManyWithoutPhaseInput = {
     create?: XOR<WorkPhaseMemberCreateWithoutPhaseInput, WorkPhaseMemberUncheckedCreateWithoutPhaseInput> | WorkPhaseMemberCreateWithoutPhaseInput[] | WorkPhaseMemberUncheckedCreateWithoutPhaseInput[]
     connectOrCreate?: WorkPhaseMemberCreateOrConnectWithoutPhaseInput | WorkPhaseMemberCreateOrConnectWithoutPhaseInput[]
     createMany?: WorkPhaseMemberCreateManyPhaseInputEnvelope
     connect?: WorkPhaseMemberWhereUniqueInput | WorkPhaseMemberWhereUniqueInput[]
+  }
+
+  export type WorkPhaseItemUncheckedCreateNestedManyWithoutPhaseInput = {
+    create?: XOR<WorkPhaseItemCreateWithoutPhaseInput, WorkPhaseItemUncheckedCreateWithoutPhaseInput> | WorkPhaseItemCreateWithoutPhaseInput[] | WorkPhaseItemUncheckedCreateWithoutPhaseInput[]
+    connectOrCreate?: WorkPhaseItemCreateOrConnectWithoutPhaseInput | WorkPhaseItemCreateOrConnectWithoutPhaseInput[]
+    createMany?: WorkPhaseItemCreateManyPhaseInputEnvelope
+    connect?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+  }
+
+  export type EnumWorkPhaseResultFieldUpdateOperationsInput = {
+    set?: $Enums.WorkPhaseResult
   }
 
   export type WorkProjectUpdateOneRequiredWithoutPhasesNestedInput = {
@@ -68220,6 +73024,20 @@ export namespace Prisma {
     deleteMany?: WorkPhaseMemberScalarWhereInput | WorkPhaseMemberScalarWhereInput[]
   }
 
+  export type WorkPhaseItemUpdateManyWithoutPhaseNestedInput = {
+    create?: XOR<WorkPhaseItemCreateWithoutPhaseInput, WorkPhaseItemUncheckedCreateWithoutPhaseInput> | WorkPhaseItemCreateWithoutPhaseInput[] | WorkPhaseItemUncheckedCreateWithoutPhaseInput[]
+    connectOrCreate?: WorkPhaseItemCreateOrConnectWithoutPhaseInput | WorkPhaseItemCreateOrConnectWithoutPhaseInput[]
+    upsert?: WorkPhaseItemUpsertWithWhereUniqueWithoutPhaseInput | WorkPhaseItemUpsertWithWhereUniqueWithoutPhaseInput[]
+    createMany?: WorkPhaseItemCreateManyPhaseInputEnvelope
+    set?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    disconnect?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    delete?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    connect?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    update?: WorkPhaseItemUpdateWithWhereUniqueWithoutPhaseInput | WorkPhaseItemUpdateWithWhereUniqueWithoutPhaseInput[]
+    updateMany?: WorkPhaseItemUpdateManyWithWhereWithoutPhaseInput | WorkPhaseItemUpdateManyWithWhereWithoutPhaseInput[]
+    deleteMany?: WorkPhaseItemScalarWhereInput | WorkPhaseItemScalarWhereInput[]
+  }
+
   export type WorkPhaseMemberUncheckedUpdateManyWithoutPhaseNestedInput = {
     create?: XOR<WorkPhaseMemberCreateWithoutPhaseInput, WorkPhaseMemberUncheckedCreateWithoutPhaseInput> | WorkPhaseMemberCreateWithoutPhaseInput[] | WorkPhaseMemberUncheckedCreateWithoutPhaseInput[]
     connectOrCreate?: WorkPhaseMemberCreateOrConnectWithoutPhaseInput | WorkPhaseMemberCreateOrConnectWithoutPhaseInput[]
@@ -68232,6 +73050,94 @@ export namespace Prisma {
     update?: WorkPhaseMemberUpdateWithWhereUniqueWithoutPhaseInput | WorkPhaseMemberUpdateWithWhereUniqueWithoutPhaseInput[]
     updateMany?: WorkPhaseMemberUpdateManyWithWhereWithoutPhaseInput | WorkPhaseMemberUpdateManyWithWhereWithoutPhaseInput[]
     deleteMany?: WorkPhaseMemberScalarWhereInput | WorkPhaseMemberScalarWhereInput[]
+  }
+
+  export type WorkPhaseItemUncheckedUpdateManyWithoutPhaseNestedInput = {
+    create?: XOR<WorkPhaseItemCreateWithoutPhaseInput, WorkPhaseItemUncheckedCreateWithoutPhaseInput> | WorkPhaseItemCreateWithoutPhaseInput[] | WorkPhaseItemUncheckedCreateWithoutPhaseInput[]
+    connectOrCreate?: WorkPhaseItemCreateOrConnectWithoutPhaseInput | WorkPhaseItemCreateOrConnectWithoutPhaseInput[]
+    upsert?: WorkPhaseItemUpsertWithWhereUniqueWithoutPhaseInput | WorkPhaseItemUpsertWithWhereUniqueWithoutPhaseInput[]
+    createMany?: WorkPhaseItemCreateManyPhaseInputEnvelope
+    set?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    disconnect?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    delete?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    connect?: WorkPhaseItemWhereUniqueInput | WorkPhaseItemWhereUniqueInput[]
+    update?: WorkPhaseItemUpdateWithWhereUniqueWithoutPhaseInput | WorkPhaseItemUpdateWithWhereUniqueWithoutPhaseInput[]
+    updateMany?: WorkPhaseItemUpdateManyWithWhereWithoutPhaseInput | WorkPhaseItemUpdateManyWithWhereWithoutPhaseInput[]
+    deleteMany?: WorkPhaseItemScalarWhereInput | WorkPhaseItemScalarWhereInput[]
+  }
+
+  export type WorkPhaseCreateNestedOneWithoutItemsInput = {
+    create?: XOR<WorkPhaseCreateWithoutItemsInput, WorkPhaseUncheckedCreateWithoutItemsInput>
+    connectOrCreate?: WorkPhaseCreateOrConnectWithoutItemsInput
+    connect?: WorkPhaseWhereUniqueInput
+  }
+
+  export type WorkPhaseItemMemberCreateNestedManyWithoutItemInput = {
+    create?: XOR<WorkPhaseItemMemberCreateWithoutItemInput, WorkPhaseItemMemberUncheckedCreateWithoutItemInput> | WorkPhaseItemMemberCreateWithoutItemInput[] | WorkPhaseItemMemberUncheckedCreateWithoutItemInput[]
+    connectOrCreate?: WorkPhaseItemMemberCreateOrConnectWithoutItemInput | WorkPhaseItemMemberCreateOrConnectWithoutItemInput[]
+    createMany?: WorkPhaseItemMemberCreateManyItemInputEnvelope
+    connect?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+  }
+
+  export type WorkPhaseItemMemberUncheckedCreateNestedManyWithoutItemInput = {
+    create?: XOR<WorkPhaseItemMemberCreateWithoutItemInput, WorkPhaseItemMemberUncheckedCreateWithoutItemInput> | WorkPhaseItemMemberCreateWithoutItemInput[] | WorkPhaseItemMemberUncheckedCreateWithoutItemInput[]
+    connectOrCreate?: WorkPhaseItemMemberCreateOrConnectWithoutItemInput | WorkPhaseItemMemberCreateOrConnectWithoutItemInput[]
+    createMany?: WorkPhaseItemMemberCreateManyItemInputEnvelope
+    connect?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+  }
+
+  export type EnumWorkPhaseItemStatusFieldUpdateOperationsInput = {
+    set?: $Enums.WorkPhaseItemStatus
+  }
+
+  export type WorkPhaseUpdateOneRequiredWithoutItemsNestedInput = {
+    create?: XOR<WorkPhaseCreateWithoutItemsInput, WorkPhaseUncheckedCreateWithoutItemsInput>
+    connectOrCreate?: WorkPhaseCreateOrConnectWithoutItemsInput
+    upsert?: WorkPhaseUpsertWithoutItemsInput
+    connect?: WorkPhaseWhereUniqueInput
+    update?: XOR<XOR<WorkPhaseUpdateToOneWithWhereWithoutItemsInput, WorkPhaseUpdateWithoutItemsInput>, WorkPhaseUncheckedUpdateWithoutItemsInput>
+  }
+
+  export type WorkPhaseItemMemberUpdateManyWithoutItemNestedInput = {
+    create?: XOR<WorkPhaseItemMemberCreateWithoutItemInput, WorkPhaseItemMemberUncheckedCreateWithoutItemInput> | WorkPhaseItemMemberCreateWithoutItemInput[] | WorkPhaseItemMemberUncheckedCreateWithoutItemInput[]
+    connectOrCreate?: WorkPhaseItemMemberCreateOrConnectWithoutItemInput | WorkPhaseItemMemberCreateOrConnectWithoutItemInput[]
+    upsert?: WorkPhaseItemMemberUpsertWithWhereUniqueWithoutItemInput | WorkPhaseItemMemberUpsertWithWhereUniqueWithoutItemInput[]
+    createMany?: WorkPhaseItemMemberCreateManyItemInputEnvelope
+    set?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    disconnect?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    delete?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    connect?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    update?: WorkPhaseItemMemberUpdateWithWhereUniqueWithoutItemInput | WorkPhaseItemMemberUpdateWithWhereUniqueWithoutItemInput[]
+    updateMany?: WorkPhaseItemMemberUpdateManyWithWhereWithoutItemInput | WorkPhaseItemMemberUpdateManyWithWhereWithoutItemInput[]
+    deleteMany?: WorkPhaseItemMemberScalarWhereInput | WorkPhaseItemMemberScalarWhereInput[]
+  }
+
+  export type WorkPhaseItemMemberUncheckedUpdateManyWithoutItemNestedInput = {
+    create?: XOR<WorkPhaseItemMemberCreateWithoutItemInput, WorkPhaseItemMemberUncheckedCreateWithoutItemInput> | WorkPhaseItemMemberCreateWithoutItemInput[] | WorkPhaseItemMemberUncheckedCreateWithoutItemInput[]
+    connectOrCreate?: WorkPhaseItemMemberCreateOrConnectWithoutItemInput | WorkPhaseItemMemberCreateOrConnectWithoutItemInput[]
+    upsert?: WorkPhaseItemMemberUpsertWithWhereUniqueWithoutItemInput | WorkPhaseItemMemberUpsertWithWhereUniqueWithoutItemInput[]
+    createMany?: WorkPhaseItemMemberCreateManyItemInputEnvelope
+    set?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    disconnect?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    delete?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    connect?: WorkPhaseItemMemberWhereUniqueInput | WorkPhaseItemMemberWhereUniqueInput[]
+    update?: WorkPhaseItemMemberUpdateWithWhereUniqueWithoutItemInput | WorkPhaseItemMemberUpdateWithWhereUniqueWithoutItemInput[]
+    updateMany?: WorkPhaseItemMemberUpdateManyWithWhereWithoutItemInput | WorkPhaseItemMemberUpdateManyWithWhereWithoutItemInput[]
+    deleteMany?: WorkPhaseItemMemberScalarWhereInput | WorkPhaseItemMemberScalarWhereInput[]
+  }
+
+  export type WorkPhaseItemCreateNestedOneWithoutMembersInput = {
+    create?: XOR<WorkPhaseItemCreateWithoutMembersInput, WorkPhaseItemUncheckedCreateWithoutMembersInput>
+    connectOrCreate?: WorkPhaseItemCreateOrConnectWithoutMembersInput
+    connect?: WorkPhaseItemWhereUniqueInput
+  }
+
+  export type WorkPhaseItemUpdateOneRequiredWithoutMembersNestedInput = {
+    create?: XOR<WorkPhaseItemCreateWithoutMembersInput, WorkPhaseItemUncheckedCreateWithoutMembersInput>
+    connectOrCreate?: WorkPhaseItemCreateOrConnectWithoutMembersInput
+    upsert?: WorkPhaseItemUpsertWithoutMembersInput
+    connect?: WorkPhaseItemWhereUniqueInput
+    update?: XOR<XOR<WorkPhaseItemUpdateToOneWithWhereWithoutMembersInput, WorkPhaseItemUpdateWithoutMembersInput>, WorkPhaseItemUncheckedUpdateWithoutMembersInput>
   }
 
   export type WorkPhaseCreateNestedOneWithoutMembersInput = {
@@ -69301,6 +74207,40 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumIssueKindFilter<$PrismaModel>
     _max?: NestedEnumIssueKindFilter<$PrismaModel>
+  }
+
+  export type NestedEnumWorkPhaseResultFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseResult | EnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseResultFilter<$PrismaModel> | $Enums.WorkPhaseResult
+  }
+
+  export type NestedEnumWorkPhaseResultWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseResult | EnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseResult[] | ListEnumWorkPhaseResultFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseResultWithAggregatesFilter<$PrismaModel> | $Enums.WorkPhaseResult
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumWorkPhaseResultFilter<$PrismaModel>
+    _max?: NestedEnumWorkPhaseResultFilter<$PrismaModel>
+  }
+
+  export type NestedEnumWorkPhaseItemStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseItemStatus | EnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseItemStatusFilter<$PrismaModel> | $Enums.WorkPhaseItemStatus
+  }
+
+  export type NestedEnumWorkPhaseItemStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.WorkPhaseItemStatus | EnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.WorkPhaseItemStatus[] | ListEnumWorkPhaseItemStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumWorkPhaseItemStatusWithAggregatesFilter<$PrismaModel> | $Enums.WorkPhaseItemStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumWorkPhaseItemStatusFilter<$PrismaModel>
+    _max?: NestedEnumWorkPhaseItemStatusFilter<$PrismaModel>
   }
 
   export type NestedEnumPregStageFilter<$PrismaModel = never> = {
@@ -70955,6 +75895,31 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type AnniversaryNoteCreateWithoutAnniversaryInput = {
+    year: number
+    note: string
+    sort?: number
+    createdAt?: Date | string
+  }
+
+  export type AnniversaryNoteUncheckedCreateWithoutAnniversaryInput = {
+    id?: number
+    year: number
+    note: string
+    sort?: number
+    createdAt?: Date | string
+  }
+
+  export type AnniversaryNoteCreateOrConnectWithoutAnniversaryInput = {
+    where: AnniversaryNoteWhereUniqueInput
+    create: XOR<AnniversaryNoteCreateWithoutAnniversaryInput, AnniversaryNoteUncheckedCreateWithoutAnniversaryInput>
+  }
+
+  export type AnniversaryNoteCreateManyAnniversaryInputEnvelope = {
+    data: AnniversaryNoteCreateManyAnniversaryInput | AnniversaryNoteCreateManyAnniversaryInput[]
+    skipDuplicates?: boolean
+  }
+
   export type AnniversaryBillUpsertWithWhereUniqueWithoutAnniversaryInput = {
     where: AnniversaryBillWhereUniqueInput
     update: XOR<AnniversaryBillUpdateWithoutAnniversaryInput, AnniversaryBillUncheckedUpdateWithoutAnniversaryInput>
@@ -70984,6 +75949,34 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"AnniversaryBill"> | Date | string
   }
 
+  export type AnniversaryNoteUpsertWithWhereUniqueWithoutAnniversaryInput = {
+    where: AnniversaryNoteWhereUniqueInput
+    update: XOR<AnniversaryNoteUpdateWithoutAnniversaryInput, AnniversaryNoteUncheckedUpdateWithoutAnniversaryInput>
+    create: XOR<AnniversaryNoteCreateWithoutAnniversaryInput, AnniversaryNoteUncheckedCreateWithoutAnniversaryInput>
+  }
+
+  export type AnniversaryNoteUpdateWithWhereUniqueWithoutAnniversaryInput = {
+    where: AnniversaryNoteWhereUniqueInput
+    data: XOR<AnniversaryNoteUpdateWithoutAnniversaryInput, AnniversaryNoteUncheckedUpdateWithoutAnniversaryInput>
+  }
+
+  export type AnniversaryNoteUpdateManyWithWhereWithoutAnniversaryInput = {
+    where: AnniversaryNoteScalarWhereInput
+    data: XOR<AnniversaryNoteUpdateManyMutationInput, AnniversaryNoteUncheckedUpdateManyWithoutAnniversaryInput>
+  }
+
+  export type AnniversaryNoteScalarWhereInput = {
+    AND?: AnniversaryNoteScalarWhereInput | AnniversaryNoteScalarWhereInput[]
+    OR?: AnniversaryNoteScalarWhereInput[]
+    NOT?: AnniversaryNoteScalarWhereInput | AnniversaryNoteScalarWhereInput[]
+    id?: IntFilter<"AnniversaryNote"> | number
+    anniversaryId?: IntFilter<"AnniversaryNote"> | number
+    year?: IntFilter<"AnniversaryNote"> | number
+    note?: StringFilter<"AnniversaryNote"> | string
+    sort?: IntFilter<"AnniversaryNote"> | number
+    createdAt?: DateTimeFilter<"AnniversaryNote"> | Date | string
+  }
+
   export type AnniversaryCreateWithoutBillsInput = {
     name: string
     type?: $Enums.AnniversaryType
@@ -71000,6 +75993,7 @@ export namespace Prisma {
     lunarDay?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    notes?: AnniversaryNoteCreateNestedManyWithoutAnniversaryInput
   }
 
   export type AnniversaryUncheckedCreateWithoutBillsInput = {
@@ -71019,6 +76013,7 @@ export namespace Prisma {
     lunarDay?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    notes?: AnniversaryNoteUncheckedCreateNestedManyWithoutAnniversaryInput
   }
 
   export type AnniversaryCreateOrConnectWithoutBillsInput = {
@@ -71053,6 +76048,7 @@ export namespace Prisma {
     lunarDay?: NullableIntFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    notes?: AnniversaryNoteUpdateManyWithoutAnniversaryNestedInput
   }
 
   export type AnniversaryUncheckedUpdateWithoutBillsInput = {
@@ -71072,6 +76068,101 @@ export namespace Prisma {
     lunarDay?: NullableIntFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    notes?: AnniversaryNoteUncheckedUpdateManyWithoutAnniversaryNestedInput
+  }
+
+  export type AnniversaryCreateWithoutNotesInput = {
+    name: string
+    type?: $Enums.AnniversaryType
+    date: Date | string
+    calendar?: $Enums.CalendarType
+    ownerId: number
+    remindDays?: AnniversaryCreateremindDaysInput | number[]
+    remindTime?: string | null
+    note?: string | null
+    icon?: string | null
+    background?: string | null
+    lunarLeap?: boolean
+    lunarMonth?: number | null
+    lunarDay?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    bills?: AnniversaryBillCreateNestedManyWithoutAnniversaryInput
+  }
+
+  export type AnniversaryUncheckedCreateWithoutNotesInput = {
+    id?: number
+    name: string
+    type?: $Enums.AnniversaryType
+    date: Date | string
+    calendar?: $Enums.CalendarType
+    ownerId: number
+    remindDays?: AnniversaryCreateremindDaysInput | number[]
+    remindTime?: string | null
+    note?: string | null
+    icon?: string | null
+    background?: string | null
+    lunarLeap?: boolean
+    lunarMonth?: number | null
+    lunarDay?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    bills?: AnniversaryBillUncheckedCreateNestedManyWithoutAnniversaryInput
+  }
+
+  export type AnniversaryCreateOrConnectWithoutNotesInput = {
+    where: AnniversaryWhereUniqueInput
+    create: XOR<AnniversaryCreateWithoutNotesInput, AnniversaryUncheckedCreateWithoutNotesInput>
+  }
+
+  export type AnniversaryUpsertWithoutNotesInput = {
+    update: XOR<AnniversaryUpdateWithoutNotesInput, AnniversaryUncheckedUpdateWithoutNotesInput>
+    create: XOR<AnniversaryCreateWithoutNotesInput, AnniversaryUncheckedCreateWithoutNotesInput>
+    where?: AnniversaryWhereInput
+  }
+
+  export type AnniversaryUpdateToOneWithWhereWithoutNotesInput = {
+    where?: AnniversaryWhereInput
+    data: XOR<AnniversaryUpdateWithoutNotesInput, AnniversaryUncheckedUpdateWithoutNotesInput>
+  }
+
+  export type AnniversaryUpdateWithoutNotesInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    type?: EnumAnniversaryTypeFieldUpdateOperationsInput | $Enums.AnniversaryType
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    calendar?: EnumCalendarTypeFieldUpdateOperationsInput | $Enums.CalendarType
+    ownerId?: IntFieldUpdateOperationsInput | number
+    remindDays?: AnniversaryUpdateremindDaysInput | number[]
+    remindTime?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    background?: NullableStringFieldUpdateOperationsInput | string | null
+    lunarLeap?: BoolFieldUpdateOperationsInput | boolean
+    lunarMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    lunarDay?: NullableIntFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    bills?: AnniversaryBillUpdateManyWithoutAnniversaryNestedInput
+  }
+
+  export type AnniversaryUncheckedUpdateWithoutNotesInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    type?: EnumAnniversaryTypeFieldUpdateOperationsInput | $Enums.AnniversaryType
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    calendar?: EnumCalendarTypeFieldUpdateOperationsInput | $Enums.CalendarType
+    ownerId?: IntFieldUpdateOperationsInput | number
+    remindDays?: AnniversaryUpdateremindDaysInput | number[]
+    remindTime?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    background?: NullableStringFieldUpdateOperationsInput | string | null
+    lunarLeap?: BoolFieldUpdateOperationsInput | boolean
+    lunarMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    lunarDay?: NullableIntFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    bills?: AnniversaryBillUncheckedUpdateManyWithoutAnniversaryNestedInput
   }
 
   export type WorkNodeCreateWithoutProjectInput = {
@@ -71174,8 +76265,11 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
     members?: WorkPhaseMemberCreateNestedManyWithoutPhaseInput
+    items?: WorkPhaseItemCreateNestedManyWithoutPhaseInput
   }
 
   export type WorkPhaseUncheckedCreateWithoutProjectInput = {
@@ -71186,8 +76280,11 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
     members?: WorkPhaseMemberUncheckedCreateNestedManyWithoutPhaseInput
+    items?: WorkPhaseItemUncheckedCreateNestedManyWithoutPhaseInput
   }
 
   export type WorkPhaseCreateOrConnectWithoutProjectInput = {
@@ -71321,6 +76418,8 @@ export namespace Prisma {
     endDate?: DateTimeNullableFilter<"WorkPhase"> | Date | string | null
     devEnterDate?: DateTimeNullableFilter<"WorkPhase"> | Date | string | null
     progress?: IntFilter<"WorkPhase"> | number
+    result?: EnumWorkPhaseResultFilter<"WorkPhase"> | $Enums.WorkPhaseResult
+    resultNote?: StringNullableFilter<"WorkPhase"> | string | null
     sort?: IntFilter<"WorkPhase"> | number
   }
 
@@ -71693,6 +76792,47 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type WorkPhaseItemCreateWithoutPhaseInput = {
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+    members?: WorkPhaseItemMemberCreateNestedManyWithoutItemInput
+  }
+
+  export type WorkPhaseItemUncheckedCreateWithoutPhaseInput = {
+    id?: number
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+    members?: WorkPhaseItemMemberUncheckedCreateNestedManyWithoutItemInput
+  }
+
+  export type WorkPhaseItemCreateOrConnectWithoutPhaseInput = {
+    where: WorkPhaseItemWhereUniqueInput
+    create: XOR<WorkPhaseItemCreateWithoutPhaseInput, WorkPhaseItemUncheckedCreateWithoutPhaseInput>
+  }
+
+  export type WorkPhaseItemCreateManyPhaseInputEnvelope = {
+    data: WorkPhaseItemCreateManyPhaseInput | WorkPhaseItemCreateManyPhaseInput[]
+    skipDuplicates?: boolean
+  }
+
   export type WorkProjectUpsertWithoutPhasesInput = {
     update: XOR<WorkProjectUpdateWithoutPhasesInput, WorkProjectUncheckedUpdateWithoutPhasesInput>
     create: XOR<WorkProjectCreateWithoutPhasesInput, WorkProjectUncheckedCreateWithoutPhasesInput>
@@ -71775,6 +76915,246 @@ export namespace Prisma {
     ratio?: IntFilter<"WorkPhaseMember"> | number
   }
 
+  export type WorkPhaseItemUpsertWithWhereUniqueWithoutPhaseInput = {
+    where: WorkPhaseItemWhereUniqueInput
+    update: XOR<WorkPhaseItemUpdateWithoutPhaseInput, WorkPhaseItemUncheckedUpdateWithoutPhaseInput>
+    create: XOR<WorkPhaseItemCreateWithoutPhaseInput, WorkPhaseItemUncheckedCreateWithoutPhaseInput>
+  }
+
+  export type WorkPhaseItemUpdateWithWhereUniqueWithoutPhaseInput = {
+    where: WorkPhaseItemWhereUniqueInput
+    data: XOR<WorkPhaseItemUpdateWithoutPhaseInput, WorkPhaseItemUncheckedUpdateWithoutPhaseInput>
+  }
+
+  export type WorkPhaseItemUpdateManyWithWhereWithoutPhaseInput = {
+    where: WorkPhaseItemScalarWhereInput
+    data: XOR<WorkPhaseItemUpdateManyMutationInput, WorkPhaseItemUncheckedUpdateManyWithoutPhaseInput>
+  }
+
+  export type WorkPhaseItemScalarWhereInput = {
+    AND?: WorkPhaseItemScalarWhereInput | WorkPhaseItemScalarWhereInput[]
+    OR?: WorkPhaseItemScalarWhereInput[]
+    NOT?: WorkPhaseItemScalarWhereInput | WorkPhaseItemScalarWhereInput[]
+    id?: IntFilter<"WorkPhaseItem"> | number
+    phaseId?: IntFilter<"WorkPhaseItem"> | number
+    name?: StringFilter<"WorkPhaseItem"> | string
+    status?: EnumWorkPhaseItemStatusFilter<"WorkPhaseItem"> | $Enums.WorkPhaseItemStatus
+    progress?: IntFilter<"WorkPhaseItem"> | number
+    trackProgress?: BoolFilter<"WorkPhaseItem"> | boolean
+    rework?: BoolFilter<"WorkPhaseItem"> | boolean
+    startDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    endDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    devEnterDate?: DateTimeNullableFilter<"WorkPhaseItem"> | Date | string | null
+    link?: StringNullableFilter<"WorkPhaseItem"> | string | null
+    note?: StringNullableFilter<"WorkPhaseItem"> | string | null
+    sort?: IntFilter<"WorkPhaseItem"> | number
+  }
+
+  export type WorkPhaseCreateWithoutItemsInput = {
+    kind: $Enums.WorkPhaseKind
+    enabled?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
+    sort?: number
+    project: WorkProjectCreateNestedOneWithoutPhasesInput
+    members?: WorkPhaseMemberCreateNestedManyWithoutPhaseInput
+  }
+
+  export type WorkPhaseUncheckedCreateWithoutItemsInput = {
+    id?: number
+    projectId: number
+    kind: $Enums.WorkPhaseKind
+    enabled?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
+    sort?: number
+    members?: WorkPhaseMemberUncheckedCreateNestedManyWithoutPhaseInput
+  }
+
+  export type WorkPhaseCreateOrConnectWithoutItemsInput = {
+    where: WorkPhaseWhereUniqueInput
+    create: XOR<WorkPhaseCreateWithoutItemsInput, WorkPhaseUncheckedCreateWithoutItemsInput>
+  }
+
+  export type WorkPhaseItemMemberCreateWithoutItemInput = {
+    userId?: number | null
+    name: string
+    ratio?: number
+    endDate?: Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUncheckedCreateWithoutItemInput = {
+    id?: number
+    userId?: number | null
+    name: string
+    ratio?: number
+    endDate?: Date | string | null
+  }
+
+  export type WorkPhaseItemMemberCreateOrConnectWithoutItemInput = {
+    where: WorkPhaseItemMemberWhereUniqueInput
+    create: XOR<WorkPhaseItemMemberCreateWithoutItemInput, WorkPhaseItemMemberUncheckedCreateWithoutItemInput>
+  }
+
+  export type WorkPhaseItemMemberCreateManyItemInputEnvelope = {
+    data: WorkPhaseItemMemberCreateManyItemInput | WorkPhaseItemMemberCreateManyItemInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type WorkPhaseUpsertWithoutItemsInput = {
+    update: XOR<WorkPhaseUpdateWithoutItemsInput, WorkPhaseUncheckedUpdateWithoutItemsInput>
+    create: XOR<WorkPhaseCreateWithoutItemsInput, WorkPhaseUncheckedCreateWithoutItemsInput>
+    where?: WorkPhaseWhereInput
+  }
+
+  export type WorkPhaseUpdateToOneWithWhereWithoutItemsInput = {
+    where?: WorkPhaseWhereInput
+    data: XOR<WorkPhaseUpdateWithoutItemsInput, WorkPhaseUncheckedUpdateWithoutItemsInput>
+  }
+
+  export type WorkPhaseUpdateWithoutItemsInput = {
+    kind?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
+    enabled?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    project?: WorkProjectUpdateOneRequiredWithoutPhasesNestedInput
+    members?: WorkPhaseMemberUpdateManyWithoutPhaseNestedInput
+  }
+
+  export type WorkPhaseUncheckedUpdateWithoutItemsInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    projectId?: IntFieldUpdateOperationsInput | number
+    kind?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
+    enabled?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    members?: WorkPhaseMemberUncheckedUpdateManyWithoutPhaseNestedInput
+  }
+
+  export type WorkPhaseItemMemberUpsertWithWhereUniqueWithoutItemInput = {
+    where: WorkPhaseItemMemberWhereUniqueInput
+    update: XOR<WorkPhaseItemMemberUpdateWithoutItemInput, WorkPhaseItemMemberUncheckedUpdateWithoutItemInput>
+    create: XOR<WorkPhaseItemMemberCreateWithoutItemInput, WorkPhaseItemMemberUncheckedCreateWithoutItemInput>
+  }
+
+  export type WorkPhaseItemMemberUpdateWithWhereUniqueWithoutItemInput = {
+    where: WorkPhaseItemMemberWhereUniqueInput
+    data: XOR<WorkPhaseItemMemberUpdateWithoutItemInput, WorkPhaseItemMemberUncheckedUpdateWithoutItemInput>
+  }
+
+  export type WorkPhaseItemMemberUpdateManyWithWhereWithoutItemInput = {
+    where: WorkPhaseItemMemberScalarWhereInput
+    data: XOR<WorkPhaseItemMemberUpdateManyMutationInput, WorkPhaseItemMemberUncheckedUpdateManyWithoutItemInput>
+  }
+
+  export type WorkPhaseItemMemberScalarWhereInput = {
+    AND?: WorkPhaseItemMemberScalarWhereInput | WorkPhaseItemMemberScalarWhereInput[]
+    OR?: WorkPhaseItemMemberScalarWhereInput[]
+    NOT?: WorkPhaseItemMemberScalarWhereInput | WorkPhaseItemMemberScalarWhereInput[]
+    id?: IntFilter<"WorkPhaseItemMember"> | number
+    itemId?: IntFilter<"WorkPhaseItemMember"> | number
+    userId?: IntNullableFilter<"WorkPhaseItemMember"> | number | null
+    name?: StringFilter<"WorkPhaseItemMember"> | string
+    ratio?: IntFilter<"WorkPhaseItemMember"> | number
+    endDate?: DateTimeNullableFilter<"WorkPhaseItemMember"> | Date | string | null
+  }
+
+  export type WorkPhaseItemCreateWithoutMembersInput = {
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+    phase: WorkPhaseCreateNestedOneWithoutItemsInput
+  }
+
+  export type WorkPhaseItemUncheckedCreateWithoutMembersInput = {
+    id?: number
+    phaseId: number
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
+  }
+
+  export type WorkPhaseItemCreateOrConnectWithoutMembersInput = {
+    where: WorkPhaseItemWhereUniqueInput
+    create: XOR<WorkPhaseItemCreateWithoutMembersInput, WorkPhaseItemUncheckedCreateWithoutMembersInput>
+  }
+
+  export type WorkPhaseItemUpsertWithoutMembersInput = {
+    update: XOR<WorkPhaseItemUpdateWithoutMembersInput, WorkPhaseItemUncheckedUpdateWithoutMembersInput>
+    create: XOR<WorkPhaseItemCreateWithoutMembersInput, WorkPhaseItemUncheckedCreateWithoutMembersInput>
+    where?: WorkPhaseItemWhereInput
+  }
+
+  export type WorkPhaseItemUpdateToOneWithWhereWithoutMembersInput = {
+    where?: WorkPhaseItemWhereInput
+    data: XOR<WorkPhaseItemUpdateWithoutMembersInput, WorkPhaseItemUncheckedUpdateWithoutMembersInput>
+  }
+
+  export type WorkPhaseItemUpdateWithoutMembersInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    phase?: WorkPhaseUpdateOneRequiredWithoutItemsNestedInput
+  }
+
+  export type WorkPhaseItemUncheckedUpdateWithoutMembersInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    phaseId?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+  }
+
   export type WorkPhaseCreateWithoutMembersInput = {
     kind: $Enums.WorkPhaseKind
     enabled?: boolean
@@ -71782,8 +77162,11 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
     project: WorkProjectCreateNestedOneWithoutPhasesInput
+    items?: WorkPhaseItemCreateNestedManyWithoutPhaseInput
   }
 
   export type WorkPhaseUncheckedCreateWithoutMembersInput = {
@@ -71795,7 +77178,10 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
+    items?: WorkPhaseItemUncheckedCreateNestedManyWithoutPhaseInput
   }
 
   export type WorkPhaseCreateOrConnectWithoutMembersInput = {
@@ -71821,8 +77207,11 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
     project?: WorkProjectUpdateOneRequiredWithoutPhasesNestedInput
+    items?: WorkPhaseItemUpdateManyWithoutPhaseNestedInput
   }
 
   export type WorkPhaseUncheckedUpdateWithoutMembersInput = {
@@ -71834,7 +77223,10 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
+    items?: WorkPhaseItemUncheckedUpdateManyWithoutPhaseNestedInput
   }
 
   export type PregNodeCreateWithoutPregnancyInput = {
@@ -73421,6 +78813,14 @@ export namespace Prisma {
     createdAt?: Date | string
   }
 
+  export type AnniversaryNoteCreateManyAnniversaryInput = {
+    id?: number
+    year: number
+    note: string
+    sort?: number
+    createdAt?: Date | string
+  }
+
   export type AnniversaryBillUpdateWithoutAnniversaryInput = {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     label?: StringFieldUpdateOperationsInput | string
@@ -73443,6 +78843,29 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     label?: StringFieldUpdateOperationsInput | string
     href?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnniversaryNoteUpdateWithoutAnniversaryInput = {
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnniversaryNoteUncheckedUpdateWithoutAnniversaryInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
+    sort?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnniversaryNoteUncheckedUpdateManyWithoutAnniversaryInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    year?: IntFieldUpdateOperationsInput | number
+    note?: StringFieldUpdateOperationsInput | string
     sort?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -73488,6 +78911,8 @@ export namespace Prisma {
     endDate?: Date | string | null
     devEnterDate?: Date | string | null
     progress?: number
+    result?: $Enums.WorkPhaseResult
+    resultNote?: string | null
     sort?: number
   }
 
@@ -73594,8 +79019,11 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
     members?: WorkPhaseMemberUpdateManyWithoutPhaseNestedInput
+    items?: WorkPhaseItemUpdateManyWithoutPhaseNestedInput
   }
 
   export type WorkPhaseUncheckedUpdateWithoutProjectInput = {
@@ -73606,8 +79034,11 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
     members?: WorkPhaseMemberUncheckedUpdateManyWithoutPhaseNestedInput
+    items?: WorkPhaseItemUncheckedUpdateManyWithoutPhaseNestedInput
   }
 
   export type WorkPhaseUncheckedUpdateManyWithoutProjectInput = {
@@ -73618,6 +79049,8 @@ export namespace Prisma {
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     progress?: IntFieldUpdateOperationsInput | number
+    result?: EnumWorkPhaseResultFieldUpdateOperationsInput | $Enums.WorkPhaseResult
+    resultNote?: NullableStringFieldUpdateOperationsInput | string | null
     sort?: IntFieldUpdateOperationsInput | number
   }
 
@@ -73629,6 +79062,21 @@ export namespace Prisma {
     startDate?: Date | string | null
     endDate?: Date | string | null
     ratio?: number
+  }
+
+  export type WorkPhaseItemCreateManyPhaseInput = {
+    id?: number
+    name: string
+    status?: $Enums.WorkPhaseItemStatus
+    progress?: number
+    trackProgress?: boolean
+    rework?: boolean
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    devEnterDate?: Date | string | null
+    link?: string | null
+    note?: string | null
+    sort?: number
   }
 
   export type WorkPhaseMemberUpdateWithoutPhaseInput = {
@@ -73658,6 +79106,83 @@ export namespace Prisma {
     startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     ratio?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type WorkPhaseItemUpdateWithoutPhaseInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    members?: WorkPhaseItemMemberUpdateManyWithoutItemNestedInput
+  }
+
+  export type WorkPhaseItemUncheckedUpdateWithoutPhaseInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+    members?: WorkPhaseItemMemberUncheckedUpdateManyWithoutItemNestedInput
+  }
+
+  export type WorkPhaseItemUncheckedUpdateManyWithoutPhaseInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    status?: EnumWorkPhaseItemStatusFieldUpdateOperationsInput | $Enums.WorkPhaseItemStatus
+    progress?: IntFieldUpdateOperationsInput | number
+    trackProgress?: BoolFieldUpdateOperationsInput | boolean
+    rework?: BoolFieldUpdateOperationsInput | boolean
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    devEnterDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    link?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    sort?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type WorkPhaseItemMemberCreateManyItemInput = {
+    id?: number
+    userId?: number | null
+    name: string
+    ratio?: number
+    endDate?: Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUpdateWithoutItemInput = {
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUncheckedUpdateWithoutItemInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type WorkPhaseItemMemberUncheckedUpdateManyWithoutItemInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    userId?: NullableIntFieldUpdateOperationsInput | number | null
+    name?: StringFieldUpdateOperationsInput | string
+    ratio?: IntFieldUpdateOperationsInput | number
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type PregNodeCreateManyPregnancyInput = {

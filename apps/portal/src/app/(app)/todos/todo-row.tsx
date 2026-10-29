@@ -207,8 +207,8 @@ export function PortalTodoRow({
 
         {imagesOpen && images.length > 0 && (
           <div className="todo-thumbs">
-            {images.map((src) => (
-              <LightboxImage key={src} src={src} />
+            {images.map((src, index) => (
+              <LightboxImage key={src} src={src} images={images} index={index} />
             ))}
           </div>
         )}

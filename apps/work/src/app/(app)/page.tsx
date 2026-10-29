@@ -5,7 +5,6 @@ import { listProjects } from "@/server";
 import { ImportButton } from "./import-button";
 import { ProjectFilter } from "./project-filter";
 import { PRI_ORDER } from "./pri-style";
-import { WorkStatsSide } from "./stats-side";
 
 export const dynamic = "force-dynamic";
 
@@ -74,26 +73,16 @@ export default async function HomePage({
         </div>
       </div>
 
-      <div className="work-layout">
-        <div className="work-main">
-          <ProjectFilter
-            items={items}
-            total={all.length}
-            pris={priStats}
-            pri={pri}
-            src={src}
-            plat={plat}
-          />
-        </div>
-
-        <WorkStatsSide
-          basePath="/"
+      <div className="work-main">
+        <ProjectFilter
+          items={items}
+          total={all.length}
           pris={priStats}
           sources={srcStats}
           platforms={platformStats}
-          activePri={pri}
-          activeSource={src}
-          activePlatform={plat}
+          pri={pri}
+          src={src}
+          plat={plat}
         />
       </div>
     </div>

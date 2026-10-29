@@ -269,6 +269,15 @@ exports.Prisma.AnniversaryBillScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.AnniversaryNoteScalarFieldEnum = {
+  id: 'id',
+  anniversaryId: 'anniversaryId',
+  year: 'year',
+  note: 'note',
+  sort: 'sort',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.WorkProjectScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -332,7 +341,34 @@ exports.Prisma.WorkPhaseScalarFieldEnum = {
   endDate: 'endDate',
   devEnterDate: 'devEnterDate',
   progress: 'progress',
+  result: 'result',
+  resultNote: 'resultNote',
   sort: 'sort'
+};
+
+exports.Prisma.WorkPhaseItemScalarFieldEnum = {
+  id: 'id',
+  phaseId: 'phaseId',
+  name: 'name',
+  status: 'status',
+  progress: 'progress',
+  trackProgress: 'trackProgress',
+  rework: 'rework',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  devEnterDate: 'devEnterDate',
+  link: 'link',
+  note: 'note',
+  sort: 'sort'
+};
+
+exports.Prisma.WorkPhaseItemMemberScalarFieldEnum = {
+  id: 'id',
+  itemId: 'itemId',
+  userId: 'userId',
+  name: 'name',
+  ratio: 'ratio',
+  endDate: 'endDate'
 };
 
 exports.Prisma.WorkPhaseMemberScalarFieldEnum = {
@@ -760,6 +796,7 @@ exports.WorkPriority = exports.$Enums.WorkPriority = {
 
 exports.WorkPhaseKind = exports.$Enums.WorkPhaseKind = {
   BUSINESS: 'BUSINESS',
+  PREPARE: 'PREPARE',
   DEV: 'DEV',
   SIT: 'SIT',
   UAT: 'UAT',
@@ -782,6 +819,20 @@ exports.IssueStatus = exports.$Enums.IssueStatus = {
 exports.IssueKind = exports.$Enums.IssueKind = {
   BUG: 'BUG',
   IMPROVEMENT: 'IMPROVEMENT'
+};
+
+exports.WorkPhaseResult = exports.$Enums.WorkPhaseResult = {
+  PENDING: 'PENDING',
+  DOING: 'DOING',
+  OK: 'OK',
+  RISK: 'RISK'
+};
+
+exports.WorkPhaseItemStatus = exports.$Enums.WorkPhaseItemStatus = {
+  PENDING: 'PENDING',
+  DOING: 'DOING',
+  DONE: 'DONE',
+  BLOCKED: 'BLOCKED'
 };
 
 exports.PregStage = exports.$Enums.PregStage = {
@@ -865,11 +916,14 @@ exports.Prisma.ModelName = {
   AuditLog: 'AuditLog',
   Anniversary: 'Anniversary',
   AnniversaryBill: 'AnniversaryBill',
+  AnniversaryNote: 'AnniversaryNote',
   WorkProject: 'WorkProject',
   WorkNode: 'WorkNode',
   WorkMember: 'WorkMember',
   WorkIssue: 'WorkIssue',
   WorkPhase: 'WorkPhase',
+  WorkPhaseItem: 'WorkPhaseItem',
+  WorkPhaseItemMember: 'WorkPhaseItemMember',
   WorkPhaseMember: 'WorkPhaseMember',
   Pregnancy: 'Pregnancy',
   PregNode: 'PregNode',

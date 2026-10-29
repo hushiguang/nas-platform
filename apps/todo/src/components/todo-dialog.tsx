@@ -303,8 +303,8 @@ export function TodoDialog({
 
                 {(keepImages.length > 0 || previews.length > 0) && (
                   <div className="todo-thumbs">
-                    {keepImages.map((address) => (
-                      <LightboxImage key={address} src={showImage(address)}>
+                    {keepImages.map((address, index) => (
+                      <LightboxImage key={address} src={showImage(address)} images={keepImages.map(showImage)} index={index}>
                         {/* 已有图片走 hidden 回传，删掉就是移除 */}
                         <input type="hidden" name="images" value={address} />
                         <button
@@ -317,8 +317,8 @@ export function TodoDialog({
                         </button>
                       </LightboxImage>
                     ))}
-                    {previews.map((url) => (
-                      <LightboxImage key={url} src={url} />
+                    {previews.map((url, index) => (
+                      <LightboxImage key={url} src={url} images={previews} index={index} />
                     ))}
                   </div>
                 )}

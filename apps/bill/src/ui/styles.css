@@ -1526,6 +1526,39 @@ h2 .tx-flag { margin-left: 8px; vertical-align: 2px; }
   color: #141218;
   font-weight: 650;
 }
+.image-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.image-viewer-prev {
+  left: 16px;
+}
+.image-viewer-next {
+  right: 16px;
+}
+.image-viewer-counter {
+  position: absolute;
+  bottom: calc(16px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
 
 @media (max-width: 800px) {
   .stats, .cards, .split { grid-template-columns: 1fr; display: grid; }

@@ -6,6 +6,7 @@ import { dateRange, fallbackGradient } from "@/lib/labels";
 import { getTrip, mapPoints } from "@/server";
 import { DeleteButton } from "../../components/delete-button";
 import { TravelMap } from "../../components/travel-map";
+import { PhotoGallery } from "../../components/photo-gallery";
 import { removeTripAction } from "../../mutate";
 
 export const dynamic = "force-dynamic";
@@ -72,14 +73,12 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
                 </div>
                 {stop.note ? <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>{stop.note}</p> : null}
                 {stop.photos.length ? (
-                  <div className="gallery-grid" style={{ marginTop: 8 }}>
-                    {stop.photos.map((path) => (
-                      <figure key={path}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/media/photo?path=${encodeURIComponent(path)}`} alt={stop.name} />
-                      </figure>
-                    ))}
-                  </div>
+                  <PhotoGallery
+                    items={stop.photos.map((path) => ({
+                      src: `/api/media/photo?path=${encodeURIComponent(path)}`,
+                      alt: stop.name,
+                    }))}
+                  />
                 ) : null}
               </div>
             ))}
@@ -90,15 +89,13 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
       {trip.photos.length ? (
         <section>
           <div className="section-title">相册（{trip.photos.length}）</div>
-          <div className="gallery-grid">
-            {trip.photos.map((photo) => (
-              <figure key={photo.id}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.url} alt={photo.caption ?? ""} loading="lazy" />
-                {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
-              </figure>
-            ))}
-          </div>
+          <PhotoGallery
+            items={trip.photos.map((photo) => ({
+              src: photo.url,
+              caption: photo.caption ?? undefined,
+              alt: photo.caption ?? "",
+            }))}
+          />
         </section>
       ) : (
         <div className="card" style={{ textAlign: "center", color: "var(--muted)", fontSize: 13, padding: 24 }}>

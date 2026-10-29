@@ -12,7 +12,7 @@ import type { PlatformAccess, SessionUser } from "@nas/core";
  * 同名直接全量重写，新名就新建。
  *
  * 口径（和用户对过）：
- * - 阶段人员按角色落库：项目经理→商务阶段，研发→研发/上线准备/已上线，
+ * - 阶段人员按角色落库：项目经理→商务阶段，研发→项目准备/研发/上线准备/已上线，
  *   测试→SIT/UAT，「其他」算研发；只动这几个阶段的人员，别的不碰。
  * - 项目预设的参加人员 = 涉及人员里的全部名字。
  * - 表里的人都是系统外人员，不核对系统账号，userId 一律留空；
@@ -295,12 +295,13 @@ async function syncPresetMembers(projectId: number, names: string[]): Promise<vo
 }
 
 /**
- * 角色落到哪些阶段：项目经理→商务，研发→研发/上线准备/已上线，
+ * 角色落到哪些阶段：项目经理→商务，研发→项目准备/研发/上线准备/已上线，
  * 测试→SIT/UAT，「其他」按研发算。
  */
 export function crewPlan(parsed: ParsedRow): Map<WorkPhaseKind, { names: string[]; role: string }> {
   return new Map<WorkPhaseKind, { names: string[]; role: string }>([
     ["BUSINESS", { names: [...new Set(parsed.managers)], role: "项目经理" }],
+    ["PREPARE", { names: [...new Set([...parsed.dev, ...parsed.others])], role: "研发" }],
     ["DEV", { names: [...new Set([...parsed.dev, ...parsed.others])], role: "研发" }],
     ["SIT", { names: [...new Set(parsed.qa)], role: "测试" }],
     ["UAT", { names: [...new Set(parsed.qa)], role: "测试" }],
@@ -352,6 +353,7 @@ function keepKinds(parsed: ParsedRow, phase: WorkPhaseKind): Set<WorkPhaseKind> 
   const keep = new Set<WorkPhaseKind>([...(Object.keys(parsed.dates) as WorkPhaseKind[]), phase]);
   if (parsed.managers.length > 0) keep.add("BUSINESS");
   if (parsed.dev.length > 0 || parsed.others.length > 0) {
+    keep.add("PREPARE");
     keep.add("DEV");
     keep.add("PRELAUNCH");
     keep.add("LIVE");

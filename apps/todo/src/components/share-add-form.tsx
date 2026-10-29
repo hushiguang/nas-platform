@@ -213,7 +213,7 @@ export function ShareAddForm({ token }: { token: string }) {
             {previews.length > 0 && (
               <div className="todo-thumbs">
                 {previews.map((url, index) => (
-                  <LightboxImage key={url} src={url}>
+                  <LightboxImage key={url} src={url} images={previews} index={index}>
                     <button
                       type="button"
                       className="todo-thumb-del"

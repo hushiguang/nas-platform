@@ -1017,11 +1017,16 @@ function imageSrc(url) {
   return apiUrl(`/api/image?u=${encodeURIComponent(url || '')}`);
 }
 
-function ImageViewer({ src, onClose }) {
+function ImageViewer({ images, index, onClose }) {
+  const [current, setCurrent] = useState(index ?? 0);
+  const touchStartX = useRef(null);
+  const moved = useRef(false);
   useScrollLock(true);
   useEffect(() => {
     function onKey(event) {
       if (event.key === 'Escape') onClose();
+      if (event.key === 'ArrowLeft') setCurrent((v) => (v - 1 + images.length) % images.length);
+      if (event.key === 'ArrowRight') setCurrent((v) => (v + 1) % images.length);
     }
     function onBack(event) {
       event.preventDefault();
@@ -1033,24 +1038,88 @@ function ImageViewer({ src, onClose }) {
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('capacitor:back', onBack);
     };
-  }, [onClose]);
+  }, [onClose, images.length]);
+  const list = images && images.length ? images : [];
+  const safeIndex = Math.min(Math.max(current, 0), Math.max(list.length - 1, 0));
   return createPortal(
-    <div className="image-viewer" role="dialog" aria-modal="true" aria-label="查看图片" onClick={onClose}>
+    <div
+      className="image-viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="查看图片"
+      onClick={() => {
+        if (moved.current) { moved.current = false; return; }
+        onClose();
+      }}
+      onTouchStart={(event) => {
+        touchStartX.current = event.touches[0]?.clientX ?? null;
+        moved.current = false;
+      }}
+      onTouchEnd={(event) => {
+        const startX = touchStartX.current;
+        if (startX == null) return;
+        const endX = event.changedTouches[0]?.clientX ?? startX;
+        const delta = endX - startX;
+        touchStartX.current = null;
+        if (Math.abs(delta) < 40) return;
+        moved.current = true;
+        if (delta < 0) setCurrent((v) => (v + 1) % list.length);
+        else setCurrent((v) => (v - 1 + list.length) % list.length);
+      }}
+    >
       <button className="image-viewer-close" type="button" onClick={onClose}>关闭</button>
+      {list.length > 1 ? (
+        <>
+          <button
+            type="button"
+            className="image-viewer-nav image-viewer-prev"
+            onClick={(event) => {
+              event.stopPropagation();
+              moved.current = false;
+              setCurrent((v) => (v - 1 + list.length) % list.length);
+            }}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="image-viewer-nav image-viewer-next"
+            onClick={(event) => {
+              event.stopPropagation();
+              moved.current = false;
+              setCurrent((v) => (v + 1) % list.length);
+            }}
+          >
+            ›
+          </button>
+        </>
+      ) : null}
       {/* 点大图本身也直接关闭（Esc / 点空白处 / 点图，全站一致） */}
-      <img src={src} alt="" />
+      <img
+        src={list[safeIndex]}
+        alt=""
+        onClick={(event) => {
+          event.stopPropagation();
+          if (moved.current) { moved.current = false; return; }
+          onClose();
+        }}
+      />
+      {list.length > 1 ? (
+        <span className="image-viewer-counter">{safeIndex + 1} / {list.length}</span>
+      ) : null}
     </div>,
     document.body,
   );
 }
 
-function BillImage({ url }) {
+function BillImage({ url, images, index }) {
   const [open, setOpen] = useState(false);
   const src = imageSrc(url);
+  const list = (images && images.length ? images : [url]).map(imageSrc);
   return (
     <>
       <img src={src} alt="" onClick={() => setOpen(true)} />
-      {open && <ImageViewer src={src} onClose={() => setOpen(false)} />}
+      {open && <ImageViewer images={list} index={index ?? 0} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -1537,7 +1606,7 @@ function BillDetail({ tx, onClose, onDelete, onSave }) {
             </dl>
             {tx.images?.length > 0 && (
               <div className="image-grid">
-                {tx.images.map((url) => <BillImage key={url} url={url} />)}
+                {tx.images.map((url, index) => <BillImage key={url} url={url} images={tx.images} index={index} />)}
               </div>
             )}
             <div className="modal-actions">
@@ -5626,7 +5695,7 @@ function SharePage() {
                     <div className="tiny muted">{sub}</div>
                     {item.images?.length > 0 && (
                       <div className="image-grid">
-                        {item.images.map((url) => <BillImage key={url} url={url} />)}
+                        {item.images.map((url, index) => <BillImage key={url} url={url} images={item.images} index={index} />)}
                       </div>
                     )}
                   </div>

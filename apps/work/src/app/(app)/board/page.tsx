@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const PHASE_BG: Record<string, string> = {
   商务阶段: "#dbe7fb",
+  项目准备阶段: "#f3e8d8",
   研发节点: "#d7ecff",
   SIT测试阶段: "#e6dcfa",
   UAT阶段: "#fdeacc",
@@ -38,6 +39,7 @@ function projectColor(projectId: number) {
 // 筛选 chips：按 kind 匹配（label 是全称如“UAT阶段”，简称精确匹配对不上）。已上线不参与日历
 const PHASE_FILTERS = [
   { kind: "BUSINESS", short: "商务" },
+  { kind: "PREPARE", short: "项目准备" },
   { kind: "DEV", short: "研发" },
   { kind: "SIT", short: "SIT" },
   { kind: "UAT", short: "UAT" },
@@ -91,6 +93,35 @@ interface Row {
   name: string;
   sub: string;
   bars: Bar[];
+  /** 人员视图：本周按投入比例算的占用（平均 / 单日峰值） */
+  load?: { avg: number; peak: number };
+}
+
+function mondayOf(iso: string): string {
+  const date = new Date(`${iso}T00:00:00Z`);
+  const dow = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - dow);
+  return date.toISOString().slice(0, 10);
+}
+
+/** 这一周每天把在跑的阶段投入加起来，平均和峰值都返回，超过 100% 就是排满了。 */
+function weeklyLoad(
+  segments: { kind: string; from: string; to: string; ratio: number }[],
+  weekStart: string,
+): { avg: number; peak: number } {
+  let total = 0;
+  let peak = 0;
+  for (let day = 0; day < 7; day += 1) {
+    const date = addDays(weekStart, day);
+    let load = 0;
+    for (const segment of segments) {
+      if (segment.kind === "LIVE" || !segment.from || !segment.to) continue;
+      if (segment.from <= date && date <= segment.to) load += segment.ratio;
+    }
+    total += load;
+    if (load > peak) peak = load;
+  }
+  return { avg: Math.round(total / 7), peak };
 }
 
 interface PlacedBar extends Bar {
@@ -104,12 +135,13 @@ interface PlacedBar extends Bar {
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; mode?: string; date?: string; phase?: string }>;
+  searchParams: Promise<{ view?: string; mode?: string; date?: string; phase?: string; person?: string }>;
 }) {
   const { user, access } = await requireAppAccess();
   const sp = await searchParams;
   const view = sp.view === "person" ? "person" : "project";
   const mode = sp.mode === "week" ? "week" : "month";
+  const personFilter = view === "person" && sp.person ? sp.person : undefined;
   const activePhase = view === "project" && sp.phase && sp.phase !== "已上线" ? sp.phase : undefined;
   const today = new Date().toISOString().slice(0, 10);
   const anchor = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? (sp.date as string) : today;
@@ -146,6 +178,10 @@ export default async function BoardPage({
                 lines: [
                   names.length > 0 ? `人员：${names.join("、")}` : "人员：暂未排人",
                   `进度：实际 ${p.progress}%${p.expected != null ? ` · 预期 ${p.expected}%` : ""}`,
+                  `事项 ${p.itemDone}/${p.itemTotal}`,
+                  ...p.items
+                    .filter((item) => item.trackProgress)
+                    .map((item) => `${item.name}：${item.progress}%`),
                 ],
               },
             };
@@ -224,14 +260,14 @@ export default async function BoardPage({
                 key: `${p.projectId}`,
                 ...base,
                 label: p.projectName,
-                note: phaseText || undefined,
+                note: `${phaseText || "时间未定"} · ${p.ratio}%`,
                 from: p.from,
                 to: p.to,
                 conflict: clash.length > 0,
                 tip: {
                   heading: p.projectName,
                   meta: `${p.from} ～ ${p.to}${phaseText ? ` · ${phaseText}` : ""}`,
-                  lines: [`预计释放：${p.release}`],
+                  lines: [`投入 ${p.ratio}%`, `预计释放：${p.release}`],
                   warn: clash.length > 0 ? `⚠ 与「${clash.join("」「")}」时间冲突` : undefined,
                 },
               },
@@ -244,14 +280,14 @@ export default async function BoardPage({
               key: `${p.projectId}:${s.kind}`,
               ...base,
               label: s.label,
-              note: p.projectName,
+              note: `${p.projectName} · ${s.ratio}%`,
               from: s.from,
               to: s.to,
               conflict: clash.length > 0,
               tip: {
                 heading: p.projectName,
                 meta: `${s.label} · ${s.from} ～ ${s.to}`,
-                lines: [`该项目占用 ${p.from} ～ ${p.to}`, `预计释放：${p.release}`],
+                lines: [`投入 ${s.ratio}%`, `该项目占用 ${p.from} ～ ${p.to}`, `预计释放：${p.release}`],
                 warn: clash.length > 0 ? `⚠ 与「${clash.join("」「")}」时间冲突` : undefined,
               },
             };
@@ -272,10 +308,19 @@ export default async function BoardPage({
             .filter(Boolean)
             .join(" · "),
           bars,
+          load: weeklyLoad(
+            person.projects.flatMap((p) => p.segments),
+            mondayOf(today),
+          ),
         },
       ];
     });
   }
+
+  if (personFilter) rows = rows.filter((row) => row.key === personFilter);
+  const personName = personFilter
+    ? rows[0]?.name.replace(/^⚠\s*/, "") ?? personFilter.replace(/^name:/, "")
+    : "";
 
   // 时间轴范围：周视图固定一周；月视图从锚点月份开始，并延伸到所有排期的最晚月份，保证能一直滑到最右侧
   let start: string;
@@ -427,13 +472,13 @@ export default async function BoardPage({
           <h1>日历看板</h1>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Link href={qs({ view, mode, date: prev })} className="btn" aria-label="上一段">
+          <Link href={qs({ view, mode, date: prev, person: personFilter })} className="btn" aria-label="上一段">
             〈
           </Link>
-          <Link href={qs({ view, mode })} className="btn">
+          <Link href={qs({ view, mode, person: personFilter })} className="btn">
             今天
           </Link>
-          <Link href={qs({ view, mode, date: next })} className="btn" aria-label="下一段">
+          <Link href={qs({ view, mode, date: next, person: personFilter })} className="btn" aria-label="下一段">
             〉
           </Link>
         </div>
@@ -445,10 +490,10 @@ export default async function BoardPage({
           {end.slice(0, 7) !== start.slice(0, 7) ? ` – ${monthLabel(end)}` : ""}
         </span>
         <span style={{ display: "inline-flex", gap: 4 }}>
-          <Link href={qs({ view, mode: "week", date: anchor })} style={tab(mode === "week")}>
+          <Link href={qs({ view, mode: "week", date: anchor, person: personFilter })} style={tab(mode === "week")}>
             周
           </Link>
-          <Link href={qs({ view, mode: "month", date: anchor })} style={tab(mode === "month")}>
+          <Link href={qs({ view, mode: "month", date: anchor, person: personFilter })} style={tab(mode === "month")}>
             月
           </Link>
         </span>
@@ -460,6 +505,11 @@ export default async function BoardPage({
             人员安排
           </Link>
         </span>
+        {view === "person" && personFilter ? (
+          <Link href={qs({ view: "person", mode, date: anchor })} className="badge soft" style={{ textDecoration: "none" }}>
+            只看 {personName} ✕
+          </Link>
+        ) : null}
         <span className="muted" style={{ fontSize: 12, marginLeft: "auto" }}>
           {start} ～ {end}
         </span>
@@ -469,7 +519,7 @@ export default async function BoardPage({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           {[...PHASE_FILTERS, { kind: "LAUNCH", short: "上线" } as const].map(({ kind, short: k }) => {
             const active = activePhase === kind;
-            const bg = kind === "LAUNCH" ? "#ffd9d9" : (PHASE_BG[{ BUSINESS: "商务阶段", DEV: "研发节点", SIT: "SIT测试阶段", UAT: "UAT阶段", PRELAUNCH: "准备上线" }[kind as string] ?? ""] ?? "#dbe7fb");
+            const bg = kind === "LAUNCH" ? "#ffd9d9" : (PHASE_BG[{ BUSINESS: "商务阶段", PREPARE: "项目准备阶段", DEV: "研发节点", SIT: "SIT测试阶段", UAT: "UAT阶段", PRELAUNCH: "准备上线" }[kind as string] ?? ""] ?? "#dbe7fb");
             return (
               <Link
                 key={k}
@@ -610,6 +660,27 @@ export default async function BoardPage({
                   {row.sub ? (
                     <div className="muted" style={{ fontSize: 11, whiteSpace: "normal", wordBreak: "break-all", lineHeight: 1.4 }}>
                       {row.sub}
+                    </div>
+                  ) : null}
+                  {view === "person" && row.load ? (
+                    <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                      <span className="load-bar" aria-hidden="true">
+                        <i
+                          style={{
+                            width: `${Math.min(100, row.load.avg)}%`,
+                            background: row.load.peak > 100 ? "var(--coral)" : undefined,
+                          }}
+                        />
+                      </span>
+                      <span
+                        style={{
+                          color: row.load.peak > 100 ? "var(--coral)" : "var(--muted)",
+                          whiteSpace: "nowrap",
+                        }}
+                        title="按每个阶段的人员投入比例，算这一周平均每天占用多少；同天加起来超过 100% 就是排满了"
+                      >
+                        本周 {row.load.avg}%{row.load.peak > 100 ? ` · 峰 ${row.load.peak}%` : ""}
+                      </span>
                     </div>
                   ) : null}
                 </div>

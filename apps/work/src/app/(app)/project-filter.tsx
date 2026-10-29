@@ -5,6 +5,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { ProjectCard, type ProjectCardItem } from "./card";
 import { PRI_DOT } from "./pri-style";
 import { ProjectSearch } from "./project-search";
+import type { SourceStat } from "./stats-side";
 
 export interface PriChip {
   key: string;
@@ -36,6 +37,8 @@ export function ProjectFilter({
   items,
   total,
   pris,
+  sources,
+  platforms,
   pri,
   src,
   plat,
@@ -43,6 +46,8 @@ export function ProjectFilter({
   items: ProjectCardItem[];
   total: number;
   pris: PriChip[];
+  sources: SourceStat[];
+  platforms: SourceStat[];
   pri?: string;
   src?: string;
   plat?: string;
@@ -75,30 +80,65 @@ export function ProjectFilter({
 
   return (
     <>
-      <div className="work-filter-row">
-        <ProjectSearch value={keyword} onChange={setKeyword} />
-        <Link
-          href={hrefOf({ pri: undefined, src: undefined, plat: undefined })}
-          className={`badge${!pri && !src && !plat ? "" : " soft"}`}
-          style={{ textDecoration: "none" }}
-        >
-          全部 {total}
-        </Link>
-        {pris.map((p) => (
+      <div className="work-filter-bar">
+        <div className="work-filter-row">
+          <ProjectSearch value={keyword} onChange={setKeyword} />
           <Link
-            key={p.key}
-            href={hrefOf({ pri: pri === p.key ? undefined : p.key })}
-            className={`badge${pri === p.key ? "" : " soft"}`}
-            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+            href={hrefOf({ pri: undefined, src: undefined, plat: undefined })}
+            className={`badge${!pri && !src && !plat ? "" : " soft"}`}
+            style={{ textDecoration: "none" }}
           >
-            <span style={{ width: 8, height: 8, borderRadius: 999, background: PRI_DOT[p.key] }} />
-            {p.label} {p.count}
+            全部 {total}
           </Link>
-        ))}
-        {typed ? (
-          <span className="muted work-filter-hit">
-            「{typed}」匹配 {filtered.length} 个
-          </span>
+          {pris.map((p) => (
+            <Link
+              key={p.key}
+              href={hrefOf({ pri: pri === p.key ? undefined : p.key })}
+              className={`badge${pri === p.key ? "" : " soft"}`}
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: 999, background: PRI_DOT[p.key] }} />
+              {p.label} {p.count}
+            </Link>
+          ))}
+          {typed ? (
+            <span className="muted work-filter-hit">
+              「{typed}」匹配 {filtered.length} 个
+            </span>
+          ) : null}
+        </div>
+
+        {platforms.length > 0 ? (
+          <div className="work-filter-row work-filter-sub">
+            <span className="work-filter-cap">平台</span>
+            {platforms.map((s) => (
+              <Link
+                key={s.code}
+                href={hrefOf({ plat: plat === s.code ? undefined : s.code })}
+                className={`work-chip${plat === s.code ? " is-on" : ""}`}
+              >
+                {s.code}
+                {s.delayed > 0 ? <i>{s.delayed} 延期</i> : null}
+                <b>{s.count}</b>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+        {sources.length > 0 ? (
+          <div className="work-filter-row work-filter-sub">
+            <span className="work-filter-cap">提出方</span>
+            {sources.map((s) => (
+              <Link
+                key={s.code}
+                href={hrefOf({ src: src === s.code ? undefined : s.code })}
+                className={`work-chip${src === s.code ? " is-on" : ""}`}
+              >
+                {s.code}
+                {s.delayed > 0 ? <i>{s.delayed} 延期</i> : null}
+                <b>{s.count}</b>
+              </Link>
+            ))}
+          </div>
         ) : null}
       </div>
 
@@ -136,7 +176,7 @@ export function ProjectFilter({
         </div>
       ) : (
         <>
-          <div className="work-grid work-grid-row">
+          <div className="work-line-list">
             {active.map((item) => (
               <ProjectCard key={item.id} item={item} />
             ))}
@@ -144,7 +184,7 @@ export function ProjectFilter({
           {live.length > 0 ? (
             <section className="section">
               <h2 className="section-title">已上线 · {live.length}</h2>
-              <div className="work-grid work-grid-row">
+              <div className="work-line-list">
                 {live.map((item) => (
                   <ProjectCard key={item.id} item={item} />
                 ))}

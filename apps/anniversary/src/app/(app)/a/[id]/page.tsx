@@ -104,6 +104,20 @@ export default async function AnniversaryDetailPage({
           </div>
         ) : null}
 
+        {item.notes.length > 0 ? (
+          <div className="anniv-bills" style={{ marginTop: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>
+              每年的备注
+            </div>
+            {item.notes.map((note) => (
+              <div className="anniv-bill-row" key={note.id} style={{ cursor: "default" }}>
+                <span>{note.year}</span>
+                <span style={{ whiteSpace: "pre-wrap" }}>{note.note}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn ghost" href={`/a/${item.id}/edit`}>
             修改

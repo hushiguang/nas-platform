@@ -17,6 +17,18 @@ export { UPCOMING_DAYS };
 
 const TYPES: AnniversaryType[] = ["BIRTHDAY", "MARRIAGE", "PROPOSAL", "COUNTDOWN", "OTHER"];
 
+export interface YearNoteDraft {
+  id?: number;
+  year: string;
+  note: string;
+}
+
+export interface YearNoteView {
+  id: number;
+  year: number;
+  note: string;
+}
+
 export interface BillDraft {
   id?: number;
   year: string;
@@ -47,6 +59,7 @@ export interface AnniversaryDraft {
   background: string;
   note: string;
   bills: BillDraft[];
+  notes: YearNoteDraft[];
   remindDays: number[];
   remindTime: string;
 }
@@ -60,6 +73,7 @@ export interface AnniversaryView {
   calendar: "SOLAR" | "LUNAR";
   note: string | null;
   bills: BillView[];
+  notes: YearNoteView[];
   background: string | null;
   remindDays: number[];
   remindTime: string | null;
@@ -68,7 +82,7 @@ export interface AnniversaryView {
   draft: AnniversaryDraft;
 }
 
-const withBills = { bills: true } satisfies Prisma.AnniversaryInclude;
+const withBills = { bills: true, notes: true } satisfies Prisma.AnniversaryInclude;
 type AnniversaryRow = Prisma.AnniversaryGetPayload<{ include: typeof withBills }>;
 
 function solarToLunar(year: number, month: number, day: number) {
@@ -93,6 +107,16 @@ function sortedBills(row: AnniversaryRow): BillView[] {
     }));
 }
 
+function sortedNotes(row: AnniversaryRow): YearNoteView[] {
+  return [...row.notes]
+    .sort((a, b) => b.year - a.year || a.sort - b.sort)
+    .map((note) => ({
+      id: note.id,
+      year: note.year,
+      note: note.note,
+    }));
+}
+
 function toDraft(row: AnniversaryRow): AnniversaryDraft {
   const origin = dateParts(row.date);
   const base = {
@@ -108,6 +132,11 @@ function toDraft(row: AnniversaryRow): AnniversaryDraft {
       year: bill.year == null ? "" : String(bill.year),
       label: bill.label,
       href: bill.href,
+    })),
+    notes: sortedNotes(row).map((note) => ({
+      id: note.id,
+      year: String(note.year),
+      note: note.note,
     })),
     remindDays: row.remindDays,
     remindTime: row.remindTime ?? "",
@@ -149,6 +178,7 @@ export function present(row: AnniversaryRow): AnniversaryView {
     calendar: row.calendar,
     note: row.note,
     bills: sortedBills(row),
+    notes: sortedNotes(row),
     background: row.background,
     remindDays: row.remindDays,
     remindTime: row.remindTime,
@@ -383,6 +413,39 @@ function parseBills(
   return bills;
 }
 
+function parseNotes(
+  form: FormData,
+): { id: number | null; year: number; note: string }[] {
+  const ids = form.getAll("noteId").map(String);
+  const years = form.getAll("noteYear").map(String);
+  const texts = form.getAll("noteText").map(String);
+  if (ids.length !== texts.length || years.length !== texts.length) {
+    throw new AnniversaryError("每年的备注没填完整");
+  }
+
+  const notes: { id: number | null; year: number; note: string }[] = [];
+  for (let i = 0; i < texts.length; i += 1) {
+    const text = texts[i].trim();
+    const yearRaw = years[i].trim();
+    if (!text && !yearRaw) continue;
+    const year = Number(yearRaw);
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+      throw new AnniversaryError("备注年份不对");
+    }
+    if (!text) throw new AnniversaryError("备注内容不能为空");
+    if (text.length > 500) throw new AnniversaryError("备注太长了");
+    const rawId = ids[i].trim();
+    let id: number | null = null;
+    if (rawId) {
+      id = Number(rawId);
+      if (!Number.isInteger(id) || id <= 0) throw new AnniversaryError("备注不对");
+    }
+    notes.push({ id, year, note: text });
+  }
+  if (notes.length > 30) throw new AnniversaryError("每年的备注太多了");
+  return notes;
+}
+
 export async function saveAnniversary(
   user: SessionUser,
   access: PlatformAccess,
@@ -390,6 +453,7 @@ export async function saveAnniversary(
 ): Promise<number> {
   const data = parseForm(form);
   const bills = parseBills(form);
+  const notes = parseNotes(form);
   const rawId = Number(readText(form, "id"));
   const id = Number.isInteger(rawId) && rawId > 0 ? rawId : null;
 
@@ -432,6 +496,31 @@ export async function saveAnniversary(
     }
     await tx.anniversaryBill.deleteMany({
       where: keep.length > 0 ? { anniversaryId, id: { notIn: keep } } : { anniversaryId },
+    });
+
+    const ownedNotes = new Set(
+      (
+        await tx.anniversaryNote.findMany({
+          where: { anniversaryId },
+          select: { id: true },
+        })
+      ).map((note) => note.id),
+    );
+    const keepNotes: number[] = [];
+    for (const [sort, note] of notes.entries()) {
+      const fields = { year: note.year, note: note.note, sort };
+      if (note.id && ownedNotes.has(note.id)) {
+        await tx.anniversaryNote.update({ where: { id: note.id }, data: fields });
+        keepNotes.push(note.id);
+      } else {
+        const created = await tx.anniversaryNote.create({
+          data: { ...fields, anniversaryId },
+        });
+        keepNotes.push(created.id);
+      }
+    }
+    await tx.anniversaryNote.deleteMany({
+      where: keepNotes.length > 0 ? { anniversaryId, id: { notIn: keepNotes } } : { anniversaryId },
     });
     return anniversaryId;
   });
@@ -559,6 +648,7 @@ export function emptyDraft(): AnniversaryDraft {
     background: "gallery:cake",
     note: "",
     bills: [],
+    notes: [],
     remindDays: [30, 7, 1, 0],
     remindTime: "09:00",
   };
