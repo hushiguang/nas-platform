@@ -7,7 +7,7 @@ export const PHASE_OPTIONS: { value: WorkPhaseKind; label: string }[] = [
   { value: "SIT", label: "SIT测试阶段" },
   { value: "UAT", label: "UAT阶段" },
   { value: "PRELAUNCH", label: "准备上线" },
-  { value: "LIVE", label: "已上线" },
+  { value: "LIVE", label: "上线阶段" },
 ];
 
 /** 阶段结论。走完一个阶段后，用它标记这个阶段到底 OK 不 OK。 */
@@ -103,7 +103,7 @@ export const PHASE_GROUP: Record<WorkPhaseKind, string> = {
   SIT: "测试",
   UAT: "测试",
   PRELAUNCH: "上线",
-  LIVE: "已上线",
+  LIVE: "上线",
 };
 
 /** 小阶段：去掉「阶段」后缀，卡片上跟大阶段并排显示。 */

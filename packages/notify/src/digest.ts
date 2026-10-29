@@ -54,7 +54,7 @@ const PHASE_LABEL: Record<string, string> = {
   SIT: "SIT测试",
   UAT: "UAT",
   PRELAUNCH: "准备上线",
-  LIVE: "已上线",
+  LIVE: "上线阶段",
 };
 
 /** 阶段推进顺序。报告里的项目表按它倒序排（上线 → 准备上线 → UAT → SIT → 研发 → 商务） */

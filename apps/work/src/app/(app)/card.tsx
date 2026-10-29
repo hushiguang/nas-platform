@@ -18,7 +18,8 @@ export function ProjectCard({ item }: { item: ProjectCardItem }) {
   const shown = crew.slice(0, 4);
   const extra = crew.length - shown.length;
   const bugLeft = item.bug.remaining + item.improvement.remaining;
-  const due = item.phaseDueLabel.replace(`${item.phaseLabel} · `, "");
+  const stripped = item.phaseDueLabel.replace(`${item.phaseLabel} · `, "");
+  const due = item.phase === "LIVE" || stripped === item.phaseLabel ? "" : stripped;
   const late = item.phaseOverdue != null;
   const launch = item.launchLabel === "未定" ? "上线时间未定" : `${item.launchLabel}上线`;
 

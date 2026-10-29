@@ -37,6 +37,7 @@ function refresh(projectId?: number) {
   revalidatePath("/");
   revalidatePath("/digest");
   revalidatePath("/people");
+  revalidatePath("/report");
   if (projectId && projectId > 0) {
     revalidatePath(`/p/${projectId}`);
     revalidatePath(`/p/${projectId}/edit`);

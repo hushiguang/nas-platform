@@ -10,6 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navItems: NavItem[] = [
     { href: "/", label: "项目管理" },
     { href: "/weekly", label: "周安排" },
+    { href: "/report", label: "周报" },
     { href: "/digest", label: "风险预报" },
     { href: "/people", label: "人员汇总" },
     { href: "/board", label: "日历看板" },
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const bottomNav: NavItem[] = [
     { href: "/", label: "项目管理" },
     { href: "/weekly", label: "周安排" },
+    { href: "/report", label: "周报" },
     { href: "/digest", label: "风险预报" },
     { href: "/people", label: "人员汇总" },
     { href: "/board", label: "日历看板" },

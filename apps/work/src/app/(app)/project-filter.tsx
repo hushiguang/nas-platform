@@ -183,7 +183,7 @@ export function ProjectFilter({
           </div>
           {live.length > 0 ? (
             <section className="section">
-              <h2 className="section-title">已上线 · {live.length}</h2>
+              <h2 className="section-title">上线阶段 · {live.length}</h2>
               <div className="work-line-list">
                 {live.map((item) => (
                   <ProjectCard key={item.id} item={item} />

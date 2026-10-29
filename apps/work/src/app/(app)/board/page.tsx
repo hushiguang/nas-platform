@@ -142,7 +142,7 @@ export default async function BoardPage({
   const view = sp.view === "person" ? "person" : "project";
   const mode = sp.mode === "week" ? "week" : "month";
   const personFilter = view === "person" && sp.person ? sp.person : undefined;
-  const activePhase = view === "project" && sp.phase && sp.phase !== "已上线" ? sp.phase : undefined;
+  const activePhase = view === "project" && sp.phase && sp.phase !== "已上线" && sp.phase !== "上线阶段" ? sp.phase : undefined;
   const today = new Date().toISOString().slice(0, 10);
   const anchor = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? (sp.date as string) : today;
 
@@ -250,7 +250,7 @@ export default async function BoardPage({
           const segments = p.segments.filter((s) => s.kind !== "LIVE");
           const phaseText = p.phases
             .split("、")
-            .filter((name) => name && name !== "已上线")
+            .filter((name) => name && name !== "已上线" && name !== "上线阶段")
             .join("、");
           if (p.segments.length > 0 && segments.length === 0) return [];
           if (segments.length === 0) {

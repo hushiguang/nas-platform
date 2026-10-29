@@ -273,7 +273,7 @@ export function phaseDueOf(
   endDate: string,
   today: string,
 ): { label: string; overdue: number | null } {
-  if (phase === "LIVE") return { label: `${phaseLabel} · 已上线`, overdue: null };
+  if (phase === "LIVE") return { label: phaseLabel, overdue: null };
   if (!endDate) return { label: `${phaseLabel} · 未排期`, overdue: null };
   const late = dayDiff(endDate, today);
   if (late < 0) return { label: `${phaseLabel} · 逾期 ${-late} 天`, overdue: late };

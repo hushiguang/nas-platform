@@ -68,7 +68,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <span className="expected-key">预期 {item.expected == null ? "未排期" : `${item.expected}%`}</span>
           </div>
           <p className="phase-hint-line">
-            实际进度按「研发实施 / SIT测试 / UAT测试」填的百分比算，商务、筹备上线、已上线这些不计入。
+            实际进度按「研发实施 / SIT测试 / UAT测试」填的百分比算，商务、筹备上线、上线阶段这些不计入。
           </p>
         </div>
         <div className="work-facts">

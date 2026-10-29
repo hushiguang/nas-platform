@@ -65,3 +65,12 @@ export {
   type WorkSummary,
 } from "./digest";
 export { importProjects, parseImportWorkbook, type ImportResult, type ParsedRow } from "./import";
+export {
+  exportWeeklyReportXlsx,
+  renderWeeklyReportMarkdown,
+  weeklyReport,
+  type ReportForecast,
+  type ReportLine,
+  type ReportRisk,
+  type WeeklyReport,
+} from "./report";

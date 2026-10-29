@@ -88,7 +88,7 @@ export function ImportButton() {
             按「项目」列全名匹配，同名的直接更新，没有的新增。
           </p>
           <ul className="muted" style={{ fontSize: 12.5, margin: 0, paddingLeft: 18, lineHeight: 1.9 }}>
-            <li>涉及人员按角色进阶段：项目经理→商务，研发→研发/上线准备/已上线，测试→SIT/UAT</li>
+            <li>涉及人员按角色进阶段：项目经理→商务，研发→研发/上线准备/上线阶段，测试→SIT/UAT</li>
             <li>表里的人全是系统外人员，不核对系统账号</li>
             <li>负责人取项目经理的名字；系统内部归属记在你名下</li>
             <li>同名项目会按表里的内容重写阶段日期和阶段人员</li>
