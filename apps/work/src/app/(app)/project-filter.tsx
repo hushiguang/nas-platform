@@ -13,6 +13,13 @@ export interface PriChip {
   count: number;
 }
 
+export interface PhaseChip {
+  key: string;
+  label: string;
+  count: number;
+  delayed: number;
+}
+
 function haystackOf(item: ProjectCardItem): string {
   return [
     item.name,
@@ -31,7 +38,7 @@ function haystackOf(item: ProjectCardItem): string {
 /**
  * 项目列表 + 优先级 chips + 关键字搜索。
  * 关键字只在前端过滤，输入时不触发服务端渲染，避免整页骨架闪烁和输入框失焦；
- * 优先级 / 提出方 / 平台的筛选仍然走地址栏。
+ * 优先级 / 提出方 / 平台 / 项目阶段的筛选仍然走地址栏。
  */
 export function ProjectFilter({
   items,
@@ -39,18 +46,22 @@ export function ProjectFilter({
   pris,
   sources,
   platforms,
+  phases,
   pri,
   src,
   plat,
+  phase,
 }: {
   items: ProjectCardItem[];
   total: number;
   pris: PriChip[];
   sources: SourceStat[];
   platforms: SourceStat[];
+  phases: PhaseChip[];
   pri?: string;
   src?: string;
   plat?: string;
+  phase?: string;
 }) {
   const [keyword, setKeyword] = useState("");
 
@@ -68,15 +79,17 @@ export function ProjectFilter({
   const active = filtered.filter((item) => item.phase !== "LIVE");
   const typed = keyword.trim();
 
-  const hrefOf = (patch: { pri?: string; src?: string; plat?: string }) => {
+  const hrefOf = (patch: { pri?: string; src?: string; plat?: string; phase?: string }) => {
     const params = new URLSearchParams();
-    const next = { pri, src, plat, ...patch };
+    const next = { pri, src, plat, phase, ...patch };
     if (next.pri) params.set("pri", next.pri);
     if (next.src) params.set("src", next.src);
     if (next.plat) params.set("plat", next.plat);
+    if (next.phase) params.set("phase", next.phase);
     const query = params.toString();
     return query ? `/?${query}` : "/";
   };
+  const filtering = Boolean(pri || src || plat || phase);
 
   return (
     <>
@@ -84,8 +97,8 @@ export function ProjectFilter({
         <div className="work-filter-row">
           <ProjectSearch value={keyword} onChange={setKeyword} />
           <Link
-            href={hrefOf({ pri: undefined, src: undefined, plat: undefined })}
-            className={`badge${!pri && !src && !plat ? "" : " soft"}`}
+            href={hrefOf({ pri: undefined, src: undefined, plat: undefined, phase: undefined })}
+            className={`badge${filtering ? " soft" : ""}`}
             style={{ textDecoration: "none" }}
           >
             全部 {total}
@@ -140,6 +153,22 @@ export function ProjectFilter({
             ))}
           </div>
         ) : null}
+        {phases.length > 0 ? (
+          <div className="work-filter-row work-filter-sub">
+            <span className="work-filter-cap">项目阶段</span>
+            {phases.map((item) => (
+              <Link
+                key={item.key}
+                href={hrefOf({ phase: phase === item.key ? undefined : item.key })}
+                className={`work-chip${phase === item.key ? " is-on" : ""}`}
+              >
+                {item.label}
+                {item.delayed > 0 ? <i>{item.delayed} 延期</i> : null}
+                <b>{item.count}</b>
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {filtered.length === 0 ? (
@@ -169,7 +198,7 @@ export function ProjectFilter({
               </>
             ) : (
               <>
-                <Link href={hrefOf({ pri: undefined, src: undefined, plat: undefined })}>清除筛选</Link> 看全部项目。
+                <Link href={hrefOf({ pri: undefined, src: undefined, plat: undefined, phase: undefined })}>清除筛选</Link> 看全部项目。
               </>
             )}
           </p>

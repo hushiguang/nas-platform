@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAppAccess } from "@/auth";
+import { PHASE_OPTIONS } from "@/lib/labels";
 import { platformOf } from "@/lib/platform";
 import { listProjects } from "@/server";
 import { ImportButton } from "./import-button";
@@ -11,17 +12,19 @@ export const dynamic = "force-dynamic";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ pri?: string; src?: string; plat?: string }>;
+  searchParams: Promise<{ pri?: string; src?: string; plat?: string; phase?: string }>;
 }) {
   const { user, access } = await requireAppAccess();
-  const { pri, src, plat } = await searchParams;
+  const { pri, src, plat, phase } = await searchParams;
+  const phaseKey = PHASE_OPTIONS.find((option) => option.value === phase)?.value;
   const all = await listProjects(access, user.id);
   const items = all
     .filter(
       (item) =>
         (!pri || item.priority === pri) &&
         (!src || (item.code || "未分组") === src) &&
-        (!plat || platformOf(item.name) === plat),
+        (!plat || platformOf(item.name) === plat) &&
+        (!phaseKey || item.phase === phaseKey),
     )
     // 列表在前端做关键字过滤，节点 / 问题明细不必发给浏览器
     .map(({ nodes, issues, draft, ...card }) => card);
@@ -55,6 +58,16 @@ export default async function HomePage({
     .map(([code, v]) => ({ code, ...v }))
     .sort((a, b) => b.count - a.count);
 
+  const phaseStats = PHASE_OPTIONS.map((option) => {
+    const matched = all.filter((item) => item.phase === option.value);
+    return {
+      key: option.value,
+      label: option.label,
+      count: matched.length,
+      delayed: matched.filter((item) => item.delayed > 0).length,
+    };
+  }).filter((item) => item.count > 0);
+
   return (
     <div>
       <div className="page-head">
@@ -80,9 +93,11 @@ export default async function HomePage({
           pris={priStats}
           sources={srcStats}
           platforms={platformStats}
+          phases={phaseStats}
           pri={pri}
           src={src}
           plat={plat}
+          phase={phaseKey}
         />
       </div>
     </div>

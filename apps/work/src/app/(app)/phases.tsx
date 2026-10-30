@@ -3,16 +3,28 @@
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { WorkPhaseKind } from "@nas/db";
-import type { PhaseItemView, PhaseView } from "@/server";
+import type { PhaseItemView, PhaseMemberView, PhaseView } from "@/server";
 import { PhasePercent } from "./meter";
 import {
   addPhaseReworkAction,
   removePhaseItemMemberAction,
+  removePhaseMemberAction,
   removePhaseReworkAction,
   savePhaseAction,
   savePhaseItemMemberAction,
   savePhaseItemsAction,
+  updatePhaseMemberAction,
 } from "./mutate";
+
+/** 以前只排在阶段上、还没挂到具体事项的人。研发节点这类人要出现在「研发实施」的加人里，才能改、才能删。 */
+function rosterAnchorId(phase: Pick<PhaseView, "items">): number | null {
+  const plain = phase.items.filter((item) => !item.rework);
+  return (plain.find((item) => item.trackProgress) ?? plain[0])?.id ?? null;
+}
+
+function unassignedRoster(phase: Pick<PhaseView, "members">): PhaseMemberView[] {
+  return phase.members.filter((member) => member.id > 0 && member.allocations.length === 0);
+}
 
 export function PhaseBoard({
   projectId,
@@ -277,7 +289,7 @@ function PhaseDialog({
                   (item) =>
                     `${item.id}:${item.status}:${item.progress}:${item.trackProgress}:${item.rework}:${item.name}:${item.startDate}:${item.endDate}:${item.devEnterDate}:${item.members.map((member) => `${member.id}@${member.ratio}@${member.endDate}`).join(",")}`,
                 )
-                .join("|")}`}
+                .join("|")}|${phase.members.map((member) => `${member.id}@${member.ratio}@${member.endDate}@${member.allocations.length}`).join(",")}`}
               projectId={projectId}
               phase={phase}
               participants={participants}
@@ -286,7 +298,7 @@ function PhaseDialog({
               onCrew={(action) => run(action)}
             />
           ) : (
-            <ItemList items={phase.items} />
+            <ItemList phase={phase} />
           )}
         </section>
       </div>
@@ -294,10 +306,12 @@ function PhaseDialog({
   );
 }
 
-function ItemList({ items }: { items: PhaseItemView[] }) {
+function ItemList({ phase }: { phase: PhaseView }) {
+  const anchorId = rosterAnchorId(phase);
+  const roster = unassignedRoster(phase);
   return (
     <div className="phase-item-list">
-      {items.map((item) => (
+      {phase.items.map((item) => (
         <div className={`phase-item-row${item.status === "DONE" ? " is-done" : ""}`} key={item.id}>
           <span className={`phase-item-mark is-${item.status.toLowerCase()}`} aria-hidden="true">
             {item.status === "DONE" ? "✓" : item.status === "BLOCKED" ? "!" : item.status === "DOING" ? "●" : ""}
@@ -325,7 +339,7 @@ function ItemList({ items }: { items: PhaseItemView[] }) {
             </span>
           ) : null}
           {item.note ? <span className="muted phase-item-note">{item.note}</span> : null}
-          {item.members.length > 0 ? (
+          {item.members.length > 0 || (item.id === anchorId && roster.length > 0) ? (
             <span className="phase-item-crew">
               {item.members.map((member) => (
                 <span className="phase-item-crew-person" key={member.id}>
@@ -334,6 +348,15 @@ function ItemList({ items }: { items: PhaseItemView[] }) {
                   {member.release ? <span className="muted">释放 {member.release}</span> : null}
                 </span>
               ))}
+              {item.id === anchorId
+                ? roster.map((member) => (
+                    <span className="phase-item-crew-person" key={`roster-${member.id}`}>
+                      {member.name}
+                      <b>{member.ratio}%</b>
+                      {member.release ? <span className="muted">释放 {member.release}</span> : null}
+                    </span>
+                  ))
+                : null}
             </span>
           ) : null}
         </div>
@@ -672,6 +695,7 @@ function PhaseItemsForm({
               <ItemCrew
                 projectId={projectId}
                 item={item}
+                roster={item.id === rosterAnchorId(phase) ? unassignedRoster(phase) : []}
                 suggestions={[...new Set([...participants, ...phase.members.map((member) => member.name)])]}
                 busy={busy}
                 onCrew={onCrew}
@@ -732,18 +756,20 @@ function PhaseItemsForm({
 function ItemCrew({
   projectId,
   item,
+  roster,
   suggestions,
   busy,
   onCrew,
 }: {
   projectId: number;
   item: PhaseItemView;
+  roster: PhaseMemberView[];
   suggestions: string[];
   busy: boolean;
   onCrew: (action: () => Promise<{ message: string } | void>) => void | Promise<void>;
 }) {
   const [adding, setAdding] = useState(false);
-  const taken = new Set(item.members.map((member) => member.name));
+  const taken = new Set([...item.members.map((member) => member.name), ...roster.map((member) => member.name)]);
   const options = suggestions.filter((name) => name && !taken.has(name));
 
   return (
@@ -803,6 +829,71 @@ function ItemCrew({
             disabled={busy}
             aria-label={`把${member.name}移出${item.name}`}
             onClick={() => void onCrew(() => removePhaseItemMemberAction(projectId, member.id))}
+          >
+            ×
+          </button>
+        </form>
+      ))}
+      {roster.map((member) => (
+        <form
+          className="phase-item-crew-person"
+          key={`roster-${member.id}`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onCrew(() => updatePhaseMemberAction(new FormData(event.currentTarget)));
+          }}
+        >
+          <input type="hidden" name="projectId" value={projectId} />
+          <input type="hidden" name="memberId" value={member.id} />
+          <input type="hidden" name="role" value={member.role || "研发"} />
+          <input type="hidden" name="startDate" value={member.startDate} />
+          <span className="phase-item-crew-name">{member.name}</span>
+          <label className="phase-item-crew-ratio">
+            投入
+            <input
+              className="field"
+              name="ratio"
+              type="number"
+              min={0}
+              max={100}
+              step={5}
+              defaultValue={member.ratio}
+              disabled={busy}
+              aria-label={`${member.name}在${item.name}的投入百分比`}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                if (next instanceof HTMLElement && next.classList.contains("phase-item-crew-x")) return;
+                const form = event.currentTarget.form;
+                if (!form || Number(event.currentTarget.value) === member.ratio) return;
+                form.requestSubmit();
+              }}
+            />
+            <i>%</i>
+          </label>
+          <label className="phase-item-crew-release">
+            释放
+            <input
+              className="field"
+              name="endDate"
+              type="date"
+              defaultValue={member.endDate}
+              disabled={busy}
+              aria-label={`${member.name}在${item.name}的预计释放`}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                if (next instanceof HTMLElement && next.classList.contains("phase-item-crew-x")) return;
+                const form = event.currentTarget.form;
+                if (!form || event.currentTarget.value === member.endDate) return;
+                form.requestSubmit();
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="phase-item-crew-x"
+            disabled={busy}
+            aria-label={`把${member.name}移出这个阶段`}
+            onClick={() => void onCrew(() => removePhaseMemberAction(projectId, member.id))}
           >
             ×
           </button>

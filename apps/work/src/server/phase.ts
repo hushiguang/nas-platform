@@ -720,6 +720,15 @@ export async function removePhaseItemMember(
   if (!member) throw new WorkError("找不到这个投入", 404);
   const project = await requireManage(access, userId, member.item.phase.projectId);
   await prisma.workPhaseItemMember.delete({ where: { id: memberId } });
+  const still = await prisma.workPhaseItemMember.count({
+    where: { name: member.name, item: { phaseId: member.item.phaseId } },
+  });
+  // 事项上的人删光后，阶段名册还留着的话，阶段行上仍显示这个人，而且删不掉。
+  if (still === 0) {
+    await prisma.workPhaseMember.deleteMany({
+      where: { phaseId: member.item.phaseId, name: member.name },
+    });
+  }
   try {
     await syncConflictTodos();
   } catch (err) {

@@ -2192,8 +2192,8 @@ table.data code {
     -webkit-line-clamp: 2;
   }
 }
-/* 平台 / 提出方筛选 chips：替代原来的右侧统计栏 */
-/* 筛选区吸顶：滚动时搜索 / 优先级 / 平台 / 提出方始终在最上面 */
+/* 平台 / 提出方 / 项目阶段筛选 chips：替代原来的右侧统计栏 */
+/* 筛选区吸顶：滚动时搜索 / 优先级 / 平台 / 提出方 / 项目阶段始终在最上面 */
 .work-filter-bar {
   position: sticky;
   top: 0;
@@ -2223,10 +2223,11 @@ table.data code {
 }
 .work-filter-cap {
   flex: none;
-  min-width: 36px;
+  min-width: 4.5em;
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
+  white-space: nowrap;
 }
 .work-chip {
   display: inline-flex;
