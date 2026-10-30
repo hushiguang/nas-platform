@@ -29,6 +29,13 @@ export interface ReportForecast {
   date: string;
 }
 
+export interface ReportPhaseCount {
+  key: string;
+  label: string;
+  count: number;
+  note: string;
+}
+
 export interface WeeklyReport {
   title: string;
   from: string;
@@ -38,6 +45,8 @@ export interface WeeklyReport {
   isCurrent: boolean;
   prevHref: string;
   nextHref: string | null;
+  /** 汇报用的阶段一览。上线只计本周完成的 */
+  phases: ReportPhaseCount[];
   risks: ReportRisk[];
   done: ReportLine[];
   launching: ReportLine[];
@@ -46,6 +55,50 @@ export interface WeeklyReport {
   unscheduled: ReportLine[];
   created: ReportLine[];
   forecast: ReportForecast[];
+}
+
+interface PhaseTally {
+  live: number;
+  business: number;
+  prepare: number;
+  devOn: number;
+  devWait: number;
+  sitOn: number;
+  sitWait: number;
+  uat: number;
+  prelaunch: number;
+}
+
+function emptyTally(): PhaseTally {
+  return { live: 0, business: 0, prepare: 0, devOn: 0, devWait: 0, sitOn: 0, sitWait: 0, uat: 0, prelaunch: 0 };
+}
+
+/** 项目准备没有单列。有项目时插在商务和研发之间，没有就不占一行。 */
+function phaseRows(counts: PhaseTally): ReportPhaseCount[] {
+  const rows: ReportPhaseCount[] = [
+    { key: "live", label: "本周已上线", count: counts.live, note: "" },
+    { key: "business", label: "商务阶段", count: counts.business, note: "" },
+  ];
+  if (counts.prepare > 0) {
+    rows.push({ key: "prepare", label: "项目准备", count: counts.prepare, note: "" });
+  }
+  rows.push(
+    {
+      key: "dev",
+      label: "研发阶段",
+      count: counts.devOn + counts.devWait,
+      note: `${counts.devOn}个研发中，${counts.devWait}个等待研发进入`,
+    },
+    {
+      key: "sit",
+      label: "SIT阶段",
+      count: counts.sitOn + counts.sitWait,
+      note: `${counts.sitOn}个进行中，${counts.sitWait}个等待测试进入`,
+    },
+    { key: "uat", label: "UAT阶段", count: counts.uat, note: "" },
+    { key: "prelaunch", label: "准备上线", count: counts.prelaunch, note: "" },
+  );
+  return rows;
 }
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2EF" } };
@@ -292,6 +345,19 @@ function byName(a: ReportLine, b: ReportLine): number {
   return a.name.localeCompare(b.name, "zh");
 }
 
+/** 研发跟进中先看测试，再看研发。同一阶段里仍按项目名排。 */
+const ACTIVE_PHASE_ORDER: WorkPhaseKind[] = ["UAT", "SIT", "DEV"];
+
+function byActivePhase(phaseOf: Map<number, WorkPhaseKind>): (a: ReportLine, b: ReportLine) => number {
+  const rank = (line: ReportLine) => {
+    const phase = phaseOf.get(line.id);
+    if (!phase) return ACTIVE_PHASE_ORDER.length;
+    const index = ACTIVE_PHASE_ORDER.indexOf(phase);
+    return index === -1 ? ACTIVE_PHASE_ORDER.length : index;
+  };
+  return (a, b) => rank(a) - rank(b) || byName(a, b);
+}
+
 /**
  * 周报按手写总结的栏目来：完成、待上线、跟进中、等测试、待排期。
  * 每一行是「项目（跟进人）：现在进展到哪」。
@@ -334,6 +400,8 @@ export async function weeklyReport(access: PlatformAccess, userId: number, weekR
   const unscheduled: ReportLine[] = [];
   const created: ReportLine[] = [];
   const risks: ReportRisk[] = [];
+  const tally = emptyTally();
+  const activePhase = new Map<number, WorkPhaseKind>();
 
   for (const project of projects) {
     const bucket = classify(project, week.from, week.to);
@@ -342,6 +410,17 @@ export async function weeklyReport(access: PlatformAccess, userId: number, weekR
       created.push(lineOf(project, `${md(createdOn)}新增`));
     }
     if (!bucket) continue;
+    if (bucket === "done") tally.live += 1;
+    else if (project.phase === "BUSINESS") tally.business += 1;
+    else if (project.phase === "PREPARE") tally.prepare += 1;
+    else if (project.phase === "DEV") {
+      if (bucket === "active") tally.devOn += 1;
+      else tally.devWait += 1;
+    } else if (project.phase === "SIT") {
+      if (bucket === "waitTest") tally.sitWait += 1;
+      else tally.sitOn += 1;
+    } else if (project.phase === "UAT") tally.uat += 1;
+    else if (bucket === "launching" || project.phase === "PRELAUNCH") tally.prelaunch += 1;
     const detail = story(project, bucket);
     const line = lineOf(project, detail);
     if (bucket === "waitTest") line.people = namesOf(phaseByKind(project, "SIT")?.members ?? [], "测试").join("、");
@@ -350,7 +429,10 @@ export async function weeklyReport(access: PlatformAccess, userId: number, weekR
     else if (bucket === "launching") launching.push(line);
     else if (bucket === "waitTest") waitTest.push(line);
     else if (bucket === "unscheduled") unscheduled.push(line);
-    else active.push(line);
+    else {
+      active.push(line);
+      activePhase.set(project.id, project.phase);
+    }
 
     const current = project.phases.find((phase) => phase.kind === project.phase);
     const end = isoDay(current?.endDate);
@@ -367,7 +449,7 @@ export async function weeklyReport(access: PlatformAccess, userId: number, weekR
 
   done.sort(byName);
   launching.sort(byName);
-  active.sort(byName);
+  active.sort(byActivePhase(activePhase));
   waitTest.sort(byName);
   unscheduled.sort(byName);
   created.sort(byName);
@@ -429,6 +511,7 @@ export async function weeklyReport(access: PlatformAccess, userId: number, weekR
     isCurrent: week.isCurrent,
     prevHref: weekHref(addDaysIso(week.from, -7), thisMonday),
     nextHref: week.isCurrent ? null : weekHref(addDaysIso(week.from, 7), thisMonday),
+    phases: phaseRows(tally),
     risks,
     done,
     launching,
@@ -466,6 +549,12 @@ export function renderWeeklyReportMarkdown(report: WeeklyReport): string {
   }
   lines.push(
     "## 项目进展",
+    "",
+    "### 阶段一览",
+    "",
+    "| 项目阶段 | 数量 | 备注 |",
+    "| --- | --- | --- |",
+    ...report.phases.map((item) => `| ${item.label} | ${item.count} | ${item.note} |`),
     "",
     ...section("本周完成项目", report.done, "本周暂无完成项目"),
     ...section("待上线项目", report.launching, "无"),
@@ -511,6 +600,11 @@ function paintRows(sheet: ExcelJS.Worksheet) {
 export async function exportWeeklyReportXlsx(report: WeeklyReport): Promise<Buffer> {
   const book = new ExcelJS.Workbook();
   book.creator = "工作台";
+  const glance = book.addWorksheet("阶段一览");
+  styleSheet(glance, ["项目阶段", "数量", "备注"], [16, 12, 36]);
+  for (const item of report.phases) glance.addRow([item.label, item.count, item.note || ""]);
+  paintRows(glance);
+
   const sheet = book.addWorksheet("项目进展");
   styleSheet(sheet, ["分组", "项目", "跟进人", "进展"], [16, 36, 28, 42]);
   const groups: Array<[string, ReportLine[]]> = [

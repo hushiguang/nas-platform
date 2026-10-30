@@ -96,6 +96,27 @@ export default async function ReportPage({
         )}
 
         <h2>项目进展</h2>
+        <h3>阶段一览</h3>
+        <div className="table-scroll">
+          <table className="data report phases">
+            <thead>
+              <tr>
+                <th>项目阶段</th>
+                <th>数量</th>
+                <th>备注</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.phases.map((item) => (
+                <tr key={item.key}>
+                  <td>{item.label}</td>
+                  <td>{item.count}</td>
+                  <td>{item.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <Lines title="本周完成项目" lines={report.done} empty="本周暂无完成项目" />
         <Lines title="待上线项目" lines={report.launching} empty="无" />
         <Lines title="研发跟进中项目" lines={report.active} empty="无" />

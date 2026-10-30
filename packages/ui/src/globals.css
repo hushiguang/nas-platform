@@ -2451,6 +2451,13 @@ table.data.report th:nth-child(4),
 table.data.report td:nth-child(4) {
   white-space: nowrap;
 }
+table.data.report.phases td:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+table.data.report.phases td:first-child {
+  white-space: nowrap;
+}
 .report-doc h2 {
   margin: 28px 0 8px;
   font-family: "Source Serif 4", serif;

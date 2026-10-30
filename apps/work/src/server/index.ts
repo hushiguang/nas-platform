@@ -71,6 +71,7 @@ export {
   weeklyReport,
   type ReportForecast,
   type ReportLine,
+  type ReportPhaseCount,
   type ReportRisk,
   type WeeklyReport,
 } from "./report";
