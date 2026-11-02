@@ -11,7 +11,7 @@
 # 首次启动会自动跑迁移与种子（migrator 服务，幂等）。
 #
 # 持久化数据统一收在 NAS_DATA_ROOT（见 .env，默认 /vol1/1000/docker/nas-platform）
-# 下，按应用分子目录：pgdata / bill / travel / todo。
+# 下，按应用分子目录：pgdata / bill / travel / todo / data/uploads/files。
 #
 # 对外反代：各应用各自监听独立端口（3210-3216），由外部反代（如 Lucky）按
 # 子域名分发，本文件不再内置 nginx 网关。SSO 仍靠 AUTH_COOKIE_DOMAIN=.<root>。
@@ -80,6 +80,9 @@ x-app-env: &app-env
   AMAP_WEB_KEY: ${AMAP_WEB_KEY:-}
   # 待办图片的本地目录。默认只作历史数据读取用；上传一律走图床
   TODO_UPLOAD_DIR: /data/uploads/todo
+  # 项目 / 待办 / 账单的附件。容器内固定这个路径。
+  # 宿主机目录用 ATTACHMENT_HOST_DIR 指定，不填就落在 <NAS_DATA_ROOT>/data/uploads/files
+  ATTACHMENT_DIR: /data/uploads/files
   # 图床传不上去时是否改存本地。默认 false：宁可上传报错，也不留 local: 死链
   TODO_IMAGE_LOCAL_FALLBACK: ${TODO_IMAGE_LOCAL_FALLBACK:-false}
   TZ: Asia/Shanghai
@@ -140,6 +143,7 @@ services:
     volumes:
       # 没配图床时待办图片落这里（配了图床就不会用到）。独立子目录，别和账单票据混
       - ${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/todo:/data/uploads/todo
+      - ${ATTACHMENT_HOST_DIR:-${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/data/uploads/files}:/data/uploads/files
     ports:
       - "3216:3000"
     depends_on:
@@ -165,6 +169,7 @@ services:
     volumes:
       # 票据照片。账单上传的图存这里，容器重建不丢
       - ${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/bill:/data/photos
+      - ${ATTACHMENT_HOST_DIR:-${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/data/uploads/files}:/data/uploads/files
     ports:
       - "3211:3000"
     depends_on:
@@ -207,6 +212,8 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+    volumes:
+      - ${ATTACHMENT_HOST_DIR:-${NAS_DATA_ROOT:-/vol1/1000/docker/nas-platform}/data/uploads/files}:/data/uploads/files
     ports:
       - "3213:3000"
     depends_on:

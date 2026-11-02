@@ -6,6 +6,8 @@ import { DeleteProject } from "../../delete-button";
 import { PhaseSwitch } from "../../phase-switch";
 import { PhaseBoard } from "../../phases";
 import { IssuePanel } from "../../panels";
+import { ProjectFiles } from "./files";
+import { ProjectLinks } from "./links";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +91,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             {item.stageLabel}
           </span>
         </div>
+        <ProjectLinks
+          projectId={item.id}
+          changeListLinks={item.changeListLinks}
+          jiraLinks={item.jiraLinks}
+          canEdit={item.canManage}
+        />
         {item.description ? <p className="work-desc">{item.description}</p> : null}
+        {item.canManage || item.attachments.length > 0 ? (
+          <div className="work-files">
+            <h2 className="section-title" style={{ marginTop: 18 }}>
+              附件{item.attachments.length > 0 ? ` · ${item.attachments.length}` : ""}
+            </h2>
+            <ProjectFiles projectId={item.id} initial={item.attachments} canEdit={item.canManage} />
+          </div>
+        ) : null}
         {item.showQuality ? (
           <div className="work-quality">
             <span className="stat">

@@ -446,25 +446,29 @@ enum WorkPhaseItemStatus {
 }
 
 model WorkProject {
-  id          Int           @id @default(autoincrement())
-  name        String
-  code        String?
-  status      ProjectStatus @default(PREPARING)
-  startDate   DateTime?     @db.Date
-  endDate     DateTime?     @db.Date
-  ownerId     Int
+  id              Int           @id @default(autoincrement())
+  name            String
+  code            String?
+  status          ProjectStatus @default(PREPARING)
+  startDate       DateTime?     @db.Date
+  endDate         DateTime?     @db.Date
+  ownerId         Int
   /// 项目经理。导入的项目人是系统外人员、没有账号，这里单独留名字
-  managerName String?
-  description String?
+  managerName     String?
+  description     String?
   /// 实际进度，由各启用阶段的实际进度汇总。预期进度不落库
-  progress    Int           @default(0) // 0-100
-  priority    WorkPriority  @default(MEDIUM)
+  progress        Int           @default(0) // 0-100
+  priority        WorkPriority  @default(MEDIUM)
   /// 当前阶段。每个项目的阶段日期和人员各自配置
-  phase       WorkPhaseKind @default(BUSINESS)
+  phase           WorkPhaseKind @default(BUSINESS)
   /// 计划上线日
-  launchDate  DateTime?     @db.Date
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  launchDate      DateTime?     @db.Date
+  /// ChangeList 链接，可以多条
+  changeListLinks String[]      @default([])
+  /// Jira 链接，可以多条
+  jiraLinks       String[]      @default([])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   nodes   WorkNode[]
   members WorkMember[]
@@ -1158,4 +1162,23 @@ model BillImportDraft {
   createdAt DateTime
 
   @@map("bill_import_draft")
+}
+
+/// 项目 / 待办 / 账单共用的附件。
+/// scope + refId 挂到具体记录；refId = 0 表示已上传、还没随表单保存。
+/// 文件本身在 ATTACHMENT_DIR，这里只留文件名和存储键。
+model FileAttachment {
+  id         Int      @id @default(autoincrement())
+  /// work_project | todo | bill_tx
+  scope      String
+  refId      Int      @default(0)
+  filename   String
+  mime       String
+  size       Int
+  storageKey String   @unique
+  createdBy  Int
+  createdAt  DateTime @default(now())
+
+  @@index([scope, refId])
+  @@map("file_attachment")
 }

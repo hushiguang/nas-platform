@@ -10,7 +10,7 @@
  * 日期时间一律按本地时区拼，服务端 parseDue 也按 +08:00 解析，两边口径一致。
  */
 import { useEffect, useRef, useState } from "react";
-import { useImagePaste } from "@nas/ui";
+import { AttachmentFiles, useImagePaste, type AttachmentItem } from "@nas/ui";
 import { LightboxImage } from "./lightbox";
 import { useScrollLock } from "./use-scroll-lock";
 
@@ -25,6 +25,7 @@ export interface TodoInitial {
   title: string;
   description: string | null;
   images: string[];
+  attachments?: AttachmentItem[];
   /** 以下字段精简模式（分享页）不展示，可以不传 */
   listId?: number | null;
   priority?: string;
@@ -53,6 +54,23 @@ export function imageSrc(address: string): string {
   return `/api/image?u=${encodeURIComponent(address)}`;
 }
 
+export function todoAttachmentHref(item: AttachmentItem, kind: "view" | "download"): string {
+  return `/api/attachments/${item.id}${kind === "download" ? "?download=1" : ""}`;
+}
+
+export async function uploadTodoAttachment(file: File): Promise<AttachmentItem> {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch("/api/attachments", { method: "POST", body });
+  const data = (await res.json().catch(() => ({}))) as { message?: string; attachment?: AttachmentItem };
+  if (!res.ok || !data.attachment) throw new Error(data.message || "上传失败");
+  return data.attachment;
+}
+
+export async function deleteTodoAttachment(id: number): Promise<void> {
+  await fetch(`/api/attachments/${id}`, { method: "DELETE" });
+}
+
 export function TodoDialog({
   lists,
   action,
@@ -65,6 +83,9 @@ export function TodoDialog({
   imageUrl,
   hiddenFields,
   basic = false,
+  attachmentHref = todoAttachmentHref,
+  attachmentUpload = uploadTodoAttachment,
+  attachmentDelete = deleteTodoAttachment,
 }: {
   lists: ListOption[];
   /** 可以返回 { message } 把失败原因显示在弹窗里（分享页的图片超限等） */
@@ -83,6 +104,11 @@ export function TodoDialog({
   hiddenFields?: Record<string, string>;
   /** 精简模式：只留标题、备注、图片（分享给外部的人改，清单/日期/提醒这些不给动） */
   basic?: boolean;
+  /** 不传就不显示附件。上传走各页面自己的接口，保存时靠隐藏字段把 id 交回去 */
+  attachmentHref?: (item: AttachmentItem, kind: "view" | "download") => string;
+  attachmentUpload?: (file: File) => Promise<AttachmentItem>;
+  /** 关掉弹窗但没保存时，把这次新传、还没挂上的文件删掉 */
+  attachmentDelete?: (id: number) => Promise<void>;
 }) {
   const [openState, setOpenState] = useState(false);
   const controlled = openProp !== undefined;
@@ -96,6 +122,9 @@ export function TodoDialog({
   const titleRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [keepImages, setKeepImages] = useState<string[]>(initial?.images ?? []);
+  const [attachments, setAttachments] = useState<AttachmentItem[]>(initial?.attachments ?? []);
+  const freshFileIds = useRef<number[]>([]);
+  const filesCommitted = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initial);
 
@@ -118,10 +147,18 @@ export function TodoDialog({
   // useState 初始化 —— 不同步的话，"加了图保存后再编辑"看到的是旧值（空），
   // 再一保存还会把图片写没。
   const imagesKey = (initial?.images ?? []).join("|");
+  const attachmentKey = (initial?.attachments ?? []).map((item) => item.id).join("|");
   useEffect(() => {
-    if (open) setKeepImages(initial?.images ?? []);
+    if (open) {
+      setKeepImages(initial?.images ?? []);
+      setAttachments(initial?.attachments ?? []);
+      filesCommitted.current = false;
+    } else if (!filesCommitted.current && attachmentDelete) {
+      const ids = freshFileIds.current.splice(0);
+      for (const id of ids) void attachmentDelete(id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, imagesKey]);
+  }, [open, imagesKey, attachmentKey]);
 
   // 每次打开都从干净状态开始：上一轮的错误提示不该带到下一次
   useEffect(() => {
@@ -157,6 +194,13 @@ export function TodoDialog({
       return;
     }
     setError(null);
+    filesCommitted.current = true;
+    const kept = new Set(attachments.map((item) => item.id));
+    const dropped = freshFileIds.current.filter((id) => !kept.has(id));
+    freshFileIds.current = [];
+    if (attachmentDelete) {
+      for (const id of dropped) void attachmentDelete(id);
+    }
     setOpen(false);
   }
 
@@ -289,17 +333,43 @@ export function TodoDialog({
                 </div>
               )}
 
+              {attachmentHref ? (
+                <div className="field">
+                  <span className="form-label">附件（可空，文件名会留在待办上）</span>
+                  <input type="hidden" name="attachmentSync" value="1" />
+                  {attachments.map((item) => (
+                    <input key={item.id} type="hidden" name="attachmentIds" value={item.id} />
+                  ))}
+                  <AttachmentFiles
+                    items={attachments}
+                    href={attachmentHref}
+                    uploadFile={
+                      attachmentUpload
+                        ? async (file) => {
+                            const item = await attachmentUpload(file);
+                            freshFileIds.current.push(item.id);
+                            return item;
+                          }
+                        : undefined
+                    }
+                    onChange={setAttachments}
+                  />
+                </div>
+              ) : null}
+
               <div className="field">
                 <span className="form-label">图片（可空，最多 9 张；也能直接粘贴截图）</span>
-                <input
-                  ref={fileRef}
-                  className="input"
-                  type="file"
-                  name="files"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
-                />
+                <label className="attach-pick">
+                  选择图片
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    name="files"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
+                  />
+                </label>
 
                 {(keepImages.length > 0 || previews.length > 0) && (
                   <div className="todo-thumbs">

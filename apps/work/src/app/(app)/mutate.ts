@@ -21,6 +21,7 @@ import {
   savePhaseItems,
   savePhaseMembers,
   saveProject,
+  saveProjectLinks,
   setActualProgress,
   setCurrentPhase,
   setIssueStatus,
@@ -73,6 +74,21 @@ export async function saveProjectAction(formData: FormData): Promise<ActionResul
   await audit(user, "save", "work_project", saved.id, saved.summary);
   refresh(saved.id);
   redirect(`/p/${saved.id}`);
+}
+
+export async function saveProjectLinksAction(
+  projectId: number,
+  kind: "changeList" | "jira",
+  links: string[],
+): Promise<ActionResult | void> {
+  const { user, access } = await requireAppAccess();
+  try {
+    const summary = await saveProjectLinks(access, user.id, projectId, kind, links);
+    await audit(user, "update", "work_project", projectId, summary);
+  } catch (err) {
+    return fail(err, "保存失败");
+  }
+  refresh(projectId);
 }
 
 export async function removeProjectAction(id: number): Promise<ActionResult | void> {

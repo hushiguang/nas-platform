@@ -22,6 +22,7 @@
  */
 import { prisma } from "@nas/db";
 import type { BillCategoryKind, BillTxType } from "@nas/db";
+import { billAttachmentMap } from "./attachments";
 import { BillError } from "./errors";
 import { centsToYuan, yuanToCents } from "./money";
 import { formatDate, monthBounds, pad } from "./dates";
@@ -333,7 +334,8 @@ export async function presentWithImages(actor: Actor, id: number) {
   const rows = await transactionsByIds(actor, [id]);
   if (!rows.length) throw new BillError("账单不存在", 404);
   const images = await transactionImages([rows[0].id]);
-  return presentTransaction(rows[0], images.get(rows[0].id) || []);
+  const attachments = await billAttachmentMap([rows[0].id]);
+  return presentTransaction(rows[0], images.get(rows[0].id) || [], attachments.get(rows[0].id) || []);
 }
 
 /** 把金额（分）平均分成 count 份，余数一分一分补给前面的人，保证几份加起来正好等于总额 */

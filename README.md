@@ -46,11 +46,12 @@ cp .env.example .env      # 填 NAS_DATA_ROOT / PG_PASSWORD / AUTH_SECRET / 域�
 数据目录（默认 `/vol1/1000/docker/nas-platform`，见 `.env` 的 `NAS_DATA_ROOT`）：
 
 ```
-├── app/       代码
-├── pgdata/    PostgreSQL 数据
-├── bill/      账单票据照片
-├── travel/    旅行相册（把照片放这里）
-└── todo/      待办本地图片
+├── app/                  代码
+├── pgdata/               PostgreSQL 数据
+├── bill/                 账单票据照片
+├── travel/               旅行相册（把照片放这里）
+├── todo/                 待办本地图片
+└── data/uploads/files/   项目、待办、账单附件（可在 .env 用 ATTACHMENT_HOST_DIR 改到别处）
 ```
 
 打开门户：直连 `http://<NAS_IP>:3210`，或经 Lucky 子域名访问 `http(s)://nav.<你的域名>`。

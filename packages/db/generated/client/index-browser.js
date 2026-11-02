@@ -292,6 +292,8 @@ exports.Prisma.WorkProjectScalarFieldEnum = {
   priority: 'priority',
   phase: 'phase',
   launchDate: 'launchDate',
+  changeListLinks: 'changeListLinks',
+  jiraLinks: 'jiraLinks',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -678,6 +680,18 @@ exports.Prisma.BillImportDraftScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.FileAttachmentScalarFieldEnum = {
+  id: 'id',
+  scope: 'scope',
+  refId: 'refId',
+  filename: 'filename',
+  mime: 'mime',
+  size: 'size',
+  storageKey: 'storageKey',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -950,7 +964,8 @@ exports.Prisma.ModelName = {
   BillCmbTextFix: 'BillCmbTextFix',
   BillDuplicateIgnore: 'BillDuplicateIgnore',
   BillImportTemplate: 'BillImportTemplate',
-  BillImportDraft: 'BillImportDraft'
+  BillImportDraft: 'BillImportDraft',
+  FileAttachment: 'FileAttachment'
 };
 
 /**

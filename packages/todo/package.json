@@ -13,6 +13,7 @@
   "dependencies": {
     "@nas/core": "*",
     "@nas/db": "*",
+    "@nas/media": "*",
     "@nas/notify": "*"
   }
 }

@@ -33,6 +33,17 @@ import {
   uploadFromForm,
 } from "@/server/todo-form";
 import { signOut } from "@/auth";
+import { ATTACHMENT_SCOPE, parseAttachmentIds, syncAttachmentRefs } from "@nas/media";
+
+async function syncTodoFiles(form: FormData, todoId: number, userId: number) {
+  if (!form.has("attachmentSync")) return;
+  await syncAttachmentRefs({
+    scope: ATTACHMENT_SCOPE.todo,
+    refId: todoId,
+    ids: parseAttachmentIds(form.getAll("attachmentIds")),
+    claimUserId: userId,
+  });
+}
 
 export async function logout() {
   await signOut({ redirectTo: "/login" });
@@ -66,6 +77,7 @@ export async function createTodoAction(form: FormData) {
     images,
     ownerId: user.id,
   });
+  await syncTodoFiles(form, row.id, user.id);
 
   await recordAudit({
     app: "todo",
@@ -101,6 +113,7 @@ export async function updateTodoAction(form: FormData) {
     },
     user.role === "ADMIN",
   );
+  await syncTodoFiles(form, id, user.id);
   refresh();
 }
 

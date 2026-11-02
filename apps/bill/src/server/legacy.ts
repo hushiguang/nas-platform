@@ -126,6 +126,7 @@ import {
   type Actor,
 } from "./index";
 import type { BillBook } from "@nas/db";
+import { billAttachmentMap, openBillFile, openShareBillFile, uploadBillFile, uploadShareBillFile } from "./attachments";
 import { commitImport, previewImport } from "./import";
 import { importTemplate, toCsv, toXlsx } from "./export";
 import { todayString } from "./dates";
@@ -544,9 +545,10 @@ route("GET", "transactions", async ({ req, query }) => {
   const rows = await transactionRows(actor, query, limit, offset);
   const totals = await transactionTotal(actor, query);
   const images = await transactionImages(rows.map((row) => row.id));
+  const attachments = await billAttachmentMap(rows.map((row) => row.id));
 
   return {
-    transactions: rows.map((row) => presentTransaction(row, images.get(row.id) || [])),
+    transactions: rows.map((row) => presentTransaction(row, images.get(row.id) || [], attachments.get(row.id) || [])),
     total: totals.count,
     summary: {
       expense: centsToYuan(totals.expenseCents),
@@ -765,6 +767,28 @@ route("POST", "upload/image", async ({ req, files }) => {
   });
 });
 
+// ================================================================ 附件
+// 原文件名留在库里。浏览不带 download=1（图片 / PDF 内嵌打开），下载带上。
+route("POST", "attachments", async ({ req, files }) => {
+  const actor = await requireActor(req);
+  const file = files.find((item) => item.field === "file") || files[0];
+  return uploadBillFile(actor, file);
+});
+
+route("GET", "attachments/:id", async ({ req, params, query }) => {
+  const actor = await requireActor(req);
+  return openBillFile(actor, Number(params.id), query.download === "1");
+});
+
+route("POST", "share/:token/attachments", async ({ params, files }) => {
+  const file = files.find((item) => item.field === "file") || files[0];
+  return uploadShareBillFile(String(params.token), file);
+});
+
+route("GET", "share/:token/attachments/:id", async ({ params, query }) => {
+  return openShareBillFile(String(params.token), Number(params.id), query.download === "1");
+});
+
 // 图床是自签证书，浏览器直连会加载失败，统一走这里代理
 route("GET", "image", async ({ query }) => {
   const url = String(query.u || "");
@@ -792,6 +816,7 @@ route("GET", "share/:token", async ({ params, query }) => {
   const rows = await transactionRows(owner, scope, 200);
   const totals = await transactionTotal(owner, scope);
   const images = await transactionImages(rows.map((row) => row.id));
+  const attachments = await billAttachmentMap(rows.map((row) => row.id));
 
   // AA 要按每笔账单自己勾选的分摊人算，所以逐笔取
   const billRows = await prisma.$queryRawUnsafe<
@@ -830,7 +855,7 @@ route("GET", "share/:token", async ({ params, query }) => {
       net: centsToYuan(totals.incomeCents - totals.expenseCents),
     },
     aa,
-    entries: rows.map((row) => presentTransaction(row, images.get(row.id) || [])),
+    entries: rows.map((row) => presentTransaction(row, images.get(row.id) || [], attachments.get(row.id) || [])),
   };
 });
 

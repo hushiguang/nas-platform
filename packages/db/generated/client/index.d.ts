@@ -262,6 +262,13 @@ export type BillImportTemplate = $Result.DefaultSelection<Prisma.$BillImportTemp
  * 导入草稿（解析结果暂存，等待用户确认）
  */
 export type BillImportDraft = $Result.DefaultSelection<Prisma.$BillImportDraftPayload>
+/**
+ * Model FileAttachment
+ * 项目 / 待办 / 账单共用的附件。
+ * scope + refId 挂到具体记录；refId = 0 表示已上传、还没随表单保存。
+ * 文件本身在 ATTACHMENT_DIR，这里只留文件名和存储键。
+ */
+export type FileAttachment = $Result.DefaultSelection<Prisma.$FileAttachmentPayload>
 
 /**
  * Enums
@@ -1254,6 +1261,16 @@ export class PrismaClient<
     * ```
     */
   get billImportDraft(): Prisma.BillImportDraftDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.fileAttachment`: Exposes CRUD operations for the **FileAttachment** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FileAttachments
+    * const fileAttachments = await prisma.fileAttachment.findMany()
+    * ```
+    */
+  get fileAttachment(): Prisma.FileAttachmentDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -1741,7 +1758,8 @@ export namespace Prisma {
     BillCmbTextFix: 'BillCmbTextFix',
     BillDuplicateIgnore: 'BillDuplicateIgnore',
     BillImportTemplate: 'BillImportTemplate',
-    BillImportDraft: 'BillImportDraft'
+    BillImportDraft: 'BillImportDraft',
+    FileAttachment: 'FileAttachment'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1760,7 +1778,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "platform" | "userPlatform" | "todo" | "todoList" | "todoListMember" | "notifyLog" | "notifyChannel" | "setting" | "auditLog" | "anniversary" | "anniversaryBill" | "anniversaryNote" | "workProject" | "workNode" | "workMember" | "workIssue" | "workPhase" | "workPhaseItem" | "workPhaseItemMember" | "workPhaseMember" | "pregnancy" | "pregNode" | "pregMedicine" | "pregDaily" | "pregCheckup" | "pregBagItem" | "travelCity" | "travelTrip" | "travelStop" | "travelPhoto" | "billAccount" | "billCategory" | "billBook" | "billBookMember" | "billBookParticipant" | "billTransaction" | "billTransactionImage" | "billRecurringRule" | "billAccountAlias" | "billCategoryAlias" | "billCategoryRule" | "billTransferRule" | "billCmbTextFix" | "billDuplicateIgnore" | "billImportTemplate" | "billImportDraft"
+      modelProps: "user" | "platform" | "userPlatform" | "todo" | "todoList" | "todoListMember" | "notifyLog" | "notifyChannel" | "setting" | "auditLog" | "anniversary" | "anniversaryBill" | "anniversaryNote" | "workProject" | "workNode" | "workMember" | "workIssue" | "workPhase" | "workPhaseItem" | "workPhaseItemMember" | "workPhaseMember" | "pregnancy" | "pregNode" | "pregMedicine" | "pregDaily" | "pregCheckup" | "pregBagItem" | "travelCity" | "travelTrip" | "travelStop" | "travelPhoto" | "billAccount" | "billCategory" | "billBook" | "billBookMember" | "billBookParticipant" | "billTransaction" | "billTransactionImage" | "billRecurringRule" | "billAccountAlias" | "billCategoryAlias" | "billCategoryRule" | "billTransferRule" | "billCmbTextFix" | "billDuplicateIgnore" | "billImportTemplate" | "billImportDraft" | "fileAttachment"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -5242,6 +5260,80 @@ export namespace Prisma {
           }
         }
       }
+      FileAttachment: {
+        payload: Prisma.$FileAttachmentPayload<ExtArgs>
+        fields: Prisma.FileAttachmentFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FileAttachmentFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FileAttachmentFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+          }
+          findFirst: {
+            args: Prisma.FileAttachmentFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FileAttachmentFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+          }
+          findMany: {
+            args: Prisma.FileAttachmentFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>[]
+          }
+          create: {
+            args: Prisma.FileAttachmentCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+          }
+          createMany: {
+            args: Prisma.FileAttachmentCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.FileAttachmentCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>[]
+          }
+          delete: {
+            args: Prisma.FileAttachmentDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+          }
+          update: {
+            args: Prisma.FileAttachmentUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+          }
+          deleteMany: {
+            args: Prisma.FileAttachmentDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FileAttachmentUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.FileAttachmentUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>[]
+          }
+          upsert: {
+            args: Prisma.FileAttachmentUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+          }
+          aggregate: {
+            args: Prisma.FileAttachmentAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFileAttachment>
+          }
+          groupBy: {
+            args: Prisma.FileAttachmentGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FileAttachmentGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FileAttachmentCountArgs<ExtArgs>
+            result: $Utils.Optional<FileAttachmentCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -5385,6 +5477,7 @@ export namespace Prisma {
     billDuplicateIgnore?: BillDuplicateIgnoreOmit
     billImportTemplate?: BillImportTemplateOmit
     billImportDraft?: BillImportDraftOmit
+    fileAttachment?: FileAttachmentOmit
   }
 
   /* Types for Logging */
@@ -21217,6 +21310,8 @@ export namespace Prisma {
     priority: number
     phase: number
     launchDate: number
+    changeListLinks: number
+    jiraLinks: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -21285,6 +21380,8 @@ export namespace Prisma {
     priority?: true
     phase?: true
     launchDate?: true
+    changeListLinks?: true
+    jiraLinks?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -21390,6 +21487,8 @@ export namespace Prisma {
     priority: $Enums.WorkPriority
     phase: $Enums.WorkPhaseKind
     launchDate: Date | null
+    changeListLinks: string[]
+    jiraLinks: string[]
     createdAt: Date
     updatedAt: Date
     _count: WorkProjectCountAggregateOutputType | null
@@ -21427,6 +21526,8 @@ export namespace Prisma {
     priority?: boolean
     phase?: boolean
     launchDate?: boolean
+    changeListLinks?: boolean
+    jiraLinks?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     nodes?: boolean | WorkProject$nodesArgs<ExtArgs>
@@ -21450,6 +21551,8 @@ export namespace Prisma {
     priority?: boolean
     phase?: boolean
     launchDate?: boolean
+    changeListLinks?: boolean
+    jiraLinks?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["workProject"]>
@@ -21468,6 +21571,8 @@ export namespace Prisma {
     priority?: boolean
     phase?: boolean
     launchDate?: boolean
+    changeListLinks?: boolean
+    jiraLinks?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["workProject"]>
@@ -21486,11 +21591,13 @@ export namespace Prisma {
     priority?: boolean
     phase?: boolean
     launchDate?: boolean
+    changeListLinks?: boolean
+    jiraLinks?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type WorkProjectOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "code" | "status" | "startDate" | "endDate" | "ownerId" | "managerName" | "description" | "progress" | "priority" | "phase" | "launchDate" | "createdAt" | "updatedAt", ExtArgs["result"]["workProject"]>
+  export type WorkProjectOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "code" | "status" | "startDate" | "endDate" | "ownerId" | "managerName" | "description" | "progress" | "priority" | "phase" | "launchDate" | "changeListLinks" | "jiraLinks" | "createdAt" | "updatedAt", ExtArgs["result"]["workProject"]>
   export type WorkProjectInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     nodes?: boolean | WorkProject$nodesArgs<ExtArgs>
     members?: boolean | WorkProject$membersArgs<ExtArgs>
@@ -21535,6 +21642,14 @@ export namespace Prisma {
        * 计划上线日
        */
       launchDate: Date | null
+      /**
+       * ChangeList 链接，可以多条
+       */
+      changeListLinks: string[]
+      /**
+       * Jira 链接，可以多条
+       */
+      jiraLinks: string[]
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["workProject"]>
@@ -21977,6 +22092,8 @@ export namespace Prisma {
     readonly priority: FieldRef<"WorkProject", 'WorkPriority'>
     readonly phase: FieldRef<"WorkProject", 'WorkPhaseKind'>
     readonly launchDate: FieldRef<"WorkProject", 'DateTime'>
+    readonly changeListLinks: FieldRef<"WorkProject", 'String[]'>
+    readonly jiraLinks: FieldRef<"WorkProject", 'String[]'>
     readonly createdAt: FieldRef<"WorkProject", 'DateTime'>
     readonly updatedAt: FieldRef<"WorkProject", 'DateTime'>
   }
@@ -59763,6 +59880,1102 @@ export namespace Prisma {
 
 
   /**
+   * Model FileAttachment
+   */
+
+  export type AggregateFileAttachment = {
+    _count: FileAttachmentCountAggregateOutputType | null
+    _avg: FileAttachmentAvgAggregateOutputType | null
+    _sum: FileAttachmentSumAggregateOutputType | null
+    _min: FileAttachmentMinAggregateOutputType | null
+    _max: FileAttachmentMaxAggregateOutputType | null
+  }
+
+  export type FileAttachmentAvgAggregateOutputType = {
+    id: number | null
+    refId: number | null
+    size: number | null
+    createdBy: number | null
+  }
+
+  export type FileAttachmentSumAggregateOutputType = {
+    id: number | null
+    refId: number | null
+    size: number | null
+    createdBy: number | null
+  }
+
+  export type FileAttachmentMinAggregateOutputType = {
+    id: number | null
+    scope: string | null
+    refId: number | null
+    filename: string | null
+    mime: string | null
+    size: number | null
+    storageKey: string | null
+    createdBy: number | null
+    createdAt: Date | null
+  }
+
+  export type FileAttachmentMaxAggregateOutputType = {
+    id: number | null
+    scope: string | null
+    refId: number | null
+    filename: string | null
+    mime: string | null
+    size: number | null
+    storageKey: string | null
+    createdBy: number | null
+    createdAt: Date | null
+  }
+
+  export type FileAttachmentCountAggregateOutputType = {
+    id: number
+    scope: number
+    refId: number
+    filename: number
+    mime: number
+    size: number
+    storageKey: number
+    createdBy: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type FileAttachmentAvgAggregateInputType = {
+    id?: true
+    refId?: true
+    size?: true
+    createdBy?: true
+  }
+
+  export type FileAttachmentSumAggregateInputType = {
+    id?: true
+    refId?: true
+    size?: true
+    createdBy?: true
+  }
+
+  export type FileAttachmentMinAggregateInputType = {
+    id?: true
+    scope?: true
+    refId?: true
+    filename?: true
+    mime?: true
+    size?: true
+    storageKey?: true
+    createdBy?: true
+    createdAt?: true
+  }
+
+  export type FileAttachmentMaxAggregateInputType = {
+    id?: true
+    scope?: true
+    refId?: true
+    filename?: true
+    mime?: true
+    size?: true
+    storageKey?: true
+    createdBy?: true
+    createdAt?: true
+  }
+
+  export type FileAttachmentCountAggregateInputType = {
+    id?: true
+    scope?: true
+    refId?: true
+    filename?: true
+    mime?: true
+    size?: true
+    storageKey?: true
+    createdBy?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type FileAttachmentAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FileAttachment to aggregate.
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FileAttachments to fetch.
+     */
+    orderBy?: FileAttachmentOrderByWithRelationInput | FileAttachmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FileAttachmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FileAttachments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FileAttachments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FileAttachments
+    **/
+    _count?: true | FileAttachmentCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: FileAttachmentAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: FileAttachmentSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FileAttachmentMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FileAttachmentMaxAggregateInputType
+  }
+
+  export type GetFileAttachmentAggregateType<T extends FileAttachmentAggregateArgs> = {
+        [P in keyof T & keyof AggregateFileAttachment]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFileAttachment[P]>
+      : GetScalarType<T[P], AggregateFileAttachment[P]>
+  }
+
+
+
+
+  export type FileAttachmentGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FileAttachmentWhereInput
+    orderBy?: FileAttachmentOrderByWithAggregationInput | FileAttachmentOrderByWithAggregationInput[]
+    by: FileAttachmentScalarFieldEnum[] | FileAttachmentScalarFieldEnum
+    having?: FileAttachmentScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FileAttachmentCountAggregateInputType | true
+    _avg?: FileAttachmentAvgAggregateInputType
+    _sum?: FileAttachmentSumAggregateInputType
+    _min?: FileAttachmentMinAggregateInputType
+    _max?: FileAttachmentMaxAggregateInputType
+  }
+
+  export type FileAttachmentGroupByOutputType = {
+    id: number
+    scope: string
+    refId: number
+    filename: string
+    mime: string
+    size: number
+    storageKey: string
+    createdBy: number
+    createdAt: Date
+    _count: FileAttachmentCountAggregateOutputType | null
+    _avg: FileAttachmentAvgAggregateOutputType | null
+    _sum: FileAttachmentSumAggregateOutputType | null
+    _min: FileAttachmentMinAggregateOutputType | null
+    _max: FileAttachmentMaxAggregateOutputType | null
+  }
+
+  type GetFileAttachmentGroupByPayload<T extends FileAttachmentGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FileAttachmentGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FileAttachmentGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FileAttachmentGroupByOutputType[P]>
+            : GetScalarType<T[P], FileAttachmentGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FileAttachmentSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    scope?: boolean
+    refId?: boolean
+    filename?: boolean
+    mime?: boolean
+    size?: boolean
+    storageKey?: boolean
+    createdBy?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["fileAttachment"]>
+
+  export type FileAttachmentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    scope?: boolean
+    refId?: boolean
+    filename?: boolean
+    mime?: boolean
+    size?: boolean
+    storageKey?: boolean
+    createdBy?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["fileAttachment"]>
+
+  export type FileAttachmentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    scope?: boolean
+    refId?: boolean
+    filename?: boolean
+    mime?: boolean
+    size?: boolean
+    storageKey?: boolean
+    createdBy?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["fileAttachment"]>
+
+  export type FileAttachmentSelectScalar = {
+    id?: boolean
+    scope?: boolean
+    refId?: boolean
+    filename?: boolean
+    mime?: boolean
+    size?: boolean
+    storageKey?: boolean
+    createdBy?: boolean
+    createdAt?: boolean
+  }
+
+  export type FileAttachmentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "scope" | "refId" | "filename" | "mime" | "size" | "storageKey" | "createdBy" | "createdAt", ExtArgs["result"]["fileAttachment"]>
+
+  export type $FileAttachmentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FileAttachment"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      /**
+       * work_project | todo | bill_tx
+       */
+      scope: string
+      refId: number
+      filename: string
+      mime: string
+      size: number
+      storageKey: string
+      createdBy: number
+      createdAt: Date
+    }, ExtArgs["result"]["fileAttachment"]>
+    composites: {}
+  }
+
+  type FileAttachmentGetPayload<S extends boolean | null | undefined | FileAttachmentDefaultArgs> = $Result.GetResult<Prisma.$FileAttachmentPayload, S>
+
+  type FileAttachmentCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FileAttachmentFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FileAttachmentCountAggregateInputType | true
+    }
+
+  export interface FileAttachmentDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FileAttachment'], meta: { name: 'FileAttachment' } }
+    /**
+     * Find zero or one FileAttachment that matches the filter.
+     * @param {FileAttachmentFindUniqueArgs} args - Arguments to find a FileAttachment
+     * @example
+     * // Get one FileAttachment
+     * const fileAttachment = await prisma.fileAttachment.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FileAttachmentFindUniqueArgs>(args: SelectSubset<T, FileAttachmentFindUniqueArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FileAttachment that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FileAttachmentFindUniqueOrThrowArgs} args - Arguments to find a FileAttachment
+     * @example
+     * // Get one FileAttachment
+     * const fileAttachment = await prisma.fileAttachment.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FileAttachmentFindUniqueOrThrowArgs>(args: SelectSubset<T, FileAttachmentFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FileAttachment that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentFindFirstArgs} args - Arguments to find a FileAttachment
+     * @example
+     * // Get one FileAttachment
+     * const fileAttachment = await prisma.fileAttachment.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FileAttachmentFindFirstArgs>(args?: SelectSubset<T, FileAttachmentFindFirstArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FileAttachment that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentFindFirstOrThrowArgs} args - Arguments to find a FileAttachment
+     * @example
+     * // Get one FileAttachment
+     * const fileAttachment = await prisma.fileAttachment.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FileAttachmentFindFirstOrThrowArgs>(args?: SelectSubset<T, FileAttachmentFindFirstOrThrowArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FileAttachments that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FileAttachments
+     * const fileAttachments = await prisma.fileAttachment.findMany()
+     * 
+     * // Get first 10 FileAttachments
+     * const fileAttachments = await prisma.fileAttachment.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const fileAttachmentWithIdOnly = await prisma.fileAttachment.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FileAttachmentFindManyArgs>(args?: SelectSubset<T, FileAttachmentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FileAttachment.
+     * @param {FileAttachmentCreateArgs} args - Arguments to create a FileAttachment.
+     * @example
+     * // Create one FileAttachment
+     * const FileAttachment = await prisma.fileAttachment.create({
+     *   data: {
+     *     // ... data to create a FileAttachment
+     *   }
+     * })
+     * 
+     */
+    create<T extends FileAttachmentCreateArgs>(args: SelectSubset<T, FileAttachmentCreateArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FileAttachments.
+     * @param {FileAttachmentCreateManyArgs} args - Arguments to create many FileAttachments.
+     * @example
+     * // Create many FileAttachments
+     * const fileAttachment = await prisma.fileAttachment.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FileAttachmentCreateManyArgs>(args?: SelectSubset<T, FileAttachmentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many FileAttachments and returns the data saved in the database.
+     * @param {FileAttachmentCreateManyAndReturnArgs} args - Arguments to create many FileAttachments.
+     * @example
+     * // Create many FileAttachments
+     * const fileAttachment = await prisma.fileAttachment.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many FileAttachments and only return the `id`
+     * const fileAttachmentWithIdOnly = await prisma.fileAttachment.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends FileAttachmentCreateManyAndReturnArgs>(args?: SelectSubset<T, FileAttachmentCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a FileAttachment.
+     * @param {FileAttachmentDeleteArgs} args - Arguments to delete one FileAttachment.
+     * @example
+     * // Delete one FileAttachment
+     * const FileAttachment = await prisma.fileAttachment.delete({
+     *   where: {
+     *     // ... filter to delete one FileAttachment
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FileAttachmentDeleteArgs>(args: SelectSubset<T, FileAttachmentDeleteArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FileAttachment.
+     * @param {FileAttachmentUpdateArgs} args - Arguments to update one FileAttachment.
+     * @example
+     * // Update one FileAttachment
+     * const fileAttachment = await prisma.fileAttachment.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FileAttachmentUpdateArgs>(args: SelectSubset<T, FileAttachmentUpdateArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FileAttachments.
+     * @param {FileAttachmentDeleteManyArgs} args - Arguments to filter FileAttachments to delete.
+     * @example
+     * // Delete a few FileAttachments
+     * const { count } = await prisma.fileAttachment.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FileAttachmentDeleteManyArgs>(args?: SelectSubset<T, FileAttachmentDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FileAttachments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FileAttachments
+     * const fileAttachment = await prisma.fileAttachment.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FileAttachmentUpdateManyArgs>(args: SelectSubset<T, FileAttachmentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FileAttachments and returns the data updated in the database.
+     * @param {FileAttachmentUpdateManyAndReturnArgs} args - Arguments to update many FileAttachments.
+     * @example
+     * // Update many FileAttachments
+     * const fileAttachment = await prisma.fileAttachment.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more FileAttachments and only return the `id`
+     * const fileAttachmentWithIdOnly = await prisma.fileAttachment.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends FileAttachmentUpdateManyAndReturnArgs>(args: SelectSubset<T, FileAttachmentUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one FileAttachment.
+     * @param {FileAttachmentUpsertArgs} args - Arguments to update or create a FileAttachment.
+     * @example
+     * // Update or create a FileAttachment
+     * const fileAttachment = await prisma.fileAttachment.upsert({
+     *   create: {
+     *     // ... data to create a FileAttachment
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FileAttachment we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FileAttachmentUpsertArgs>(args: SelectSubset<T, FileAttachmentUpsertArgs<ExtArgs>>): Prisma__FileAttachmentClient<$Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FileAttachments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentCountArgs} args - Arguments to filter FileAttachments to count.
+     * @example
+     * // Count the number of FileAttachments
+     * const count = await prisma.fileAttachment.count({
+     *   where: {
+     *     // ... the filter for the FileAttachments we want to count
+     *   }
+     * })
+    **/
+    count<T extends FileAttachmentCountArgs>(
+      args?: Subset<T, FileAttachmentCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FileAttachmentCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FileAttachment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FileAttachmentAggregateArgs>(args: Subset<T, FileAttachmentAggregateArgs>): Prisma.PrismaPromise<GetFileAttachmentAggregateType<T>>
+
+    /**
+     * Group by FileAttachment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FileAttachmentGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FileAttachmentGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FileAttachmentGroupByArgs['orderBy'] }
+        : { orderBy?: FileAttachmentGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FileAttachmentGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFileAttachmentGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FileAttachment model
+   */
+  readonly fields: FileAttachmentFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FileAttachment.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FileAttachmentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FileAttachment model
+   */
+  interface FileAttachmentFieldRefs {
+    readonly id: FieldRef<"FileAttachment", 'Int'>
+    readonly scope: FieldRef<"FileAttachment", 'String'>
+    readonly refId: FieldRef<"FileAttachment", 'Int'>
+    readonly filename: FieldRef<"FileAttachment", 'String'>
+    readonly mime: FieldRef<"FileAttachment", 'String'>
+    readonly size: FieldRef<"FileAttachment", 'Int'>
+    readonly storageKey: FieldRef<"FileAttachment", 'String'>
+    readonly createdBy: FieldRef<"FileAttachment", 'Int'>
+    readonly createdAt: FieldRef<"FileAttachment", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FileAttachment findUnique
+   */
+  export type FileAttachmentFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * Filter, which FileAttachment to fetch.
+     */
+    where: FileAttachmentWhereUniqueInput
+  }
+
+  /**
+   * FileAttachment findUniqueOrThrow
+   */
+  export type FileAttachmentFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * Filter, which FileAttachment to fetch.
+     */
+    where: FileAttachmentWhereUniqueInput
+  }
+
+  /**
+   * FileAttachment findFirst
+   */
+  export type FileAttachmentFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * Filter, which FileAttachment to fetch.
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FileAttachments to fetch.
+     */
+    orderBy?: FileAttachmentOrderByWithRelationInput | FileAttachmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FileAttachments.
+     */
+    cursor?: FileAttachmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FileAttachments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FileAttachments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FileAttachments.
+     */
+    distinct?: FileAttachmentScalarFieldEnum | FileAttachmentScalarFieldEnum[]
+  }
+
+  /**
+   * FileAttachment findFirstOrThrow
+   */
+  export type FileAttachmentFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * Filter, which FileAttachment to fetch.
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FileAttachments to fetch.
+     */
+    orderBy?: FileAttachmentOrderByWithRelationInput | FileAttachmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FileAttachments.
+     */
+    cursor?: FileAttachmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FileAttachments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FileAttachments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FileAttachments.
+     */
+    distinct?: FileAttachmentScalarFieldEnum | FileAttachmentScalarFieldEnum[]
+  }
+
+  /**
+   * FileAttachment findMany
+   */
+  export type FileAttachmentFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * Filter, which FileAttachments to fetch.
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FileAttachments to fetch.
+     */
+    orderBy?: FileAttachmentOrderByWithRelationInput | FileAttachmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FileAttachments.
+     */
+    cursor?: FileAttachmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FileAttachments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FileAttachments.
+     */
+    skip?: number
+    distinct?: FileAttachmentScalarFieldEnum | FileAttachmentScalarFieldEnum[]
+  }
+
+  /**
+   * FileAttachment create
+   */
+  export type FileAttachmentCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * The data needed to create a FileAttachment.
+     */
+    data: XOR<FileAttachmentCreateInput, FileAttachmentUncheckedCreateInput>
+  }
+
+  /**
+   * FileAttachment createMany
+   */
+  export type FileAttachmentCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FileAttachments.
+     */
+    data: FileAttachmentCreateManyInput | FileAttachmentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FileAttachment createManyAndReturn
+   */
+  export type FileAttachmentCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * The data used to create many FileAttachments.
+     */
+    data: FileAttachmentCreateManyInput | FileAttachmentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FileAttachment update
+   */
+  export type FileAttachmentUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * The data needed to update a FileAttachment.
+     */
+    data: XOR<FileAttachmentUpdateInput, FileAttachmentUncheckedUpdateInput>
+    /**
+     * Choose, which FileAttachment to update.
+     */
+    where: FileAttachmentWhereUniqueInput
+  }
+
+  /**
+   * FileAttachment updateMany
+   */
+  export type FileAttachmentUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FileAttachments.
+     */
+    data: XOR<FileAttachmentUpdateManyMutationInput, FileAttachmentUncheckedUpdateManyInput>
+    /**
+     * Filter which FileAttachments to update
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * Limit how many FileAttachments to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FileAttachment updateManyAndReturn
+   */
+  export type FileAttachmentUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * The data used to update FileAttachments.
+     */
+    data: XOR<FileAttachmentUpdateManyMutationInput, FileAttachmentUncheckedUpdateManyInput>
+    /**
+     * Filter which FileAttachments to update
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * Limit how many FileAttachments to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FileAttachment upsert
+   */
+  export type FileAttachmentUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * The filter to search for the FileAttachment to update in case it exists.
+     */
+    where: FileAttachmentWhereUniqueInput
+    /**
+     * In case the FileAttachment found by the `where` argument doesn't exist, create a new FileAttachment with this data.
+     */
+    create: XOR<FileAttachmentCreateInput, FileAttachmentUncheckedCreateInput>
+    /**
+     * In case the FileAttachment was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FileAttachmentUpdateInput, FileAttachmentUncheckedUpdateInput>
+  }
+
+  /**
+   * FileAttachment delete
+   */
+  export type FileAttachmentDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+    /**
+     * Filter which FileAttachment to delete.
+     */
+    where: FileAttachmentWhereUniqueInput
+  }
+
+  /**
+   * FileAttachment deleteMany
+   */
+  export type FileAttachmentDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FileAttachments to delete
+     */
+    where?: FileAttachmentWhereInput
+    /**
+     * Limit how many FileAttachments to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FileAttachment without action
+   */
+  export type FileAttachmentDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FileAttachment
+     */
+    select?: FileAttachmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FileAttachment
+     */
+    omit?: FileAttachmentOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -59986,6 +61199,8 @@ export namespace Prisma {
     priority: 'priority',
     phase: 'phase',
     launchDate: 'launchDate',
+    changeListLinks: 'changeListLinks',
+    jiraLinks: 'jiraLinks',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -60472,6 +61687,21 @@ export namespace Prisma {
   };
 
   export type BillImportDraftScalarFieldEnum = (typeof BillImportDraftScalarFieldEnum)[keyof typeof BillImportDraftScalarFieldEnum]
+
+
+  export const FileAttachmentScalarFieldEnum: {
+    id: 'id',
+    scope: 'scope',
+    refId: 'refId',
+    filename: 'filename',
+    mime: 'mime',
+    size: 'size',
+    storageKey: 'storageKey',
+    createdBy: 'createdBy',
+    createdAt: 'createdAt'
+  };
+
+  export type FileAttachmentScalarFieldEnum = (typeof FileAttachmentScalarFieldEnum)[keyof typeof FileAttachmentScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -62085,6 +63315,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFilter<"WorkProject"> | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFilter<"WorkProject"> | $Enums.WorkPhaseKind
     launchDate?: DateTimeNullableFilter<"WorkProject"> | Date | string | null
+    changeListLinks?: StringNullableListFilter<"WorkProject">
+    jiraLinks?: StringNullableListFilter<"WorkProject">
     createdAt?: DateTimeFilter<"WorkProject"> | Date | string
     updatedAt?: DateTimeFilter<"WorkProject"> | Date | string
     nodes?: WorkNodeListRelationFilter
@@ -62107,6 +63339,8 @@ export namespace Prisma {
     priority?: SortOrder
     phase?: SortOrder
     launchDate?: SortOrderInput | SortOrder
+    changeListLinks?: SortOrder
+    jiraLinks?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     nodes?: WorkNodeOrderByRelationAggregateInput
@@ -62132,6 +63366,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFilter<"WorkProject"> | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFilter<"WorkProject"> | $Enums.WorkPhaseKind
     launchDate?: DateTimeNullableFilter<"WorkProject"> | Date | string | null
+    changeListLinks?: StringNullableListFilter<"WorkProject">
+    jiraLinks?: StringNullableListFilter<"WorkProject">
     createdAt?: DateTimeFilter<"WorkProject"> | Date | string
     updatedAt?: DateTimeFilter<"WorkProject"> | Date | string
     nodes?: WorkNodeListRelationFilter
@@ -62154,6 +63390,8 @@ export namespace Prisma {
     priority?: SortOrder
     phase?: SortOrder
     launchDate?: SortOrderInput | SortOrder
+    changeListLinks?: SortOrder
+    jiraLinks?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: WorkProjectCountOrderByAggregateInput
@@ -62180,6 +63418,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityWithAggregatesFilter<"WorkProject"> | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindWithAggregatesFilter<"WorkProject"> | $Enums.WorkPhaseKind
     launchDate?: DateTimeNullableWithAggregatesFilter<"WorkProject"> | Date | string | null
+    changeListLinks?: StringNullableListFilter<"WorkProject">
+    jiraLinks?: StringNullableListFilter<"WorkProject">
     createdAt?: DateTimeWithAggregatesFilter<"WorkProject"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"WorkProject"> | Date | string
   }
@@ -64648,6 +65888,80 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"BillImportDraft"> | Date | string
   }
 
+  export type FileAttachmentWhereInput = {
+    AND?: FileAttachmentWhereInput | FileAttachmentWhereInput[]
+    OR?: FileAttachmentWhereInput[]
+    NOT?: FileAttachmentWhereInput | FileAttachmentWhereInput[]
+    id?: IntFilter<"FileAttachment"> | number
+    scope?: StringFilter<"FileAttachment"> | string
+    refId?: IntFilter<"FileAttachment"> | number
+    filename?: StringFilter<"FileAttachment"> | string
+    mime?: StringFilter<"FileAttachment"> | string
+    size?: IntFilter<"FileAttachment"> | number
+    storageKey?: StringFilter<"FileAttachment"> | string
+    createdBy?: IntFilter<"FileAttachment"> | number
+    createdAt?: DateTimeFilter<"FileAttachment"> | Date | string
+  }
+
+  export type FileAttachmentOrderByWithRelationInput = {
+    id?: SortOrder
+    scope?: SortOrder
+    refId?: SortOrder
+    filename?: SortOrder
+    mime?: SortOrder
+    size?: SortOrder
+    storageKey?: SortOrder
+    createdBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FileAttachmentWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    storageKey?: string
+    AND?: FileAttachmentWhereInput | FileAttachmentWhereInput[]
+    OR?: FileAttachmentWhereInput[]
+    NOT?: FileAttachmentWhereInput | FileAttachmentWhereInput[]
+    scope?: StringFilter<"FileAttachment"> | string
+    refId?: IntFilter<"FileAttachment"> | number
+    filename?: StringFilter<"FileAttachment"> | string
+    mime?: StringFilter<"FileAttachment"> | string
+    size?: IntFilter<"FileAttachment"> | number
+    createdBy?: IntFilter<"FileAttachment"> | number
+    createdAt?: DateTimeFilter<"FileAttachment"> | Date | string
+  }, "id" | "storageKey">
+
+  export type FileAttachmentOrderByWithAggregationInput = {
+    id?: SortOrder
+    scope?: SortOrder
+    refId?: SortOrder
+    filename?: SortOrder
+    mime?: SortOrder
+    size?: SortOrder
+    storageKey?: SortOrder
+    createdBy?: SortOrder
+    createdAt?: SortOrder
+    _count?: FileAttachmentCountOrderByAggregateInput
+    _avg?: FileAttachmentAvgOrderByAggregateInput
+    _max?: FileAttachmentMaxOrderByAggregateInput
+    _min?: FileAttachmentMinOrderByAggregateInput
+    _sum?: FileAttachmentSumOrderByAggregateInput
+  }
+
+  export type FileAttachmentScalarWhereWithAggregatesInput = {
+    AND?: FileAttachmentScalarWhereWithAggregatesInput | FileAttachmentScalarWhereWithAggregatesInput[]
+    OR?: FileAttachmentScalarWhereWithAggregatesInput[]
+    NOT?: FileAttachmentScalarWhereWithAggregatesInput | FileAttachmentScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"FileAttachment"> | number
+    scope?: StringWithAggregatesFilter<"FileAttachment"> | string
+    refId?: IntWithAggregatesFilter<"FileAttachment"> | number
+    filename?: StringWithAggregatesFilter<"FileAttachment"> | string
+    mime?: StringWithAggregatesFilter<"FileAttachment"> | string
+    size?: IntWithAggregatesFilter<"FileAttachment"> | number
+    storageKey?: StringWithAggregatesFilter<"FileAttachment"> | string
+    createdBy?: IntWithAggregatesFilter<"FileAttachment"> | number
+    createdAt?: DateTimeWithAggregatesFilter<"FileAttachment"> | Date | string
+  }
+
   export type UserCreateInput = {
     username: string
     passwordHash: string
@@ -65763,6 +67077,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -65785,6 +67101,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -65806,6 +67124,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -65828,6 +67148,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput
@@ -65850,6 +67172,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -65867,6 +67191,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -65885,6 +67211,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -68493,6 +69821,87 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type FileAttachmentCreateInput = {
+    scope: string
+    refId?: number
+    filename: string
+    mime: string
+    size: number
+    storageKey: string
+    createdBy: number
+    createdAt?: Date | string
+  }
+
+  export type FileAttachmentUncheckedCreateInput = {
+    id?: number
+    scope: string
+    refId?: number
+    filename: string
+    mime: string
+    size: number
+    storageKey: string
+    createdBy: number
+    createdAt?: Date | string
+  }
+
+  export type FileAttachmentUpdateInput = {
+    scope?: StringFieldUpdateOperationsInput | string
+    refId?: IntFieldUpdateOperationsInput | number
+    filename?: StringFieldUpdateOperationsInput | string
+    mime?: StringFieldUpdateOperationsInput | string
+    size?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    createdBy?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FileAttachmentUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    scope?: StringFieldUpdateOperationsInput | string
+    refId?: IntFieldUpdateOperationsInput | number
+    filename?: StringFieldUpdateOperationsInput | string
+    mime?: StringFieldUpdateOperationsInput | string
+    size?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    createdBy?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FileAttachmentCreateManyInput = {
+    id?: number
+    scope: string
+    refId?: number
+    filename: string
+    mime: string
+    size: number
+    storageKey: string
+    createdBy: number
+    createdAt?: Date | string
+  }
+
+  export type FileAttachmentUpdateManyMutationInput = {
+    scope?: StringFieldUpdateOperationsInput | string
+    refId?: IntFieldUpdateOperationsInput | number
+    filename?: StringFieldUpdateOperationsInput | string
+    mime?: StringFieldUpdateOperationsInput | string
+    size?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    createdBy?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FileAttachmentUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    scope?: StringFieldUpdateOperationsInput | string
+    refId?: IntFieldUpdateOperationsInput | number
+    filename?: StringFieldUpdateOperationsInput | string
+    mime?: StringFieldUpdateOperationsInput | string
+    size?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    createdBy?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -69750,6 +71159,14 @@ export namespace Prisma {
     not?: NestedEnumWorkPhaseKindFilter<$PrismaModel> | $Enums.WorkPhaseKind
   }
 
+  export type StringNullableListFilter<$PrismaModel = never> = {
+    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    has?: string | StringFieldRefInput<$PrismaModel> | null
+    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
+    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
+    isEmpty?: boolean
+  }
+
   export type WorkNodeListRelationFilter = {
     every?: WorkNodeWhereInput
     some?: WorkNodeWhereInput
@@ -69804,6 +71221,8 @@ export namespace Prisma {
     priority?: SortOrder
     phase?: SortOrder
     launchDate?: SortOrder
+    changeListLinks?: SortOrder
+    jiraLinks?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -71961,6 +73380,56 @@ export namespace Prisma {
     ownerId?: SortOrder
   }
 
+  export type FileAttachmentCountOrderByAggregateInput = {
+    id?: SortOrder
+    scope?: SortOrder
+    refId?: SortOrder
+    filename?: SortOrder
+    mime?: SortOrder
+    size?: SortOrder
+    storageKey?: SortOrder
+    createdBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FileAttachmentAvgOrderByAggregateInput = {
+    id?: SortOrder
+    refId?: SortOrder
+    size?: SortOrder
+    createdBy?: SortOrder
+  }
+
+  export type FileAttachmentMaxOrderByAggregateInput = {
+    id?: SortOrder
+    scope?: SortOrder
+    refId?: SortOrder
+    filename?: SortOrder
+    mime?: SortOrder
+    size?: SortOrder
+    storageKey?: SortOrder
+    createdBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FileAttachmentMinOrderByAggregateInput = {
+    id?: SortOrder
+    scope?: SortOrder
+    refId?: SortOrder
+    filename?: SortOrder
+    mime?: SortOrder
+    size?: SortOrder
+    storageKey?: SortOrder
+    createdBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type FileAttachmentSumOrderByAggregateInput = {
+    id?: SortOrder
+    refId?: SortOrder
+    size?: SortOrder
+    createdBy?: SortOrder
+  }
+
   export type UserPlatformCreateNestedManyWithoutUserInput = {
     create?: XOR<UserPlatformCreateWithoutUserInput, UserPlatformUncheckedCreateWithoutUserInput> | UserPlatformCreateWithoutUserInput[] | UserPlatformUncheckedCreateWithoutUserInput[]
     connectOrCreate?: UserPlatformCreateOrConnectWithoutUserInput | UserPlatformCreateOrConnectWithoutUserInput[]
@@ -72730,6 +74199,14 @@ export namespace Prisma {
     update?: XOR<XOR<AnniversaryUpdateToOneWithWhereWithoutNotesInput, AnniversaryUpdateWithoutNotesInput>, AnniversaryUncheckedUpdateWithoutNotesInput>
   }
 
+  export type WorkProjectCreatechangeListLinksInput = {
+    set: string[]
+  }
+
+  export type WorkProjectCreatejiraLinksInput = {
+    set: string[]
+  }
+
   export type WorkNodeCreateNestedManyWithoutProjectInput = {
     create?: XOR<WorkNodeCreateWithoutProjectInput, WorkNodeUncheckedCreateWithoutProjectInput> | WorkNodeCreateWithoutProjectInput[] | WorkNodeUncheckedCreateWithoutProjectInput[]
     connectOrCreate?: WorkNodeCreateOrConnectWithoutProjectInput | WorkNodeCreateOrConnectWithoutProjectInput[]
@@ -72796,6 +74273,16 @@ export namespace Prisma {
 
   export type EnumWorkPhaseKindFieldUpdateOperationsInput = {
     set?: $Enums.WorkPhaseKind
+  }
+
+  export type WorkProjectUpdatechangeListLinksInput = {
+    set?: string[]
+    push?: string | string[]
+  }
+
+  export type WorkProjectUpdatejiraLinksInput = {
+    set?: string[]
+    push?: string | string[]
   }
 
   export type WorkNodeUpdateManyWithoutProjectNestedInput = {
@@ -76436,6 +77923,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: WorkMemberCreateNestedManyWithoutProjectInput
@@ -76457,6 +77946,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: WorkMemberUncheckedCreateNestedManyWithoutProjectInput
@@ -76493,6 +77984,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: WorkMemberUpdateManyWithoutProjectNestedInput
@@ -76514,6 +78007,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: WorkMemberUncheckedUpdateManyWithoutProjectNestedInput
@@ -76534,6 +78029,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -76555,6 +78052,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -76591,6 +78090,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -76612,6 +78113,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput
@@ -76632,6 +78135,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -76653,6 +78158,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -76689,6 +78196,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -76710,6 +78219,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput
@@ -76730,6 +78241,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -76751,6 +78264,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
+    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -76857,6 +78372,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -76878,6 +78395,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
+    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput

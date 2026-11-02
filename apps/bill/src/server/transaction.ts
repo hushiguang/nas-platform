@@ -19,6 +19,7 @@ import { accountOwned, ensureAccount, resolveAccount } from "./account";
 import { categoryOwned, ensureCategory } from "./category";
 import type { Actor } from "./book";
 import { canSeeBook, canWriteBook, ensurePersonalBook, saveImages, visibleBookIds } from "./book";
+import { ATTACHMENT_SCOPE, MediaError, parseAttachmentIds, removeAttachmentRefs, syncAttachmentRefs } from "@nas/media";
 
 /** 带 join 出来的展示字段的流水行（来自 listTransactions 的裸 SQL） */
 export interface TransactionRow extends BillTransaction {
@@ -64,6 +65,8 @@ export interface TxInput {
   memberName?: string | null;
   bookId?: number | null;
   images?: unknown;
+  /** 附件 id 数组，或 `{ id }`。不传就不动原来的附件 */
+  attachments?: unknown;
   shareWith?: unknown;
   /** 转入场景：表示「从对方账户收进来」，用来把转出/转入方向摆正 */
   incoming?: boolean;
@@ -221,6 +224,19 @@ export async function insertTransaction(
   });
 
   if (Array.isArray(body.images)) await saveImages(created.id, body.images);
+  if (Array.isArray(body.attachments)) {
+    try {
+      await syncAttachmentRefs({
+        scope: ATTACHMENT_SCOPE.bill,
+        refId: created.id,
+        ids: parseAttachmentIds(body.attachments),
+        claimUserId: userId,
+      });
+    } catch (err) {
+      if (err instanceof MediaError) throw new BillError(err.message, err.status);
+      throw err;
+    }
+  }
   if (keepId != null || followed) {
     await syncBillFollowTodo({
       id: created.id,
@@ -237,7 +253,11 @@ export async function insertTransaction(
 }
 
 /** 逐笔呈现给前端，字段名保持与旧 API 一致（金额转元、枚举转小写） */
-export function presentTransaction(row: TransactionRow, images: string[] = []) {
+export function presentTransaction(
+  row: TransactionRow,
+  images: string[] = [],
+  attachments: { id: number; filename: string; mime: string; size: number }[] = [],
+) {
   const category = row.parentName
     ? `${row.parentName} / ${row.categoryName}`
     : row.categoryName || row.categoryLabel || "";
@@ -261,6 +281,7 @@ export function presentTransaction(row: TransactionRow, images: string[] = []) {
     note: row.note || "",
     source: row.source.toLowerCase(),
     images: images || [],
+    attachments: attachments || [],
     // 后续动作 → 待办（新增字段）
     followAction: row.followAction.toLowerCase(),
     followStatus: row.followStatus.toLowerCase(),
@@ -301,6 +322,7 @@ export async function deleteTransaction(actor: Actor, id: number) {
   if (!row) throw new BillError("账单不存在", 404);
   await removeBillFollowTodo(row.id);
   await prisma.billTransaction.delete({ where: { id: row.id } });
+  await removeAttachmentRefs(ATTACHMENT_SCOPE.bill, row.id);
 }
 
 /**
@@ -350,6 +372,7 @@ export async function updateTransaction(
     bookId: current.bookId,
     // 图片：传了新数组就用新的，没传沿用原来的（避免改个备注把图弄丢）
     images: Array.isArray(body.images) ? body.images : oldImages,
+    ...(Array.isArray(body.attachments) ? { attachments: body.attachments } : {}),
     // 没传就沿用原来的分摊人（可能是 null = 全员平分）
     shareWith: Array.isArray(body.shareWith) ? body.shareWith : parseShareWith(current.shareWith),
     followNote: body.followNote !== undefined ? body.followNote : current.followNote,
@@ -372,6 +395,9 @@ export async function updateTransaction(
       current.id,
     );
   } catch (err) {
+    // 新记录已经落上（例如附件保存失败）就别再覆盖，否则会把刚写好的账冲掉
+    const leftover = await prisma.billTransaction.findUnique({ where: { id: current.id }, select: { id: true } });
+    if (leftover) throw err;
     // 回滚：把原样（含原 id）写回去，别让用户点一下「保存」就丢一条账单
     await prisma.billTransaction.create({
       data: {

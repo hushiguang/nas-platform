@@ -1,5 +1,6 @@
 import { dayDiff, zonedDate } from "@nas/core";
 import type { TodoView } from "@nas/todo";
+import type { AttachmentItem } from "@nas/ui";
 import { TodoRow } from "./todo-row";
 import type { ListOption } from "./todo-dialog";
 
@@ -17,7 +18,7 @@ export function TodoList({
   grouped = true,
   focusId,
 }: {
-  todos: TodoView[];
+  todos: Array<TodoView & { attachments?: AttachmentItem[] }>;
   lists: ListOption[];
   today: string;
   /** 管理员视图里显示归属人 */
@@ -28,7 +29,7 @@ export function TodoList({
 }) {
   const listNameById = new Map(lists.map((l) => [l.id, l.icon ? `${l.icon} ${l.name}` : l.name]));
 
-  function renderRow(todo: TodoView) {
+  function renderRow(todo: TodoView & { attachments?: AttachmentItem[] }) {
     return (
       <TodoRow
         key={todo.id}

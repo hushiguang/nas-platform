@@ -2,6 +2,7 @@ import Link from "next/link";
 import { zonedDate } from "@nas/core";
 import { listTodos, listVisibleLists, todoStats } from "@nas/todo";
 import { requireUser } from "@/auth";
+import { withTodoAttachments } from "@/server/attachments";
 import { createTodoAction } from "@/app/actions";
 import { TodoDialog } from "@/components/todo-dialog";
 import { TodoList } from "@/components/todo-list";
@@ -28,7 +29,7 @@ export default async function TodoHomePage({
   const [todos, stats] = await Promise.all([
     // 待办应用只看自己手动记的（source = MANUAL，见 sourceWhere 默认口径）；
     // 账单/纪念日/工作收上来的归门户「待办管理」页聚合展示
-    listTodos({ userId: user.id, listId, scope: "open", search }),
+    listTodos({ userId: user.id, listId, scope: "open", search }).then(withTodoAttachments),
     todoStats({ userId: user.id }),
   ]);
   const today = zonedDate(new Date());

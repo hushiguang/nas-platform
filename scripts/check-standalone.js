@@ -112,6 +112,24 @@ function canvasMissingReason() {
 
 const canvasReason = canvasMissingReason();
 
+// pdfjs-dist 在 Node 里走 fake worker，运行时动态 import("./pdf.worker.mjs")
+// （源码里标了 webpackIgnore）。文件追踪只拷到 pdf.mjs，worker 不在产物里，
+// 容器导入招行 PDF 就报 Setting up fake worker failed。Dockerfile.app 会补拷
+// 这一份，这里确认补拷到位。
+function pdfWorkerMissingReason() {
+  const reasons = [];
+  for (const rel of ["legacy/build", "build"]) {
+    const dir = path.join(standaloneRoot, "node_modules/pdfjs-dist", rel);
+    if (!fs.existsSync(path.join(dir, "pdf.mjs"))) continue;
+    if (!fs.existsSync(path.join(dir, "pdf.worker.mjs"))) {
+      reasons.push(`${rel}/pdf.worker.mjs`);
+    }
+  }
+  return reasons.length ? reasons.join(", ") : null;
+}
+
+const pdfWorkerReason = pdfWorkerMissingReason();
+
 const missingPkgs = moduleSyncPackages().filter((name) => {
   const dest = path.join(standaloneRoot, "node_modules", name);
   try {
@@ -122,7 +140,7 @@ const missingPkgs = moduleSyncPackages().filter((name) => {
   }
 });
 
-if (missing.length || missingPkgs.length || canvasReason) {
+if (missing.length || missingPkgs.length || canvasReason || pdfWorkerReason) {
   if (missing.length) {
     console.error(`standalone 产物缺失 next 模块（APP=${app}）：${missing.join(", ")}`);
     console.error(`产物目录：${base}`);
@@ -136,6 +154,12 @@ if (missing.length || missingPkgs.length || canvasReason) {
       `standalone 产物缺失 @napi-rs/canvas（APP=${app}，pdf-parse 的 optional 依赖未追踪）：${canvasReason}`
     );
     console.error(`产物目录：${path.join(standaloneRoot, "node_modules/@napi-rs")}`);
+  }
+  if (pdfWorkerReason) {
+    console.error(
+      `standalone 产物缺失 pdfjs worker（APP=${app}，fake worker 动态 import 未被追踪）：${pdfWorkerReason}`
+    );
+    console.error(`产物目录：${path.join(standaloneRoot, "node_modules/pdfjs-dist")}`);
   }
   process.exit(1);
 }

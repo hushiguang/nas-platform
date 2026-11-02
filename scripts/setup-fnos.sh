@@ -125,7 +125,10 @@ else
 #   <root>/bill    账单票据照片（读写）
 #   <root>/travel  旅行相册（只读，把照片放这里）
 #   <root>/todo    待办本地图片（没配图床时才用）
+# 附件默认在 <root>/data/uploads/files。要挂到别的盘，填绝对路径：
+# ATTACHMENT_HOST_DIR=/vol2/1000/family/attachments
 NAS_DATA_ROOT=${NAS_DATA_ROOT}
+ATTACHMENT_HOST_DIR=
 
 # 数据库
 DATABASE_URL=postgresql://nas:${PG_PASSWORD}@localhost:5433/nas_platform
@@ -212,6 +215,9 @@ NAS_DATA_ROOT_VALUE="${NAS_DATA_ROOT_VALUE:-$NAS_DATA_ROOT}"
 # ---------------------------------------------------------------- 3. 准备挂载目录
 log "准备挂载目录"
 mkdir -p "$NAS_DATA_ROOT_VALUE"/{pgdata,bill,travel,todo}
+ATTACHMENT_HOST_DIR_VALUE="$(grep -E '^ATTACHMENT_HOST_DIR=' .env | tail -1 | cut -d= -f2-)"
+ATTACHMENT_HOST_DIR_VALUE="${ATTACHMENT_HOST_DIR_VALUE:-$NAS_DATA_ROOT_VALUE/data/uploads/files}"
+mkdir -p "$ATTACHMENT_HOST_DIR_VALUE"
 
 # pgdata 属主必须是镜像里的 postgres 用户（uid 70），否则容器起不来
 if ! chown -R 70:70 "$NAS_DATA_ROOT_VALUE/pgdata" 2>/dev/null; then
@@ -220,15 +226,16 @@ if ! chown -R 70:70 "$NAS_DATA_ROOT_VALUE/pgdata" 2>/dev/null; then
 fi
 
 # 容器内进程以 uid 1001 运行，给照片/票据目录放宽权限，方便上传
-chmod -R 775 "$NAS_DATA_ROOT_VALUE"/{bill,travel,todo} 2>/dev/null \
-  || sudo chmod -R 775 "$NAS_DATA_ROOT_VALUE"/{bill,travel,todo} 2>/dev/null \
+chmod -R 775 "$NAS_DATA_ROOT_VALUE"/{bill,travel,todo} "$ATTACHMENT_HOST_DIR_VALUE" 2>/dev/null \
+  || sudo chmod -R 775 "$NAS_DATA_ROOT_VALUE"/{bill,travel,todo} "$ATTACHMENT_HOST_DIR_VALUE" 2>/dev/null \
   || echo "  （提示：照片目录权限放宽失败，上传报错时手动执行 chmod -R 775）"
 
 echo "  数据根目录就绪：$NAS_DATA_ROOT_VALUE"
 echo "    ├── pgdata  (属主 70:70)"
 echo "    ├── bill    (账单票据)"
 echo "    ├── travel  (旅行相册，把照片放这里)"
-echo "    └── todo    (待办图片)"
+echo "    ├── todo    (待办图片)"
+echo "    └── 附件    ($ATTACHMENT_HOST_DIR_VALUE)"
 
 # ---------------------------------------------------------------- 4. 构建并启动
 log "构建并启动（默认串行构建，避免小内存 NAS 构建 OOM）"

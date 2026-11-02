@@ -1,6 +1,7 @@
 import { zonedDate } from "@nas/core";
 import { listVisibleLists, todayTodos } from "@nas/todo";
 import { requireUser } from "@/auth";
+import { withTodoAttachments } from "@/server/attachments";
 import { createTodoAction } from "@/app/actions";
 import { TodoDialog } from "@/components/todo-dialog";
 import { TodoList } from "@/components/todo-list";
@@ -10,7 +11,7 @@ export default async function TodayPage() {
   const user = await requireUser();
   const lists = await listVisibleLists(user.id);
   const listOptions = lists.map((l) => ({ id: l.id, name: l.name, icon: l.icon }));
-  const todos = await todayTodos({ userId: user.id });
+  const todos = await withTodoAttachments(await todayTodos({ userId: user.id }));
 
   return (
     <div className="todo-home">

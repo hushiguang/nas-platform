@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { portalUrl } from "@nas/core";
 import { listTodos, listByShareToken } from "@nas/todo";
 import { SharedTodoRow } from "@/components/shared-todo-row";
+import { withTodoAttachments } from "@/server/attachments";
 import { ShareAddForm } from "@/components/share-add-form";
 
 /**
@@ -40,12 +41,14 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
     );
   }
 
-  const todos = await listTodos({
-    userId: list.ownerId,
-    listId: list.id,
-    scope: "all",
-    take: 500,
-  });
+  const todos = await withTodoAttachments(
+    await listTodos({
+      userId: list.ownerId,
+      listId: list.id,
+      scope: "all",
+      take: 500,
+    }),
+  );
   const pending = todos.filter((todo) => todo.status !== "DONE" && todo.status !== "CANCELLED");
   const done = todos
     .filter((todo) => todo.status === "DONE")

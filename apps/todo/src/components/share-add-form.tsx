@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useImagePaste } from "@nas/ui";
+import { AttachmentFiles, useImagePaste, type AttachmentItem } from "@nas/ui";
 import { guestAddTodoAction } from "@/app/share/actions";
 import { LightboxImage } from "./lightbox";
 import { useScrollLock } from "./use-scroll-lock";
@@ -27,6 +27,8 @@ const MAX_TOTAL_BYTES = 28 * 1024 * 1024;
  */
 export function ShareAddForm({ token }: { token: string }) {
   const [previews, setPreviews] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const freshFileIds = useRef<number[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // H5 上表单收进右下角悬浮按钮，点开是一张和账单一样的弹窗卡片
@@ -93,11 +95,20 @@ export function ShareAddForm({ token }: { token: string }) {
   }
 
   /** 取消：清空已填内容并收起弹窗（桌面端隐藏这个按钮，表单一直摊在页面里） */
+  function dropFreshFiles() {
+    const ids = freshFileIds.current.splice(0);
+    for (const id of ids) {
+      void fetch(`/share/${encodeURIComponent(token)}/attachments/${id}`, { method: "DELETE" });
+    }
+  }
+
   function cancel() {
     if (inFlight.current) return;
     formRef.current?.reset();
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews([]);
+    dropFreshFiles();
+    setAttachments([]);
     setError(null);
     setSheetOpen(false);
   }
@@ -129,6 +140,8 @@ export function ShareAddForm({ token }: { token: string }) {
       form.reset();
       previews.forEach((url) => URL.revokeObjectURL(url));
       setPreviews([]);
+      freshFileIds.current = [];
+      setAttachments([]);
       // 弹窗模式加完就收起来，让用户直接看到新条目落在列表里
       setSheetOpen(false);
     } catch (err) {
@@ -196,17 +209,51 @@ export function ShareAddForm({ token }: { token: string }) {
           </label>
 
           <div className="share-field">
-            <span className="form-label">图片（可空，最多 {MAX_IMAGES} 张）</span>
-            <input
-              ref={fileRef}
-              className="input"
-              type="file"
-              name="files"
-              accept="image/*"
-              multiple
+            <span className="form-label">附件（可空）</span>
+            <input type="hidden" name="attachmentSync" value="1" />
+            {attachments.map((item) => (
+              <input key={item.id} type="hidden" name="attachmentIds" value={item.id} />
+            ))}
+            <AttachmentFiles
+              items={attachments}
+              href={(item, kind) =>
+                `/share/${encodeURIComponent(token)}/attachments/${item.id}${kind === "download" ? "?download=1" : ""}`
+              }
+              uploadFile={async (file) => {
+                const body = new FormData();
+                body.append("file", file);
+                const res = await fetch(`/share/${encodeURIComponent(token)}/attachments`, { method: "POST", body });
+                const data = (await res.json().catch(() => ({}))) as { message?: string; attachment?: AttachmentItem };
+                if (!res.ok || !data.attachment) throw new Error(data.message || "上传失败");
+                freshFileIds.current.push(data.attachment.id);
+                return data.attachment;
+              }}
+              onChange={(next) => {
+                const removed = attachments.filter((item) => !next.some((row) => row.id === item.id));
+                for (const item of removed) {
+                  void fetch(`/share/${encodeURIComponent(token)}/attachments/${item.id}`, { method: "DELETE" });
+                  freshFileIds.current = freshFileIds.current.filter((id) => id !== item.id);
+                }
+                setAttachments(next);
+              }}
               disabled={pending}
-              onChange={(e) => applyFiles(Array.from(e.target.files ?? []))}
             />
+          </div>
+
+          <div className="share-field">
+            <span className="form-label">图片（可空，最多 {MAX_IMAGES} 张）</span>
+            <label className={`attach-pick${pending ? " is-off" : ""}`}>
+              选择图片
+              <input
+                ref={fileRef}
+                type="file"
+                name="files"
+                accept="image/*"
+                multiple
+                disabled={pending}
+                onChange={(e) => applyFiles(Array.from(e.target.files ?? []))}
+              />
+            </label>
             <span className="muted share-add-hint">
               单张不超过 {MAX_IMAGE_MB}MB，也能直接粘贴截图
             </span>

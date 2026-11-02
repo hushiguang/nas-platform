@@ -9,6 +9,7 @@
 import { prisma } from "@nas/db";
 import type { Prisma, Todo } from "@nas/db";
 import { zonedDayRange } from "@nas/core";
+import { ATTACHMENT_SCOPE, removeAttachmentRefs } from "@nas/media";
 import { cancelTodoNotify } from "@nas/notify";
 import { accessibleListIds, todoVisibilityWhere } from "./lists";
 import type { TodoQuery, TodoStats, UpdateTodoInput } from "./types";
@@ -228,6 +229,7 @@ export async function deleteTodo(todoId: number, userId: number, isAdmin = false
   if (!(await canAccessTodo(todoId, userId, isAdmin))) throw new Error("待办不存在或无权删除");
   await cancelTodoNotify(todoId);
   await prisma.todo.delete({ where: { id: todoId } });
+  await removeAttachmentRefs(ATTACHMENT_SCOPE.todo, todoId);
 }
 
 /**

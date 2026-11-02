@@ -1,3 +1,4 @@
+export * from "./attachments";
 export * from "./catalog";
 export * from "./portal-covers";
 export * from "./config";

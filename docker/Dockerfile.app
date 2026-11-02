@@ -114,6 +114,20 @@ RUN SND="apps/${APP}/.next/standalone/node_modules/next/dist" \
         cp -r "$pkg/." "$dest/$(basename "$pkg")/"; \
       done; \
     fi \
+# pdfjs-dist 在 Node 里禁用真正的 Worker 线程，改走 fake worker：
+# legacy/build/pdf.mjs 用动态 import("./pdf.worker.mjs")，并且标了
+# webpackIgnore，Next 文件追踪跟不到。产物里 pdf.mjs 在、worker 不在，
+# 容器里导入招行 PDF 就报：
+#   Setting up fake worker failed: "Cannot find module
+#   '/app/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs' ..."
+# 只在对应的 pdf.mjs 已被追踪进来时补这一份 worker（约 2MB），source map 不带。
+ && for rel in legacy/build build; do \
+      src="node_modules/pdfjs-dist/$rel/pdf.worker.mjs"; \
+      dest_dir="apps/${APP}/.next/standalone/node_modules/pdfjs-dist/$rel"; \
+      if [ -f "$dest_dir/pdf.mjs" ] && [ -f "$src" ]; then \
+        cp "$src" "$dest_dir/pdf.worker.mjs"; \
+      fi; \
+    done \
  && APP="$APP" node scripts/check-standalone.js
 
 # ---------------------------------------------------------------- 运行层

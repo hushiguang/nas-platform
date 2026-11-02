@@ -8,6 +8,7 @@ import {
   toggleTodoAction,
   updateTodoAction,
 } from "@/app/actions";
+import { AttachmentFiles, type AttachmentItem } from "@nas/ui";
 import { TodoDialog, imageSrc, type ListOption } from "./todo-dialog";
 import { LightboxImage } from "./lightbox";
 
@@ -42,7 +43,7 @@ export function TodoRow({
   showOwner,
   focus,
 }: {
-  todo: TodoView;
+  todo: TodoView & { attachments?: AttachmentItem[] };
   today: string;
   listName?: string;
   lists: ListOption[];
@@ -162,6 +163,12 @@ export function TodoRow({
             ))}
           </div>
         )}
+        {todo.attachments && todo.attachments.length > 0 ? (
+          <AttachmentFiles
+            items={todo.attachments}
+            href={(item, kind) => `/api/attachments/${item.id}${kind === "download" ? "?download=1" : ""}`}
+          />
+        ) : null}
       </div>
 
       <TodoDialog
@@ -184,6 +191,7 @@ export function TodoRow({
             ? String((todo.remindRules[0] as { time?: string })?.time ?? "09:00")
             : "09:00",
           images: todo.imageList,
+          attachments: todo.attachments,
         }}
       />
     </li>

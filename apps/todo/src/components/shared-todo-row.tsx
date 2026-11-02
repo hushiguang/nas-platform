@@ -4,6 +4,7 @@ import { useState } from "react";
 import { dayDiff, zonedDate, zonedTime } from "@nas/core";
 import type { TodoView } from "@nas/todo";
 import { guestToggleTodoAction, guestUpdateTodoAction } from "@/app/share/actions";
+import { AttachmentFiles, type AttachmentItem } from "@nas/ui";
 import { LightboxImage } from "./lightbox";
 import { TodoDialog, type ListOption } from "./todo-dialog";
 
@@ -34,7 +35,7 @@ export function SharedTodoRow({
   writable,
   list,
 }: {
-  todo: TodoView;
+  todo: TodoView & { attachments?: AttachmentItem[] };
   token: string;
   writable: boolean;
   /** 当前清单信息：编辑弹窗里的「归到清单」只有这一个选项 */
@@ -54,6 +55,20 @@ export function SharedTodoRow({
   // 图片不能走 /api/image（要登录），走这个清单自己的免登录代理
   function imageSrc(address: string): string {
     return `/share/${encodeURIComponent(token)}/image?u=${encodeURIComponent(address)}`;
+  }
+
+  function fileHref(item: AttachmentItem, kind: "view" | "download"): string {
+    const base = `/share/${encodeURIComponent(token)}/attachments/${item.id}`;
+    return kind === "download" ? `${base}?download=1` : base;
+  }
+
+  async function uploadFile(file: File): Promise<AttachmentItem> {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(`/share/${encodeURIComponent(token)}/attachments`, { method: "POST", body });
+    const data = (await res.json().catch(() => ({}))) as { message?: string; attachment?: AttachmentItem };
+    if (!res.ok || !data.attachment) throw new Error(data.message || "上传失败");
+    return data.attachment;
   }
 
   /** 点条目的内容区也能打开编辑弹窗；勾选框、按钮、链接各走各的，划选备注文字时不弹窗 */
@@ -152,6 +167,9 @@ export function SharedTodoRow({
             ))}
           </div>
         )}
+        {todo.attachments && todo.attachments.length > 0 ? (
+          <AttachmentFiles items={todo.attachments} href={fileHref} />
+        ) : null}
       </div>
 
       {writable && (
@@ -163,11 +181,17 @@ export function SharedTodoRow({
           imageUrl={imageSrc}
           hiddenFields={{ token }}
           basic
+          attachmentHref={fileHref}
+          attachmentUpload={uploadFile}
+          attachmentDelete={async (id) => {
+            await fetch(`/share/${encodeURIComponent(token)}/attachments/${id}`, { method: "DELETE" });
+          }}
           initial={{
             id: todo.id,
             title: todo.title,
             description: todo.description,
             images: todo.imageList,
+            attachments: todo.attachments,
           }}
         />
       )}

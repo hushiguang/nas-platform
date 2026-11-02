@@ -9,6 +9,7 @@
  */
 import { revalidatePath } from "next/cache";
 import { prisma } from "@nas/db";
+import { ATTACHMENT_SCOPE, MediaError, parseAttachmentIds, syncAttachmentRefs } from "@nas/media";
 import { createManualTodo, listByShareToken, setTodoStatus, updateTodo } from "@nas/todo";
 import { saveImage } from "@/server/images";
 import { optionalText, parseImages, text } from "@/server/todo-form";
@@ -113,6 +114,18 @@ export async function guestUpdateTodoAction(form: FormData): Promise<GuestWriteR
     description: optionalText(form, "description"),
     images: [...parseImages(form), ...uploaded],
   });
+  if (form.has("attachmentSync")) {
+    try {
+      await syncAttachmentRefs({
+        scope: ATTACHMENT_SCOPE.todo,
+        refId: id,
+        ids: parseAttachmentIds(form.getAll("attachmentIds")),
+        claimUserId: list.ownerId,
+      });
+    } catch (err) {
+      return { ok: false, message: err instanceof MediaError ? err.message : "附件没保存上" };
+    }
+  }
   revalidatePath(`/share/${token}`);
   return { ok: true };
 }
@@ -147,13 +160,25 @@ export async function guestAddTodoAction(form: FormData): Promise<GuestWriteResu
     }
   }
 
-  await createManualTodo({
+  const created = await createManualTodo({
     title,
     description,
     listId: list.id,
     ownerId: list.ownerId,
     images,
   });
+  if (form.has("attachmentSync")) {
+    try {
+      await syncAttachmentRefs({
+        scope: ATTACHMENT_SCOPE.todo,
+        refId: created.id,
+        ids: parseAttachmentIds(form.getAll("attachmentIds")),
+        claimUserId: list.ownerId,
+      });
+    } catch (err) {
+      return { ok: false, message: err instanceof MediaError ? err.message : "附件没保存上" };
+    }
+  }
   revalidatePath(`/share/${token}`);
   return { ok: true };
 }

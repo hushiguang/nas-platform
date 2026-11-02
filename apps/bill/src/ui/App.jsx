@@ -1,7 +1,7 @@
 import { Children, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useImagePaste } from '@nas/ui';
+import { AttachmentFiles, useImagePaste } from '@nas/ui';
 import { api, apiUrl, getApiBase, getToken, setToken, subscribeBusy, track } from './api';
 import { consumePayDraft, isNative, lastPayNotice, openPayAccessibilitySettings, openPayApp, openPayNotifySettings, openPayPopupSettings } from './platform';
 
@@ -431,9 +431,10 @@ function CreateBillModal({ open, seed, onClose, onSaved }) {
               categories={books.categories}
               participants={bookPeopleNames(books.currentBook)}
               requireMember={bookAaOn(books.currentBook)}
+              showAttachments
             />
           ) : (
-            <BookFields form={form} setForm={setForm} accounts={books.accounts} categories={books.categories} showImages />
+            <BookFields form={form} setForm={setForm} accounts={books.accounts} categories={books.categories} showImages showAttachments />
           )}
         </div>
         <div className="modal-actions">
@@ -960,7 +961,36 @@ function withBook(query, bookQuery) {
   return query ? `${query}&${bookQuery}` : `?${bookQuery}`;
 }
 
-function BookFields({ form, setForm, accounts, categories, showTime = true, showImages = false }) {
+function attachmentHref(item, kind, token) {
+  const path = token ? `/api/share/${token}/attachments/${item.id}` : `/api/attachments/${item.id}`;
+  return apiUrl(`${path}${kind === 'download' ? '?download=1' : ''}`);
+}
+
+function attachmentNames(tx) {
+  const names = (tx?.attachments || []).map((item) => item.filename).filter(Boolean);
+  if (!names.length) return null;
+  return <span className="tiny attach-names">附件：{names.join('、')}</span>;
+}
+
+function BillAttachments({ items, onChange, token, disabled = false }) {
+  return (
+    <AttachmentFiles
+      items={items || []}
+      href={(item, kind) => attachmentHref(item, kind, token)}
+      uploadFile={onChange ? async (file) => {
+        const body = new FormData();
+        body.append('file', file);
+        const path = token ? `/api/share/${token}/attachments` : '/api/attachments';
+        const result = await api(path, { method: 'POST', body });
+        return result.attachment;
+      } : undefined}
+      onChange={onChange}
+      disabled={disabled}
+    />
+  );
+}
+
+function BookFields({ form, setForm, accounts, categories, showTime = true, showImages = false, showAttachments = false }) {
   const cats = categories.filter((c) => !c.archived && c.kind === form.type);
   return (
     <div className="form-row wrap">
@@ -1005,6 +1035,15 @@ function BookFields({ form, setForm, accounts, categories, showTime = true, show
         <div className="field-full">
           <span className="tiny muted">图片（选完自动传图床，最多 9 张）</span>
           <ImagePicker images={form.images} onChange={(images) => setForm({ ...form, images })} />
+        </div>
+      )}
+      {showAttachments && (
+        <div className="field-full">
+          <span className="tiny muted">附件（点「选择文件」，不限图片；文件名会留在这笔账上）</span>
+          <BillAttachments
+            items={form.attachments}
+            onChange={(attachments) => setForm((current) => ({ ...current, attachments }))}
+          />
         </div>
       )}
     </div>
@@ -1189,7 +1228,7 @@ function ImagePicker({ images, onChange, uploadPath = '/api/upload/image', disab
 
 // 共享/家庭账本用的简化表单：账户可留空，分类自己填（已有的会联想出来）。
 // 开了 AA 的账本必填付款人/收款人（要拿它算平摊），没开的可以留空，只记账
-function SharedBillFields({ form, setForm, accounts, categories, participants = [], showTime = true, requireMember = true }) {
+function SharedBillFields({ form, setForm, accounts, categories, participants = [], showTime = true, requireMember = true, showAttachments = false }) {
   const names = [...new Set(categories.filter((c) => !c.archived && c.kind === form.type).map((c) => c.name))];
   // 账本预设的参与人，付款人直接选，免得同一个人打成两个名字、AA 算错
   const people = [...new Set(participants.map((item) => (typeof item === 'string' ? item : item.name)).filter(Boolean))];
@@ -1270,6 +1309,15 @@ function SharedBillFields({ form, setForm, accounts, categories, participants = 
         <span className="tiny muted">图片（选完自动传图床，最多 9 张）</span>
         <ImagePicker images={form.images} onChange={(images) => setForm({ ...form, images })} />
       </div>
+      {showAttachments && (
+        <div className="field-full">
+          <span className="tiny muted">附件（点「选择文件」，不限图片；文件名会留在这笔账上）</span>
+          <BillAttachments
+            items={form.attachments}
+            onChange={(attachments) => setForm((current) => ({ ...current, attachments }))}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1287,6 +1335,7 @@ function emptyBill() {
     payee: '',
     note: '',
     images: [],
+    attachments: [],
   };
 }
 
@@ -1502,6 +1551,7 @@ function BillDetail({ tx, onClose, onDelete, onSave }) {
       followNote: tx.followNote || '',
       countExpense: tx.countExpense !== false,
       images: imageList(tx.images),
+      attachments: Array.isArray(tx.attachments) ? tx.attachments : [],
       // 老账单是 null（全员平分），交给表单默认全选；空数组 = 自己承担
       shareWith: Array.isArray(tx.shareWith) ? tx.shareWith : undefined,
     });
@@ -1554,9 +1604,10 @@ function BillDetail({ tx, onClose, onDelete, onSave }) {
                 categories={books.categories}
                 participants={bookPeopleNames(books.books.find((book) => book.id === tx.bookId))}
                 requireMember={bookAaOn(books.books.find((book) => book.id === tx.bookId))}
+                showAttachments
               />
             ) : (
-              <BookFields form={form} setForm={setForm} accounts={books.accounts} categories={books.categories} showImages />
+              <BookFields form={form} setForm={setForm} accounts={books.accounts} categories={books.categories} showImages showAttachments />
             )}
             <div className="follow-fields">
               <label className="field-full">后续跟进
@@ -1609,6 +1660,7 @@ function BillDetail({ tx, onClose, onDelete, onSave }) {
                 {tx.images.map((url, index) => <BillImage key={url} url={url} images={tx.images} index={index} />)}
               </div>
             )}
+            {tx.attachments?.length > 0 && <BillAttachments items={tx.attachments} />}
             <div className="modal-actions">
               <button className="secondary" type="button" onClick={onClose}>关闭</button>
               <button
@@ -1825,6 +1877,7 @@ function PieBillList({ bills, emptyText, onOpen }) {
             <span className="tx-main">
               <span className="tx-title">{billTitle(tx)}</span>
               <span className="tiny muted">{[formatWhen(tx.occurredAt), tx.memberName, tx.categoryName, accountLine(tx)].filter(Boolean).join(' · ')}</span>
+              {attachmentNames(tx)}
             </span>
             <span className="tx-side">
               {flag && <span className={`tx-flag ${flag.kind}`}>{flag.label}</span>}
@@ -2180,6 +2233,7 @@ function Overview() {
                 <span className="tx-main">
                   <span className="tx-title">{billTitle(tx)}</span>
                   <span className="tiny muted">{[formatWhen(tx.occurredAt), tx.memberName, accountLine(tx)].filter(Boolean).join(' · ')}</span>
+                  {attachmentNames(tx)}
                 </span>
                 <span className="tx-side">
                   <span className={`tx-amount ${tx.type}`}>{signedMoney(tx)}</span>
@@ -2405,6 +2459,7 @@ function CalendarPage() {
                   <span className="tx-main">
                     <span className="tx-title">{billTitle(tx)}</span>
                     <span className="tiny muted">{[formatWhen(tx.occurredAt), tx.categoryName, accountLine(tx)].filter(Boolean).join(' · ')}</span>
+                    {attachmentNames(tx)}
                   </span>
                   <span className="tx-side">
                     {flag && <span className={`tx-flag ${flag.kind}`}>{flag.label}</span>}
@@ -2849,6 +2904,7 @@ function Bills() {
                   <span className="tx-main">
                     <span className="tx-title">{billTitle(tx)}</span>
                     <span className="tiny muted">{[formatWhen(tx.occurredAt), tx.categoryName, accountLine(tx)].filter(Boolean).join(' · ')}</span>
+                    {attachmentNames(tx)}
                   </span>
                   <span className="tx-side">
                     {flag && <span className={`tx-flag ${flag.kind}`}>{flag.label}</span>}
@@ -5467,6 +5523,7 @@ function SharePage() {
     note: '',
     occurredAt: nowLocal(),
     images: [],
+    attachments: [],
   }));
 
   async function load() {
@@ -5494,9 +5551,10 @@ function SharePage() {
           ...form,
           shareWith: data?.book?.aaEnabled ? sharePicked : undefined,
           images: imageList(form.images),
+          attachments: form.attachments || [],
         },
       });
-      setForm({ ...form, amount: '', categoryLabel: '', payee: '', note: '', images: [], shareWith: null });
+      setForm({ ...form, amount: '', categoryLabel: '', payee: '', note: '', images: [], attachments: [], shareWith: null });
       setNotice('记好了，谢谢！');
       await load();
     } catch (err) {
@@ -5670,6 +5728,14 @@ function SharePage() {
               uploadPath={`/api/share/${token}/upload`}
             />
           </div>
+          <div>
+            <span className="tiny muted">附件</span>
+            <BillAttachments
+              token={token}
+              items={form.attachments}
+              onChange={(attachments) => setForm((current) => ({ ...current, attachments }))}
+            />
+          </div>
           <button className="primary" type="submit" disabled={saving}>{saving ? '保存中…' : '补一笔'}</button>
         </form>
         )}
@@ -5698,6 +5764,7 @@ function SharePage() {
                         {item.images.map((url, index) => <BillImage key={url} url={url} images={item.images} index={index} />)}
                       </div>
                     )}
+                    {item.attachments?.length > 0 && <BillAttachments token={token} items={item.attachments} />}
                   </div>
                   <b className={item.type === 'income' ? 'income' : 'expense'}>
                     {item.type === 'income' ? '+' : '-'}{money(item.amount)}

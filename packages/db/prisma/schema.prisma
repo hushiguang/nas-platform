@@ -462,6 +462,10 @@ model WorkProject {
   phase       WorkPhaseKind @default(BUSINESS)
   /// 计划上线日
   launchDate  DateTime?     @db.Date
+  /// ChangeList 链接，可以多条
+  changeListLinks String[] @default([])
+  /// Jira 链接，可以多条
+  jiraLinks       String[] @default([])
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -1157,4 +1161,23 @@ model BillImportDraft {
   createdAt DateTime
 
   @@map("bill_import_draft")
+}
+
+/// 项目 / 待办 / 账单共用的附件。
+/// scope + refId 挂到具体记录；refId = 0 表示已上传、还没随表单保存。
+/// 文件本身在 ATTACHMENT_DIR，这里只留文件名和存储键。
+model FileAttachment {
+  id         Int      @id @default(autoincrement())
+  /// work_project | todo | bill_tx
+  scope      String
+  refId      Int      @default(0)
+  filename   String
+  mime       String
+  size       Int
+  storageKey String   @unique
+  createdBy  Int
+  createdAt  DateTime @default(now())
+
+  @@index([scope, refId])
+  @@map("file_attachment")
 }

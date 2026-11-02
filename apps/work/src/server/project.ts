@@ -1,6 +1,6 @@
 import { dayDiff, type PlatformAccess, type SessionUser, zonedDate, zonedTime } from "@nas/core";
 import { prisma, Prisma, type IssueKind, type IssueStatus, type NodeStatus, type ProjectStatus, type WorkPhaseItemStatus, type WorkPhaseKind, type WorkPriority } from "@nas/db";
-import { isAllowedImageUrl } from "@nas/media";
+import { ATTACHMENT_SCOPE, listAttachmentRecords, presentAttachment, removeAttachmentRefs, isAllowedImageUrl } from "@nas/media";
 import {
   ISSUE_KIND_LABEL,
   ISSUE_LABEL,
@@ -207,6 +207,10 @@ export interface ProjectView {
   dates: string;
   launchDate: string;
   launchLabel: string;
+  /** ChangeList 链接，可以多条 */
+  changeListLinks: string[];
+  /** Jira 链接，可以多条 */
+  jiraLinks: string[];
   description: string | null;
   /** 实际进度：只按研发 + 测试阶段算，都来自于手填的百分比。没有研发 / 测试阶段时为 null */
   progress: number | null;
@@ -240,6 +244,8 @@ export interface ProjectView {
   phaseOverdue: number | null;
   delayed: number;
   draft: ProjectDraft;
+  /** 项目附件。列表页不加载，详情页才填 */
+  attachments: { id: number; filename: string; mime: string; size: number }[];
 }
 
 /** 计划日已过、还没完成的节点改成延期。重复跑没有额外副作用。 */
@@ -571,6 +577,8 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
     dates: rangeLabel(startDate, endDate),
     launchDate,
     launchLabel: launchDate ? dayLabel(launchDate) : "未定",
+    changeListLinks: [...row.changeListLinks],
+    jiraLinks: [...row.jiraLinks],
     description: row.description,
     progress: workProgress(phases),
     expected: expectedProgress(phases),
@@ -602,6 +610,7 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
     phaseDueLabel: phaseDue.label,
     phaseOverdue: phaseDue.overdue,
     delayed: nodes.filter((node) => node.status === "DELAYED").length,
+    attachments: [],
     draft: {
       id: row.id,
       name: row.name,
@@ -687,7 +696,9 @@ export async function getProject(access: PlatformAccess, userId: number, id: num
   await refreshDelayedNodes();
   await ensurePhases({ id });
   const [item] = await loadViews({ id, ...visibleWhere(access, userId) }, access, userId);
-  return item ?? null;
+  if (!item) return null;
+  const files = await listAttachmentRecords(ATTACHMENT_SCOPE.workProject, [item.id]);
+  return { ...item, attachments: (files.get(item.id) ?? []).map(presentAttachment) };
 }
 
 export async function listPeople(): Promise<PersonOption[]> {
@@ -867,6 +878,40 @@ export async function saveProject(
   return { id: created.id, summary: `记下项目「${name}」` };
 }
 
+const PROJECT_LINK_LIMIT = 20;
+const PROJECT_LINK_LENGTH = 500;
+
+/** 保存项目上的 ChangeList 或 Jira 链接。空行丢掉，重复的只留一条。 */
+export async function saveProjectLinks(
+  access: PlatformAccess,
+  userId: number,
+  projectId: number,
+  kind: "changeList" | "jira",
+  rawLinks: string[],
+): Promise<string> {
+  if (!Array.isArray(rawLinks)) throw new WorkError("链接不对");
+  if (rawLinks.length > PROJECT_LINK_LIMIT) throw new WorkError("链接太多了，最多 20 条");
+  const links: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of rawLinks) {
+    const value = String(raw ?? "").trim();
+    if (!value) continue;
+    if (value.length > PROJECT_LINK_LENGTH) throw new WorkError("链接太长了");
+    if (!/^https?:\/\//i.test(value)) throw new WorkError("链接要以 http:// 或 https:// 开头");
+    if (seen.has(value)) continue;
+    seen.add(value);
+    links.push(value);
+  }
+  const project = await requireProject(access, userId, projectId);
+  assertManage(access, userId, project.ownerId);
+  await prisma.workProject.update({
+    where: { id: projectId },
+    data: kind === "changeList" ? { changeListLinks: links } : { jiraLinks: links },
+  });
+  const label = kind === "changeList" ? "Change list" : "Jira";
+  return `修改「${project.name}」的${label}链接`;
+}
+
 /**
  * 项目预设的参加人员。手填名字，名字对上某个启用账号时顺手记下 userId，
  * 这样这些人在权限判断里仍算项目成员；系统外的人只留名字。
@@ -909,6 +954,7 @@ export async function removeProject(access: PlatformAccess, userId: number, id: 
       : []),
     prisma.workProject.delete({ where: { id } }),
   ]);
+  await removeAttachmentRefs(ATTACHMENT_SCOPE.workProject, id);
   return `删除项目「${existing.name}」`;
 }
 
