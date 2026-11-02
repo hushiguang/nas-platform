@@ -462,10 +462,10 @@ model WorkProject {
   phase       WorkPhaseKind @default(BUSINESS)
   /// 计划上线日
   launchDate  DateTime?     @db.Date
-  /// ChangeList 链接，可以多条
-  changeListLinks String[] @default([])
-  /// Jira 链接，可以多条
-  jiraLinks       String[] @default([])
+  /// ChangeList：{title, url} 数组，可以多条
+  changeListLinks Json @default("[]")
+  /// Jira：{title, url} 数组，可以多条
+  jiraLinks       Json @default("[]")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

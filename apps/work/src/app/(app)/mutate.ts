@@ -79,7 +79,7 @@ export async function saveProjectAction(formData: FormData): Promise<ActionResul
 export async function saveProjectLinksAction(
   projectId: number,
   kind: "changeList" | "jira",
-  links: string[],
+  links: { title: string; url: string }[],
 ): Promise<ActionResult | void> {
   const { user, access } = await requireAppAccess();
   try {

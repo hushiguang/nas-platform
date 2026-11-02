@@ -21487,8 +21487,8 @@ export namespace Prisma {
     priority: $Enums.WorkPriority
     phase: $Enums.WorkPhaseKind
     launchDate: Date | null
-    changeListLinks: string[]
-    jiraLinks: string[]
+    changeListLinks: JsonValue
+    jiraLinks: JsonValue
     createdAt: Date
     updatedAt: Date
     _count: WorkProjectCountAggregateOutputType | null
@@ -21643,13 +21643,13 @@ export namespace Prisma {
        */
       launchDate: Date | null
       /**
-       * ChangeList 链接，可以多条
+       * ChangeList：{title, url} 数组，可以多条
        */
-      changeListLinks: string[]
+      changeListLinks: Prisma.JsonValue
       /**
-       * Jira 链接，可以多条
+       * Jira：{title, url} 数组，可以多条
        */
-      jiraLinks: string[]
+      jiraLinks: Prisma.JsonValue
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["workProject"]>
@@ -22092,8 +22092,8 @@ export namespace Prisma {
     readonly priority: FieldRef<"WorkProject", 'WorkPriority'>
     readonly phase: FieldRef<"WorkProject", 'WorkPhaseKind'>
     readonly launchDate: FieldRef<"WorkProject", 'DateTime'>
-    readonly changeListLinks: FieldRef<"WorkProject", 'String[]'>
-    readonly jiraLinks: FieldRef<"WorkProject", 'String[]'>
+    readonly changeListLinks: FieldRef<"WorkProject", 'Json'>
+    readonly jiraLinks: FieldRef<"WorkProject", 'Json'>
     readonly createdAt: FieldRef<"WorkProject", 'DateTime'>
     readonly updatedAt: FieldRef<"WorkProject", 'DateTime'>
   }
@@ -63315,8 +63315,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFilter<"WorkProject"> | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFilter<"WorkProject"> | $Enums.WorkPhaseKind
     launchDate?: DateTimeNullableFilter<"WorkProject"> | Date | string | null
-    changeListLinks?: StringNullableListFilter<"WorkProject">
-    jiraLinks?: StringNullableListFilter<"WorkProject">
+    changeListLinks?: JsonFilter<"WorkProject">
+    jiraLinks?: JsonFilter<"WorkProject">
     createdAt?: DateTimeFilter<"WorkProject"> | Date | string
     updatedAt?: DateTimeFilter<"WorkProject"> | Date | string
     nodes?: WorkNodeListRelationFilter
@@ -63366,8 +63366,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFilter<"WorkProject"> | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFilter<"WorkProject"> | $Enums.WorkPhaseKind
     launchDate?: DateTimeNullableFilter<"WorkProject"> | Date | string | null
-    changeListLinks?: StringNullableListFilter<"WorkProject">
-    jiraLinks?: StringNullableListFilter<"WorkProject">
+    changeListLinks?: JsonFilter<"WorkProject">
+    jiraLinks?: JsonFilter<"WorkProject">
     createdAt?: DateTimeFilter<"WorkProject"> | Date | string
     updatedAt?: DateTimeFilter<"WorkProject"> | Date | string
     nodes?: WorkNodeListRelationFilter
@@ -63418,8 +63418,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityWithAggregatesFilter<"WorkProject"> | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindWithAggregatesFilter<"WorkProject"> | $Enums.WorkPhaseKind
     launchDate?: DateTimeNullableWithAggregatesFilter<"WorkProject"> | Date | string | null
-    changeListLinks?: StringNullableListFilter<"WorkProject">
-    jiraLinks?: StringNullableListFilter<"WorkProject">
+    changeListLinks?: JsonWithAggregatesFilter<"WorkProject">
+    jiraLinks?: JsonWithAggregatesFilter<"WorkProject">
     createdAt?: DateTimeWithAggregatesFilter<"WorkProject"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"WorkProject"> | Date | string
   }
@@ -67077,8 +67077,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -67101,8 +67101,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -67124,8 +67124,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -67148,8 +67148,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput
@@ -67172,8 +67172,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -67191,8 +67191,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -67211,8 +67211,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -71159,14 +71159,6 @@ export namespace Prisma {
     not?: NestedEnumWorkPhaseKindFilter<$PrismaModel> | $Enums.WorkPhaseKind
   }
 
-  export type StringNullableListFilter<$PrismaModel = never> = {
-    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    has?: string | StringFieldRefInput<$PrismaModel> | null
-    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
-    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
-    isEmpty?: boolean
-  }
-
   export type WorkNodeListRelationFilter = {
     every?: WorkNodeWhereInput
     some?: WorkNodeWhereInput
@@ -74199,14 +74191,6 @@ export namespace Prisma {
     update?: XOR<XOR<AnniversaryUpdateToOneWithWhereWithoutNotesInput, AnniversaryUpdateWithoutNotesInput>, AnniversaryUncheckedUpdateWithoutNotesInput>
   }
 
-  export type WorkProjectCreatechangeListLinksInput = {
-    set: string[]
-  }
-
-  export type WorkProjectCreatejiraLinksInput = {
-    set: string[]
-  }
-
   export type WorkNodeCreateNestedManyWithoutProjectInput = {
     create?: XOR<WorkNodeCreateWithoutProjectInput, WorkNodeUncheckedCreateWithoutProjectInput> | WorkNodeCreateWithoutProjectInput[] | WorkNodeUncheckedCreateWithoutProjectInput[]
     connectOrCreate?: WorkNodeCreateOrConnectWithoutProjectInput | WorkNodeCreateOrConnectWithoutProjectInput[]
@@ -74273,16 +74257,6 @@ export namespace Prisma {
 
   export type EnumWorkPhaseKindFieldUpdateOperationsInput = {
     set?: $Enums.WorkPhaseKind
-  }
-
-  export type WorkProjectUpdatechangeListLinksInput = {
-    set?: string[]
-    push?: string | string[]
-  }
-
-  export type WorkProjectUpdatejiraLinksInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type WorkNodeUpdateManyWithoutProjectNestedInput = {
@@ -77923,8 +77897,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: WorkMemberCreateNestedManyWithoutProjectInput
@@ -77946,8 +77920,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     members?: WorkMemberUncheckedCreateNestedManyWithoutProjectInput
@@ -77984,8 +77958,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: WorkMemberUpdateManyWithoutProjectNestedInput
@@ -78007,8 +77981,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     members?: WorkMemberUncheckedUpdateManyWithoutProjectNestedInput
@@ -78029,8 +78003,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -78052,8 +78026,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -78090,8 +78064,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -78113,8 +78087,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput
@@ -78135,8 +78109,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -78158,8 +78132,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -78196,8 +78170,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -78219,8 +78193,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput
@@ -78241,8 +78215,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeCreateNestedManyWithoutProjectInput
@@ -78264,8 +78238,8 @@ export namespace Prisma {
     priority?: $Enums.WorkPriority
     phase?: $Enums.WorkPhaseKind
     launchDate?: Date | string | null
-    changeListLinks?: WorkProjectCreatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectCreatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     nodes?: WorkNodeUncheckedCreateNestedManyWithoutProjectInput
@@ -78372,8 +78346,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUpdateManyWithoutProjectNestedInput
@@ -78395,8 +78369,8 @@ export namespace Prisma {
     priority?: EnumWorkPriorityFieldUpdateOperationsInput | $Enums.WorkPriority
     phase?: EnumWorkPhaseKindFieldUpdateOperationsInput | $Enums.WorkPhaseKind
     launchDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    changeListLinks?: WorkProjectUpdatechangeListLinksInput | string[]
-    jiraLinks?: WorkProjectUpdatejiraLinksInput | string[]
+    changeListLinks?: JsonNullValueInput | InputJsonValue
+    jiraLinks?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     nodes?: WorkNodeUncheckedUpdateManyWithoutProjectNestedInput

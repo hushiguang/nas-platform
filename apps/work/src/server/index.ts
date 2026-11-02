@@ -28,6 +28,7 @@ export {
   type PhaseMemberView,
   type PhaseView,
   type ProjectDraft,
+  type ProjectLink,
   type ProjectView,
   type QualityStats,
 } from "./project";

@@ -207,10 +207,10 @@ export interface ProjectView {
   dates: string;
   launchDate: string;
   launchLabel: string;
-  /** ChangeList 链接，可以多条 */
-  changeListLinks: string[];
-  /** Jira 链接，可以多条 */
-  jiraLinks: string[];
+  /** ChangeList：标题 + 链接，可以多条 */
+  changeListLinks: ProjectLink[];
+  /** Jira：标题 + 链接，可以多条 */
+  jiraLinks: ProjectLink[];
   description: string | null;
   /** 实际进度：只按研发 + 测试阶段算，都来自于手填的百分比。没有研发 / 测试阶段时为 null */
   progress: number | null;
@@ -577,8 +577,8 @@ function present(row: ProjectRow, names: Map<number, string>, access: PlatformAc
     dates: rangeLabel(startDate, endDate),
     launchDate,
     launchLabel: launchDate ? dayLabel(launchDate) : "未定",
-    changeListLinks: [...row.changeListLinks],
-    jiraLinks: [...row.jiraLinks],
+    changeListLinks: projectLinksOf(row.changeListLinks),
+    jiraLinks: projectLinksOf(row.jiraLinks),
     description: row.description,
     progress: workProgress(phases),
     expected: expectedProgress(phases),
@@ -879,34 +879,65 @@ export async function saveProject(
 }
 
 const PROJECT_LINK_LIMIT = 20;
-const PROJECT_LINK_LENGTH = 500;
+const PROJECT_LINK_TITLE = 80;
+const PROJECT_LINK_URL = 2000;
 
-/** 保存项目上的 ChangeList 或 Jira 链接。空行丢掉，重复的只留一条。 */
+export interface ProjectLink {
+  title: string;
+  url: string;
+}
+
+/** 读出标题和地址。旧数据如果只存了地址，标题就先用地址。 */
+export function projectLinksOf(value: Prisma.JsonValue | null | undefined): ProjectLink[] {
+  if (!Array.isArray(value)) return [];
+  const links: ProjectLink[] = [];
+  for (const item of value) {
+    if (typeof item === "string") {
+      const url = item.trim();
+      if (url) links.push({ title: url, url });
+      continue;
+    }
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const row = item as { title?: unknown; url?: unknown };
+    const url = String(row.url ?? "").trim();
+    const title = String(row.title ?? "").replace(/\s+/g, " ").trim();
+    if (!url) continue;
+    links.push({ title: title || url, url });
+  }
+  return links;
+}
+
+/** 保存项目上的 ChangeList 或 Jira 链接。空行丢掉，同一条地址只留一次。 */
 export async function saveProjectLinks(
   access: PlatformAccess,
   userId: number,
   projectId: number,
   kind: "changeList" | "jira",
-  rawLinks: string[],
+  rawLinks: { title?: string; url?: string }[],
 ): Promise<string> {
   if (!Array.isArray(rawLinks)) throw new WorkError("链接不对");
   if (rawLinks.length > PROJECT_LINK_LIMIT) throw new WorkError("链接太多了，最多 20 条");
-  const links: string[] = [];
+  const links: ProjectLink[] = [];
   const seen = new Set<string>();
   for (const raw of rawLinks) {
-    const value = String(raw ?? "").trim();
-    if (!value) continue;
-    if (value.length > PROJECT_LINK_LENGTH) throw new WorkError("链接太长了");
-    if (!/^https?:\/\//i.test(value)) throw new WorkError("链接要以 http:// 或 https:// 开头");
-    if (seen.has(value)) continue;
-    seen.add(value);
-    links.push(value);
+    const title = String(raw?.title ?? "").replace(/\s+/g, " ").trim();
+    const url = String(raw?.url ?? "").trim();
+    if (!title && !url) continue;
+    if (!title) throw new WorkError("先写个标题");
+    if (!url) throw new WorkError("先贴上链接");
+    if (title.length > PROJECT_LINK_TITLE) throw new WorkError("标题太长了");
+    if (url.length > PROJECT_LINK_URL) throw new WorkError("链接太长了");
+    if (!/^https?:\/\//i.test(url)) throw new WorkError("链接要以 http:// 或 https:// 开头");
+    if (seen.has(url)) continue;
+    seen.add(url);
+    links.push({ title, url });
   }
   const project = await requireProject(access, userId, projectId);
   assertManage(access, userId, project.ownerId);
+  const payload = links as unknown as Prisma.InputJsonValue;
   await prisma.workProject.update({
     where: { id: projectId },
-    data: kind === "changeList" ? { changeListLinks: links } : { jiraLinks: links },
+    data: kind === "changeList" ? { changeListLinks: payload } : { jiraLinks: payload },
   });
   const label = kind === "changeList" ? "Change list" : "Jira";
   return `修改「${project.name}」的${label}链接`;

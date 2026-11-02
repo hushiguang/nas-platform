@@ -2914,10 +2914,8 @@ a.work-row:hover {
   min-width: 0;
 }
 .work-link-anchor {
-  max-width: min(420px, 100%);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .work-link-empty {
   padding-top: 2px;
@@ -2935,13 +2933,21 @@ a.work-row:hover {
   min-width: 0;
 }
 .work-link-edit-line {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(108px, 180px) minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
 }
 .work-link-edit-line .field {
-  flex: 1;
   min-width: 0;
+}
+@media (max-width: 640px) {
+  .work-link-edit-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .work-link-url {
+    grid-column: 1 / -1;
+  }
 }
 .work-link-edit-tools {
   display: flex;
